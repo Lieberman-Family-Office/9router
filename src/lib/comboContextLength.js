@@ -33,3 +33,27 @@ export function comboWindowStats(modelIds, getCaps) {
   }
   return { maxContext, minContext, maxOutput, resolved, unresolved };
 }
+
+export function enrichComboModelEntry(combo, getCaps) {
+  const entry = {
+    id: combo.name,
+    object: "model",
+    owned_by: "combo",
+  };
+  if (combo.kind === "webSearch" || combo.kind === "webFetch") {
+    entry.kind = combo.kind;
+  }
+  const stats = comboWindowStats(combo.models || [], getCaps);
+  if (stats.maxContext != null) {
+    entry.context_length = stats.maxContext;
+    entry.capabilities = {
+      contextWindow: stats.maxContext,
+      contextWindowMin: stats.minContext,
+      maxOutput: stats.maxOutput,
+    };
+  }
+  if (stats.maxOutput != null) {
+    entry.max_completion_tokens = stats.maxOutput;
+  }
+  return entry;
+}

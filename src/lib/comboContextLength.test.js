@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { comboWindowStats, parseProviderModelId } from "./comboContextLength.js";
+import {
+  comboWindowStats,
+  enrichComboModelEntry,
+  parseProviderModelId,
+} from "./comboContextLength.js";
 
 describe("parseProviderModelId", () => {
   it("splits alias/model", () => {
@@ -116,5 +120,24 @@ describe("comboWindowStats", () => {
     expect(s.maxContext).toBe(200_000);
     expect(s.minContext).toBe(150_000);
     expect(s.maxOutput).toBe(32_000);
+  });
+});
+
+describe("enrichComboModelEntry", () => {
+  it("sets context_length to max leg window", () => {
+    const entry = enrichComboModelEntry(
+      { name: "subs-coding", models: ["cx/gpt-5.6-sol", "cc/claude-opus-5"] },
+      (alias, modelId) =>
+        ({
+          "cx/gpt-5.6-sol": { contextWindow: 372_000, maxOutput: 128_000 },
+          "cc/claude-opus-5": { contextWindow: 1_000_000, maxOutput: 128_000 },
+        })[`${alias}/${modelId}`],
+    );
+    expect(entry.id).toBe("subs-coding");
+    expect(entry.owned_by).toBe("combo");
+    expect(entry.context_length).toBe(1_000_000);
+    expect(entry.max_completion_tokens).toBe(128_000);
+    expect(entry.capabilities.contextWindow).toBe(1_000_000);
+    expect(entry.capabilities.contextWindowMin).toBe(372_000);
   });
 });

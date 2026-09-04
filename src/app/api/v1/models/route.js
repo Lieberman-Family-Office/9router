@@ -18,6 +18,7 @@ import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { updateProviderCredentials } from "@/sse/services/tokenRefresh";
 import { resolveConnectionProxyConfig } from "@/lib/network/connectionProxy";
 import { capabilitiesFromServiceKind, getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
+import { enrichComboModelEntry } from "@/lib/comboContextLength";
 
 // Per-provider live model resolvers. Each receives a connection record and
 // returns { models: [{ id, name? }, ...] } | null on failure.
@@ -292,18 +293,18 @@ export async function buildModelsList(kindFilter, options = {}) {
 
   const models = [];
 
+  const aliasToProviderId = Object.fromEntries(
+    Object.entries(PROVIDER_ID_TO_ALIAS).map(([id, alias]) => [alias, id]),
+  );
+  const getCapsForAlias = (alias, modelId) => {
+    const providerId = aliasToProviderId[alias] || alias;
+    return getCapabilitiesForModel(providerId, modelId);
+  };
+
   // Combos first (filtered by kind). Web combos expose `kind` so AI knows search vs fetch.
   for (const combo of combos) {
     if (!comboMatchesKinds(combo, kindFilter)) continue;
-    const entry = {
-      id: combo.name,
-      object: "model",
-      owned_by: "combo",
-    };
-    if (combo.kind === "webSearch" || combo.kind === "webFetch") {
-      entry.kind = combo.kind;
-    }
-    models.push(entry);
+    models.push(enrichComboModelEntry(combo, getCapsForAlias));
   }
 
   if (connections.length === 0) {
