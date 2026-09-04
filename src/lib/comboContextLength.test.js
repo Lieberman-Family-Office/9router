@@ -32,8 +32,89 @@ describe("comboWindowStats", () => {
     expect(s.unresolved).toEqual([]);
   });
 
-  it("returns null maxContext when model list empty", () => {
+  it("pins null stats and zero resolved when model list empty", () => {
     const getCaps = () => ({ contextWindow: 200_000, maxOutput: 64_000 });
-    expect(comboWindowStats([], getCaps).maxContext).toBeNull();
+    expect(comboWindowStats([], getCaps)).toEqual({
+      maxContext: null,
+      minContext: null,
+      maxOutput: null,
+      resolved: 0,
+      unresolved: [],
+    });
+  });
+
+  it("lands unparseable model ids in unresolved", () => {
+    const getCaps = () => ({ contextWindow: 200_000, maxOutput: 64_000 });
+    const s = comboWindowStats(["subs-coding", ""], getCaps);
+    expect(s.unresolved).toEqual(["subs-coding", ""]);
+    expect(s.resolved).toBe(0);
+    expect(s.maxContext).toBeNull();
+    expect(s.minContext).toBeNull();
+    expect(s.maxOutput).toBeNull();
+  });
+
+  it("lands non-finite or non-positive contextWindow in unresolved without affecting max/min", () => {
+    const getCaps = (alias, modelId) => {
+      const key = `${alias}/${modelId}`;
+      return (
+        {
+          "cc/good": { contextWindow: 100_000, maxOutput: 8_000 },
+          "cc/nan": { contextWindow: NaN, maxOutput: 8_000 },
+          "cc/zero": { contextWindow: 0, maxOutput: 8_000 },
+          "cc/neg": { contextWindow: -1, maxOutput: 8_000 },
+          "cc/missing": {},
+        }[key] || { contextWindow: 50_000, maxOutput: 4_000 }
+      );
+    };
+    const s = comboWindowStats(
+      ["cc/good", "cc/nan", "cc/zero", "cc/neg", "cc/missing"],
+      getCaps,
+    );
+    expect(s.unresolved).toEqual([
+      "cc/nan",
+      "cc/zero",
+      "cc/neg",
+      "cc/missing",
+    ]);
+    expect(s.resolved).toBe(1);
+    expect(s.maxContext).toBe(100_000);
+    expect(s.minContext).toBe(100_000);
+    expect(s.maxOutput).toBe(8_000);
+  });
+
+  it("resolves context when maxOutput missing; maxOutput stays null if none provide it", () => {
+    const getCaps = (alias, modelId) => {
+      const key = `${alias}/${modelId}`;
+      return (
+        {
+          "cc/no-out": { contextWindow: 200_000 },
+          "cc/also-no-out": { contextWindow: 300_000 },
+        }[key] || {}
+      );
+    };
+    const s = comboWindowStats(["cc/no-out", "cc/also-no-out"], getCaps);
+    expect(s.unresolved).toEqual([]);
+    expect(s.resolved).toBe(2);
+    expect(s.maxContext).toBe(300_000);
+    expect(s.minContext).toBe(200_000);
+    expect(s.maxOutput).toBeNull();
+  });
+
+  it("resolves context from legs missing maxOutput while still taking maxOutput from other legs", () => {
+    const getCaps = (alias, modelId) => {
+      const key = `${alias}/${modelId}`;
+      return (
+        {
+          "cc/no-out": { contextWindow: 200_000 },
+          "cc/with-out": { contextWindow: 150_000, maxOutput: 32_000 },
+        }[key] || {}
+      );
+    };
+    const s = comboWindowStats(["cc/no-out", "cc/with-out"], getCaps);
+    expect(s.unresolved).toEqual([]);
+    expect(s.resolved).toBe(2);
+    expect(s.maxContext).toBe(200_000);
+    expect(s.minContext).toBe(150_000);
+    expect(s.maxOutput).toBe(32_000);
   });
 });
