@@ -51,6 +51,7 @@ const DEFAULT_SETTINGS = {
   dnsToolEnabled: {},
   rtkEnabled: true,
   headroomEnabled: false,
+  maxInputTokens: 0,
   headroomUrl: DEFAULT_HEADROOM_URL,
   headroomCompressUserMessages: false,
   headroomTimeoutMs: 3000,

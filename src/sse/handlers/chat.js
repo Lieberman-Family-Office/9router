@@ -272,6 +272,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
       ccFilterNaming: !!chatSettings.ccFilterNaming,
       rtkEnabled: !!chatSettings.rtkEnabled,
       headroomEnabled: !!chatSettings.headroomEnabled,
+      maxInputTokens: chatSettings.maxInputTokens,
       headroomUrl: chatSettings.headroomUrl || DEFAULT_HEADROOM_URL,
       headroomCompressUserMessages: !!chatSettings.headroomCompressUserMessages,
       headroomTimeoutMs: chatSettings.headroomTimeoutMs,
