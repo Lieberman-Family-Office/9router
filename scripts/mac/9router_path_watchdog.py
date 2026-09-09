@@ -190,7 +190,9 @@ def run_probes(
     ok, detail = tailscale_backend_running(
         socket_path=ts_socket, ts_bin=ts_bin, runner=runner
     )
-    results.append(ProbeResult("ts_backend", ok, detail, PROBE_TARGETS["ts_backend"]))
+    results.append(
+        ProbeResult("ts_backend", ok, detail, PROBE_TARGETS["ts_backend"])
+    )
     return results
 
 
@@ -234,7 +236,12 @@ def kickstart_commands(*, uid: int, targets: Iterable[str]) -> list[list[str]]:
             )
         elif target == TARGET_9ROUTER:
             cmds.append(
-                ["/bin/launchctl", "kickstart", "-k", f"gui/{uid}/com.lfenergy.9router"]
+                [
+                    "/bin/launchctl",
+                    "kickstart",
+                    "-k",
+                    f"gui/{uid}/com.lfenergy.9router",
+                ]
             )
         elif target == TARGET_HELPER:
             cmds.append(
