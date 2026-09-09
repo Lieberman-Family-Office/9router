@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  System Tailscale (kernel TUN) for 9router inbound path.
+  Replaces com.lfenergy.tailscaled-userspace.
+
+  Install (admin; unsubstituted __HOME__ fails loudly):
+
+    sed "s|__HOME__|$HOME|g" \
+      scripts/mac/templates/com.lfenergy.tailscaled.plist \
+      > /tmp/com.lfenergy.tailscaled.plist
+    sudo cp /tmp/com.lfenergy.tailscaled.plist \
+      /Library/LaunchDaemons/com.lfenergy.tailscaled.plist
+    sudo launchctl bootstrap system \
+      /Library/LaunchDaemons/com.lfenergy.tailscaled.plist
+    sudo launchctl kickstart -k system/com.lfenergy.tailscaled
+
+  Statedir reuses ~/.tailscale-userspace so jasonmac-9router identity
+  and serve config survive cutover from userspace networking.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.lfenergy.tailscaled</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/opt/tailscale/bin/tailscaled</string>
+    <string>--statedir=__HOME__/.tailscale-userspace</string>
+    <string>--socket=/var/run/tailscaled.socket</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>__HOME__/.tailscale-userspace/system-daemon.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/.tailscale-userspace/system-daemon.log</string>
+</dict>
+</plist>
