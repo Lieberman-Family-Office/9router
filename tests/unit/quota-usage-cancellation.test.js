@@ -15,6 +15,19 @@ describe("offline usage request cancellation", () => {
     controller.abort();
     expect((await result).message).toContain("offline abort");
   });
+  it.each([undefined, null, {}])("preserves proxy defaults and legacy cancellation (%s)", async proxy => {
+    const controller = new AbortController();
+    fetch.mockReset();
+    fetch.mockResolvedValueOnce({ ok: false, status: 503 });
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ organization_id: "offline-org" }) });
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+    await getClaudeUsage("offline-defaults", proxy, { signal: controller.signal });
+    expect(fetch).toHaveBeenCalledTimes(3);
+    for (const [, options, actualProxy] of fetch.mock.calls) {
+      expect(options.signal).toBe(controller.signal);
+      expect(actualProxy).toBe(proxy === undefined ? null : proxy);
+    }
+  });
   it("retains cancellation across both Claude legacy requests", async () => {
     const controller = new AbortController();
     fetch.mockReset();

@@ -114,7 +114,7 @@ export function createErrorResult(statusCode, message, resetsAtMs) {
  * @returns {Response}
  */
 export function unavailableResponse(statusCode, message, retryAfter, retryAfterHuman) {
-  const resetMs = retryAfter ? Date.parse(retryAfter) : NaN;
+  const resetMs = retryAfter ? Date.parse(retryAfter) : Number.NaN;
   const retryAfterSec = Number.isFinite(resetMs) ? Math.max(Math.ceil((resetMs - Date.now()) / 1000), 1) : null;
   const msg = retryAfterHuman ? `${message} (${retryAfterHuman})` : message;
   return new Response(

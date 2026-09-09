@@ -221,7 +221,7 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     }
 
     if (selectable.length === 0 && quotaAwareOn && quotaProviders.includes(providerId) && USAGE_FETCHERS[providerId]) {
-      const earliest = quotaBlockedResets.filter(Boolean).sort()[0] || null;
+      const earliest = quotaBlockedResets.filter(Boolean).sort((a, b) => Date.parse(a) - Date.parse(b))[0] || null;
       if (earliest) {
         log.warn(
           "AUTH",

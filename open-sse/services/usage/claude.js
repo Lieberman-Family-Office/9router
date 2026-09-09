@@ -57,7 +57,7 @@ export async function getClaudeUsage(accessToken, proxyOptions = null, options =
   return promise;
 }
 
-async function fetchClaudeUsageRaw(accessToken, proxyOptions = null, signal) {
+async function fetchClaudeUsageRaw(accessToken, proxyOptions = null, signal = undefined) {
   try {
     // Skip OAuth usage call while this token is cooling down from a recent 429
     const cooldownUntil = oauthCooldown.get(accessToken);
@@ -136,7 +136,7 @@ async function fetchClaudeUsageRaw(accessToken, proxyOptions = null, signal) {
 /**
  * Legacy Claude usage for API key / org admin users
  */
-async function getClaudeUsageLegacy(accessToken, proxyOptions = null, signal) {
+async function getClaudeUsageLegacy(accessToken, proxyOptions = null, signal = undefined) {
   try {
     const settingsResponse = await proxyAwareFetch(CLAUDE_CONFIG.settingsUrl, {
       method: "GET",

@@ -125,6 +125,14 @@ describe("polling isolation", () => {
     } }));
     await expect(getProviderCredentials("claude", null, "claude-sonnet-4-6")).resolves.toMatchObject({ allRateLimited: true, retryAfter: "2026-10-01T03:00:00.000Z" });
   });
+  it.each([false, true])("orders fully-known resets chronologically (reverse=%s)", async reverse => {
+    const rows = [{ id: `chrono-a-${reverse}`, accessToken: "chrono-a" }, { id: `chrono-b-${reverse}`, accessToken: "chrono-b" }];
+    mocks.getProviderConnections.mockResolvedValue(reverse ? rows.reverse() : rows);
+    mocks.getClaudeUsage.mockImplementation(async token => ({ quotas: {
+      "weekly (7d)": { remaining: 0, resetAt: token === "chrono-a" ? "+010000-01-01T00:00:00.000Z" : "2099-10-01T01:00:00Z" },
+    } }));
+    await expect(getProviderCredentials("claude", null, "claude-sonnet-4-6")).resolves.toMatchObject({ allRateLimited: true, retryAfter: "2099-10-01T01:00:00.000Z" });
+  });
   it("serializes fresh round-robin state after concurrent polling", async () => {
     const rows = [{ id: "race-a", accessToken: "a" }, { id: "race-b", accessToken: "b" }];
     mocks.getSettings.mockResolvedValue({ quotaAwareSelection: true, fallbackStrategy: "round-robin", stickyRoundRobinLimit: 1 });
