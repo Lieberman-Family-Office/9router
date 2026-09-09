@@ -36,6 +36,17 @@ vi.mock("@/sse/utils/logger.js", () => ({
   warn: vi.fn(),
 }));
 
+vi.mock("open-sse/index.js", () => ({}));
+vi.mock("@/sse/services/model.js", () => ({ getModelInfo: async () => ({ provider: "claude", model: "claude-sonnet-4-6" }), getComboModels: async () => null }));
+vi.mock("open-sse/handlers/chatCore.js", () => ({ handleChatCore: vi.fn(() => { throw new Error("Inference forbidden"); }) }));
+vi.mock("@/sse/services/tokenRefresh.js", () => ({ updateProviderCredentials: vi.fn(), checkAndRefreshToken: vi.fn() }));
+vi.mock("@/lib/headroom/detect", () => ({ DEFAULT_HEADROOM_URL: "" }));
+vi.mock("@/lib/pxpipe/loader.js", () => ({ getTransform: vi.fn() }));
+vi.mock("@/lib/pxpipe/events.js", () => ({ appendPxpipeEvent: vi.fn() }));
+vi.mock("open-sse/services/combo.js", () => ({ handleComboChat: vi.fn(), handleFusionChat: vi.fn(), detectRequiredCapabilities: () => new Set() }));
+vi.mock("open-sse/services/capacityAdapter.js", () => ({ augmentModelsWithCapacityAdapter: models => models, withCapacityAdapterStripping: fn => fn, getActiveAdapterStrategy: vi.fn() }));
+vi.mock("open-sse/utils/bypassHandler.js", () => ({ handleBypassRequest: () => null }));
+const { handleChat } = await import("@/sse/handlers/chat.js");
 const { getProviderCredentials } = await import("@/sse/services/auth.js");
 
 beforeEach(() => {
@@ -50,6 +61,39 @@ beforeEach(() => {
 });
 
 describe("polling isolation", () => {
+  it("shares account usage across concurrent models without persisting raw token keys", async () => {
+    const token = "mock-private-credential";
+    mocks.getProviderConnections.mockResolvedValue([{ id: "cross-model", accessToken: token }]);
+    mocks.getCodexUsage.mockResolvedValue({ quotas: { weekly: { remaining: 50 }, spark_weekly: { remaining: 0 } } });
+    const keys = [];
+    const originalSet = Map.prototype.set;
+    const spy = vi.spyOn(Map.prototype, "set").mockImplementation(function(key, value) { keys.push(key); return originalSet.call(this, key, value); });
+    try {
+      const [normal, spark] = await Promise.all([
+        getProviderCredentials("codex", null, "gpt-6-astra"),
+        getProviderCredentials("codex", null, "gpt-5.3-codex-spark"),
+      ]);
+      expect(normal.connectionId).toBe("cross-model");
+      expect(spark).toMatchObject({ allRateLimited: true, retryAfter: null });
+      expect(mocks.getCodexUsage).toHaveBeenCalledTimes(1);
+      expect(keys.some(key => String(key).includes(token))).toBe(false);
+      mocks.getProviderConnections.mockResolvedValue([{ id: "cross-model", accessToken: "rotated-mock" }]);
+      await getProviderCredentials("codex", null, "gpt-6-astra");
+      expect(mocks.getCodexUsage).toHaveBeenCalledTimes(2);
+    } finally { spy.mockRestore(); }
+  });
+
+  it.each([false, true])("returns chat 429 with unknown resets (mixed known=%s)", async mixed => {
+    mocks.getProviderConnections.mockResolvedValue([{ id: `http-unknown-${mixed}`, accessToken: "unknown" }, { id: `http-other-${mixed}`, accessToken: "other" }]);
+    mocks.getClaudeUsage.mockImplementation(async token => ({ quotas: { "weekly (7d)": { remaining: 0, resetAt: mixed && token === "other" ? "2099-10-01T03:00:00Z" : null } } }));
+    const response = await handleChat(new Request("http://localhost/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude/claude-sonnet-4-6", messages: [] }) }));
+    expect(response.status).toBe(429);
+    expect(response.headers.has("Retry-After")).toBe(mixed);
+    const body = await response.json();
+    expect(body.error.message).toContain("blocking quota exhausted");
+    expect(body.error.message).not.toContain("null");
+  });
+
   it.each(["claude", "codex"])("bounds %s polling and allows unrelated providers to progress", async (provider) => {
     vi.useFakeTimers();
     let signal;

@@ -118,51 +118,59 @@ export function sortConnectionsByRemaining(connections) {
 export function createQuotaSnapshotCache({
   ttlMs = DEFAULT_QUOTA_CACHE_TTL_MS,
   staleOkMs = DEFAULT_STALE_OK_MS,
+  // ponytail: retain at most 256 account entries; increase only for larger account pools.
+  maxEntries = 256,
   now = () => Date.now(),
 } = {}) {
-  const values = new Map();
-  const inflight = new Map();
+  if (!Number.isInteger(maxEntries) || maxEntries < 1) throw new RangeError("maxEntries must be a positive integer");
+  const entries = new Map();
 
   function get(connectionId) {
-    return values.get(connectionId) || null;
+    const entry = entries.get(connectionId);
+    if (entry && !entry.promise && now() - entry.touchedAt >= staleOkMs) {
+      entries.delete(connectionId);
+      return null;
+    }
+    return entry?.value || null;
   }
 
-  function set(connectionId, snap) {
-    values.set(connectionId, snap);
+  function set(connectionId, value) {
+    entries.delete(connectionId);
+    entries.set(connectionId, { value, fingerprint: "", touchedAt: now() });
+    while (entries.size > maxEntries) entries.delete(entries.keys().next().value);
   }
 
-  async function getOrFetch(connectionId, fetcher) {
+  async function getOrFetch(connectionId, fetcher, fingerprint = "", freshnessMs = ttlMs) {
     const t = now();
-    const cached = values.get(connectionId);
-    if (cached && t - (cached.fetchedAt || 0) < ttlMs) return cached;
-
-    if (inflight.has(connectionId)) return inflight.get(connectionId);
-
-    const p = (async () => {
+    for (const [key, entry] of entries) {
+      if (!entry.promise && t - entry.touchedAt >= staleOkMs) entries.delete(key);
+    }
+    let entry = entries.get(connectionId);
+    if (entry?.fingerprint !== fingerprint) {
+      entries.delete(connectionId);
+      entry = null;
+    }
+    const cached = entry?.value;
+    if (cached && t - cached.fetchedAt < freshnessMs) return cached;
+    if (entry?.promise) return entry.promise;
+    entry = { fingerprint, value: cached, touchedAt: t };
+    entries.delete(connectionId);
+    entries.set(connectionId, entry);
+    while (entries.size > maxEntries) entries.delete(entries.keys().next().value);
+    entry.promise = (async () => {
       try {
-        const snap = await fetcher();
-        const stored = { ...snap, fetchedAt: snap.fetchedAt || now(), stale: false };
-        values.set(connectionId, stored);
-        return stored;
-      } catch (err) {
-        if (cached && t - (cached.fetchedAt || 0) < staleOkMs) {
-          return { ...cached, stale: true };
-        }
-        return {
-          remainingFraction: null,
-          unknown: true,
-          blockingExhausted: false,
-          fetchedAt: now(),
-          stale: true,
-          error: String(err?.message || err),
-        };
+        const value = await Promise.resolve().then(fetcher);
+        entry.value = { ...value, fetchedAt: now(), stale: false };
+        return entry.value;
+      } catch {
+        if (cached && now() - cached.fetchedAt < staleOkMs) return { ...cached, stale: true };
+        return { unknown: true, fetchedAt: now(), stale: true };
       } finally {
-        inflight.delete(connectionId);
+        entry.promise = null;
+        entry.touchedAt = now();
       }
     })();
-
-    inflight.set(connectionId, p);
-    return p;
+    return entry.promise;
   }
 
   return { get, set, getOrFetch };

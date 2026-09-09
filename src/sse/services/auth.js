@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { getProviderConnections, validateApiKey, updateProviderConnection, getSettings, getProxyPools } from "@/lib/localDb";
 import { resolveConnectionProxyConfig, pickProxyPoolId } from "@/lib/network/connectionProxy";
 import { formatRetryAfter, checkFallbackError, isModelLockActive, buildModelLockUpdate, getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
@@ -17,15 +18,7 @@ import * as log from "../utils/logger.js";
 // Mutex to prevent race conditions during account selection
 let selectionMutex = Promise.resolve();
 
-const quotaSnapshotCacheByTtl = new Map();
-
-function getQuotaCache(ttlMs) {
-  const key = String(ttlMs);
-  if (!quotaSnapshotCacheByTtl.has(key)) {
-    quotaSnapshotCacheByTtl.set(key, createQuotaSnapshotCache({ ttlMs }));
-  }
-  return quotaSnapshotCacheByTtl.get(key);
-}
+const quotaUsageCache = createQuotaSnapshotCache();
 
 const USAGE_FETCHERS = {
   claude: getClaudeUsage,
@@ -58,10 +51,10 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
   if (quotaEnabled) {
     const ttlMs = Number(settingsBeforePoll.quotaCacheTtlMs) > 0
       ? Number(settingsBeforePoll.quotaCacheTtlMs) : DEFAULT_QUOTA_CACHE_TTL_MS;
-    const cache = getQuotaCache(ttlMs);
     const candidates = await getProviderConnections({ provider: providerId, isActive: true });
     await Promise.all(candidates.map(async (conn) => {
-      const snap = await cache.getOrFetch(JSON.stringify([providerId, conn.id, conn.accessToken, model]), async () => {
+      const fingerprint = createHash("sha256").update(conn.accessToken || "").digest("hex");
+      const usage = await quotaUsageCache.getOrFetch(JSON.stringify([providerId, conn.id]), async () => {
         const controller = new AbortController();
         let timer;
         try {
@@ -69,8 +62,7 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
             (async () => {
               const proxy = await resolveConnectionProxyConfig(conn.providerSpecificData || {});
               controller.signal.throwIfAborted();
-              const usage = await USAGE_FETCHERS[providerId](conn.accessToken, { ...proxy, strictProxy: false }, { force: false, signal: controller.signal });
-              return normalizeQuotasToSnapshot(providerId, usage, model);
+              return await USAGE_FETCHERS[providerId](conn.accessToken, { ...proxy, strictProxy: false }, { force: false, signal: controller.signal });
             })(),
             new Promise((_, reject) => {
               timer = setTimeout(() => {
@@ -82,8 +74,8 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
         } finally {
           clearTimeout(timer);
         }
-      });
-      snapshots.set(conn.id, { token: conn.accessToken, snap });
+      }, fingerprint, ttlMs);
+      snapshots.set(conn.id, { token: conn.accessToken, snap: normalizeQuotasToSnapshot(providerId, usage, model) });
     }));
   }
   // Re-read connection state under the mutex after polling; selection updates remain serialized.
@@ -244,7 +236,7 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
         };
       }
       log.warn("AUTH", `${provider} | all accounts blocked by quota-aware filter`);
-      return null;
+      return { allRateLimited: true, retryAfter: null, retryAfterHuman: null, lastError: "blocking quota exhausted", lastErrorCode: 429 };
     }
 
     // Per-provider strategy overrides global setting

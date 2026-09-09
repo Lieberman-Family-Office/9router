@@ -115,6 +115,29 @@ describe("sortConnectionsByRemaining", () => {
 });
 
 describe("createQuotaSnapshotCache", () => {
+  it("bounds account entries and expires idle values", async () => {
+    let now = 10;
+    const cache = createQuotaSnapshotCache({ maxEntries: 2, staleOkMs: 100, now: () => now });
+    for (const id of ["a", "b", "c"]) await cache.getOrFetch(id, async () => ({ quotas: {} }), "fingerprint");
+    expect(cache.get("a")).toBeNull();
+    expect(cache.get("b")).not.toBeNull();
+    now += 101;
+    expect(cache.get("b")).toBeNull();
+    expect(cache.get("c")).toBeNull();
+  });
+
+  it("invalidates rotation without allowing the old flight to overwrite the new value", async () => {
+    const cache = createQuotaSnapshotCache();
+    let resolveOld;
+    const old = cache.getOrFetch("account", () => new Promise(resolve => { resolveOld = resolve; }), "old-fingerprint");
+    await cache.getOrFetch("account", async () => ({ quotas: { weekly: { remaining: 90 } } }), "new-fingerprint");
+    resolveOld({ quotas: { weekly: { remaining: 0 } } });
+    await old;
+    const fetcher = vi.fn();
+    expect((await cache.getOrFetch("account", fetcher, "new-fingerprint")).quotas.weekly.remaining).toBe(90);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it("singleflights concurrent fetches", async () => {
     let calls = 0;
     const cache = createQuotaSnapshotCache({ ttlMs: 60_000, now: () => 1_000_000 });
