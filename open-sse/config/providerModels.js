@@ -90,6 +90,11 @@ export function getModelUpstreamId(aliasOrId, modelId) {
   return baseId + suffix;
 }
 
+export function splitCodexEffortSuffix(modelId) {
+  const match = /-(none|minimal|low|medium|high|xhigh)$/.exec(modelId);
+  return { model: match ? modelId.slice(0, match.index) : modelId, effort: match?.[1] || null };
+}
+
 export function getModelQuotaFamily(aliasOrId, modelId) {
   const models = PROVIDER_MODELS[aliasOrId];
   return modelQuotaFamily(findModel(models, modelId, aliasOrId));

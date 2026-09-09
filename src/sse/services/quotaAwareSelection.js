@@ -1,4 +1,4 @@
-import { getModelUpstreamId } from "../../../open-sse/config/providerModels.js";
+import { getModelUpstreamId, splitCodexEffortSuffix } from "../../../open-sse/config/providerModels.js";
 import { stripThinkingSuffix } from "../../../open-sse/translator/concerns/thinkingUnified.js";
 
 export const DEFAULT_QUOTA_CACHE_TTL_MS = 45_000;
@@ -67,7 +67,7 @@ export function normalizeQuotasToSnapshot(providerId, usage, model = null) {
   if (providerId === "codex") {
     // Local admission policy, not entitlement proof: only exact Spark + reported Pro + Spark windows gets separate limits.
     // Ordinary requests (including local review aliases) use general limits, not GitHub review windows.
-    const spark = stripThinkingSuffix(getModelUpstreamId("cx", modelId)) === "gpt-5.3-codex-spark"
+    const spark = splitCodexEffortSuffix(stripThinkingSuffix(getModelUpstreamId("cx", modelId))).model === "gpt-5.3-codex-spark"
       && usage?.plan === "pro"
       && entries.some(([name, quota]) => ["spark_session", "spark_weekly"].includes(name) && quota && typeof quota === "object");
     sessionKey = spark ? "spark_session" : "session";
@@ -138,10 +138,25 @@ export function createQuotaSnapshotCache({
     return entry?.value || null;
   }
 
+  function makeRoom() {
+    if (entries.size < maxEntries) return true;
+    for (const [key, entry] of entries) {
+      if (!entry.promise) {
+        entries.delete(key);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function unknownUsage() {
+    return { unknown: true, fetchedAt: now(), stale: true };
+  }
+
   function set(connectionId, value) {
+    if (entries.get(connectionId)?.promise) return;
     entries.delete(connectionId);
-    entries.set(connectionId, { value, fingerprint: "", touchedAt: now() });
-    while (entries.size > maxEntries) entries.delete(entries.keys().next().value);
+    if (makeRoom()) entries.set(connectionId, { value, fingerprint: "", touchedAt: now() });
   }
 
   async function getOrFetch(connectionId, fetcher, fingerprint = "", freshnessMs = ttlMs) {
@@ -151,6 +166,8 @@ export function createQuotaSnapshotCache({
     }
     let entry = entries.get(connectionId);
     if (entry?.fingerprint !== fingerprint) {
+      // A rotated credential must not consume the old result or displace its live flight.
+      if (entry?.promise) return unknownUsage();
       entries.delete(connectionId);
       entry = null;
     }
@@ -159,8 +176,9 @@ export function createQuotaSnapshotCache({
     if (entry?.promise) return entry.promise;
     entry = { fingerprint, value: cached, touchedAt: t };
     entries.delete(connectionId);
+    // ponytail: full live-flight capacity returns unknown without polling; retry on the next request.
+    if (!makeRoom()) return unknownUsage();
     entries.set(connectionId, entry);
-    while (entries.size > maxEntries) entries.delete(entries.keys().next().value);
     entry.promise = (async () => {
       try {
         const value = await Promise.resolve().then(fetcher);

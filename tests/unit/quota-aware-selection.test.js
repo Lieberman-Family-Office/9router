@@ -34,6 +34,14 @@ describe("scoped quota windows", () => {
       expect(normalizeQuotasToSnapshot("codex", usage, "gpt-6-codex-spark").blockingExhausted).toBe(remaining === 0);
     }
   });
+  it.each(["none", "minimal", "low", "medium", "high", "xhigh"])("matches dispatch for dash effort %s without future-model exemption", effort => {
+    const usage = { plan: "pro", quotas: { weekly: { remaining: 0 }, spark_weekly: { remaining: 50 } } };
+    for (const model of [`gpt-5.3-codex-spark-${effort}`, `gpt-5.3-codex-spark-${effort}-review`, `gpt-5.3-codex-spark-${effort}-review(high)`]) {
+      expect(normalizeQuotasToSnapshot("codex", usage, model).blockingExhausted).toBe(false);
+    }
+    expect(normalizeQuotasToSnapshot("codex", usage, `gpt-6-codex-spark-${effort}`).blockingExhausted).toBe(true);
+    expect(normalizeQuotasToSnapshot("codex", usage, `gpt-5.6-sol-${effort}-review`).blockingExhausted).toBe(true);
+  });
   it("preserves the session-only exhaustion policy", () => {
     expect(normalizeQuotasToSnapshot("codex", { plan: "pro", quotas: { spark_session: { remaining: 0 } } }, "gpt-5.3-codex-spark").blockingExhausted).toBe(false);
   });
@@ -153,12 +161,33 @@ describe("createQuotaSnapshotCache", () => {
     const cache = createQuotaSnapshotCache();
     let resolveOld;
     const old = cache.getOrFetch("account", () => new Promise(resolve => { resolveOld = resolve; }), "old-fingerprint");
-    await cache.getOrFetch("account", async () => ({ quotas: { weekly: { remaining: 90 } } }), "new-fingerprint");
+    expect(await cache.getOrFetch("account", async () => ({ quotas: {} }), "new-fingerprint")).toMatchObject({ unknown: true });
+    await Promise.resolve();
     resolveOld({ quotas: { weekly: { remaining: 0 } } });
     await old;
+    await cache.getOrFetch("account", async () => ({ quotas: { weekly: { remaining: 90 } } }), "new-fingerprint");
     const fetcher = vi.fn();
     expect((await cache.getOrFetch("account", fetcher, "new-fingerprint")).quotas.weekly.remaining).toBe(90);
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("preserves singleflight at capacity and releases settled slots (reject=%s)", async reject => {
+    const cache = createQuotaSnapshotCache({ maxEntries: 1 });
+    let settle;
+    const fetchA = vi.fn(() => new Promise((resolve, fail) => { settle = reject ? () => fail(new Error("offline")) : () => resolve({ quotas: {} }); }));
+    const fetchB = vi.fn(async () => ({ quotas: {} }));
+    const first = cache.getOrFetch("a", fetchA, "a-fingerprint");
+    await Promise.resolve();
+    expect(await cache.getOrFetch("b", fetchB, "b-fingerprint")).toMatchObject({ unknown: true });
+    const second = cache.getOrFetch("a", fetchA, "a-fingerprint");
+    expect(await cache.getOrFetch("a", fetchB, "rotated")).toMatchObject({ unknown: true });
+    expect(fetchA).toHaveBeenCalledTimes(1);
+    expect(fetchB).not.toHaveBeenCalled();
+    settle();
+    expect(await first).toEqual(await second);
+    await cache.getOrFetch("b", fetchB, "b-fingerprint");
+    expect(fetchB).toHaveBeenCalledTimes(1);
+    expect(cache.get("a")).toBeNull();
   });
 
   it("singleflights concurrent fetches", async () => {
