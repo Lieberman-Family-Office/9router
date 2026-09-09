@@ -49,6 +49,43 @@ beforeEach(() => {
   });
 });
 
+describe("polling isolation", () => {
+  it.each(["claude", "codex"])("bounds %s polling and allows unrelated providers to progress", async (provider) => {
+    vi.useFakeTimers();
+    let signal;
+    mocks.getProviderConnections.mockImplementation(async ({ provider: id }) => [{ id: `slow-${provider}-${id}`, accessToken: "offline" }]);
+    const fetcher = provider === "claude" ? mocks.getClaudeUsage : mocks.getCodexUsage;
+    fetcher.mockImplementation((_token, _proxy, options) => { signal = options.signal; return new Promise(() => {}); });
+    try {
+      const pending = getProviderCredentials(provider);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(signal.aborted).toBe(false);
+      await expect(getProviderCredentials("other")).resolves.toMatchObject({ connectionId: `slow-${provider}-other` });
+      await vi.advanceTimersByTimeAsync(2000);
+      await expect(pending).resolves.toMatchObject({ connectionId: `slow-${provider}-${provider}` });
+      expect(signal.aborted).toBe(true);
+    } finally { vi.useRealTimers(); }
+  });
+  it("returns the earliest fully-known account reset, not its earliest window", async () => {
+    mocks.getProviderConnections.mockResolvedValue([{ id: "reset-a", accessToken: "a" }, { id: "reset-b", accessToken: "b" }]);
+    mocks.getClaudeUsage.mockImplementation(async token => ({ quotas: {
+      "weekly (7d)": { remaining: 0, resetAt: "2026-10-01T01:00:00Z" },
+      "weekly sonnet (7d)": { remaining: 0, resetAt: token === "a" ? null : "2026-10-01T03:00:00Z" },
+    } }));
+    await expect(getProviderCredentials("claude", null, "claude-sonnet-4-6")).resolves.toMatchObject({ allRateLimited: true, retryAfter: "2026-10-01T03:00:00.000Z" });
+  });
+  it("serializes fresh round-robin state after concurrent polling", async () => {
+    const rows = [{ id: "race-a", accessToken: "a" }, { id: "race-b", accessToken: "b" }];
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: true, fallbackStrategy: "round-robin", stickyRoundRobinLimit: 1 });
+    mocks.getProviderConnections.mockImplementation(async () => rows.map(row => ({ ...row })));
+    mocks.getCodexUsage.mockResolvedValue({ quotas: { session: { remaining: 50 } } });
+    mocks.updateProviderConnection.mockImplementation(async (id, patch) => Object.assign(rows.find(row => row.id === id), patch));
+    const selected = await Promise.all([getProviderCredentials("codex"), getProviderCredentials("codex")]);
+    expect(new Set(selected.map(row => row.connectionId)).size).toBe(2);
+    expect(mocks.getCodexUsage).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("Claude remaining-first routing", () => {
   it("prefers the account with higher session remaining", async () => {
     mocks.getProviderConnections.mockResolvedValue([

@@ -7,6 +7,27 @@ import {
   createQuotaSnapshotCache,
 } from "../../src/sse/services/quotaAwareSelection.js";
 
+describe("scoped quota windows", () => {
+  it("selects Codex normal, Spark and registry review families independently", () => {
+    const usage = { quotas: { session: { remaining: 80 }, weekly: { remaining: 50 }, spark_weekly: { remaining: 0 }, review_weekly: { remaining: 0 } } };
+    expect(normalizeQuotasToSnapshot("codex", usage, "gpt-6-astra").blockingExhausted).toBe(false);
+    expect(normalizeQuotasToSnapshot("codex", usage, "gpt-5.3-codex-spark").blockingExhausted).toBe(true);
+    expect(normalizeQuotasToSnapshot("codex", usage, "gpt-5.6-sol-review").blockingExhausted).toBe(true);
+  });
+  it("uses the latest applicable Claude reset, refusing unknown or invalid resets", () => {
+    const early = "2026-10-01T01:00:00.000Z";
+    const late = "2026-10-01T03:00:00.000Z";
+    const usage = { quotas: { "weekly (7d)": { remaining: 0, resetAt: early }, "weekly sonnet (7d)": { remaining: 0, resetAt: late }, "weekly opus (7d)": { remaining: 0 } } };
+    expect(normalizeQuotasToSnapshot("claude", usage, "claude-sonnet-4-6").blockingResetAt).toBe(late);
+    for (const resetAt of [null, "invalid"]) {
+      usage.quotas["weekly sonnet (7d)"].resetAt = resetAt;
+      expect(normalizeQuotasToSnapshot("claude", usage, "claude-sonnet-4-6").blockingResetAt).toBeNull();
+    }
+    usage.quotas["weekly (7d)"].remaining = 50;
+    expect(normalizeQuotasToSnapshot("claude", usage, "claude-haiku-4-5").blockingExhausted).toBe(false);
+  });
+});
+
 describe("isQuotaExhausted", () => {
   it("treats remaining <= 0 as exhausted", () => {
     expect(isQuotaExhausted({ remaining: 0, total: 100 })).toBe(true);

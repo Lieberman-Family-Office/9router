@@ -1,3 +1,5 @@
+import { getModelQuotaFamily, getModelUpstreamId } from "../../../open-sse/config/providerModels.js";
+
 export const DEFAULT_QUOTA_CACHE_TTL_MS = 45_000;
 export const DEFAULT_STALE_OK_MS = 300_000;
 
@@ -57,21 +59,29 @@ function fractionFromQuota(quota) {
   return null;
 }
 
-export function normalizeQuotasToSnapshot(providerId, usage) {
-  const quotas = usage?.quotas || {};
-  const sessionKey = PROVIDER_SESSION_KEYS[providerId] || "session";
-  const primary = quotas[sessionKey] || Object.values(quotas)[0] || null;
-  const remainingFraction = fractionFromQuota(primary);
-  const blockingExhausted = hasExhaustedBlockingQuota(quotas, sessionKey);
-  let blockingResetAt = null;
-  for (const [name, quota] of Object.entries(quotas)) {
-    if (!isBlockingQuotaName(name, sessionKey) || !isQuotaExhausted(quota)) continue;
-    const resetAt = quota?.resetAt || null;
-    if (!resetAt) continue;
-    if (!blockingResetAt || Date.parse(resetAt) < Date.parse(blockingResetAt)) {
-      blockingResetAt = resetAt;
-    }
+export function normalizeQuotasToSnapshot(providerId, usage, model = null) {
+  const modelId = String(model || "").replace(/\([^()]+\)\s*$/, "").trim();
+  let sessionKey = PROVIDER_SESSION_KEYS[providerId] || "session";
+  let entries = Object.entries(usage?.quotas || {});
+  if (providerId === "codex") {
+    const family = getModelQuotaFamily("cx", modelId) === "review" ? "review"
+      : getModelUpstreamId("cx", modelId) === "gpt-5.3-codex-spark" ? "spark" : "";
+    sessionKey = family ? `${family}_session` : "session";
+    entries = entries.filter(([name]) => [sessionKey, family ? `${family}_weekly` : "weekly"].includes(name));
+  } else if (providerId === "claude") {
+    entries = entries.filter(([name]) => {
+      const match = /^weekly (.+) \(7d\)$/.exec(name);
+      return !match || modelId.split(/[-_.]/).includes(match[1]);
+    });
   }
+  const quotas = Object.fromEntries(entries);
+  const primary = quotas[sessionKey] || null;
+  const remainingFraction = fractionFromQuota(primary);
+  const exhausted = entries.filter(([name, quota]) => isBlockingQuotaName(name, sessionKey) && isQuotaExhausted(quota));
+  const blockingExhausted = exhausted.length > 0;
+  const resets = exhausted.map(([, quota]) => Date.parse(quota?.resetAt));
+  const blockingResetAt = resets.length && resets.every(Number.isFinite)
+    ? new Date(Math.max(...resets)).toISOString() : null;
   return {
     remainingFraction,
     remaining: toFiniteNumber(primary?.remaining),

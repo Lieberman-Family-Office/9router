@@ -25,6 +25,8 @@ const USAGE_CACHE_TTL_MS = 300000;
 const usageCache = new Map(); // token -> { promise } | { result, expiresAt }
 
 export async function getClaudeUsage(accessToken, proxyOptions = null, options = {}) {
+  // Bounded callers own their request; do not join an unrelated unbounded dashboard poll.
+  if (options.signal) return fetchClaudeUsageRaw(accessToken, proxyOptions, options.signal);
   const force = options?.force === true;
 
   // Serve in-flight or fresh cached result (skip on manual force)
@@ -55,17 +57,18 @@ export async function getClaudeUsage(accessToken, proxyOptions = null, options =
   return promise;
 }
 
-async function fetchClaudeUsageRaw(accessToken, proxyOptions = null) {
+async function fetchClaudeUsageRaw(accessToken, proxyOptions = null, signal) {
   try {
     // Skip OAuth usage call while this token is cooling down from a recent 429
     const cooldownUntil = oauthCooldown.get(accessToken);
     if (cooldownUntil && Date.now() < cooldownUntil) {
-      return await getClaudeUsageLegacy(accessToken, proxyOptions);
+      return await getClaudeUsageLegacy(accessToken, proxyOptions, signal);
     }
 
     // Primary: OAuth usage endpoint (Claude Code consumer OAuth tokens)
     const oauthResponse = await proxyAwareFetch(CLAUDE_CONFIG.oauthUsageUrl, {
       method: "GET",
+      signal,
       headers: {
         "Authorization": `Bearer ${accessToken}`,
         "anthropic-beta": "oauth-2025-04-20",
@@ -124,7 +127,7 @@ async function fetchClaudeUsageRaw(accessToken, proxyOptions = null) {
 
     // Fallback: legacy settings + org usage endpoint
     console.warn(`[Claude Usage] OAuth endpoint returned ${oauthResponse.status}, falling back to legacy`);
-    return await getClaudeUsageLegacy(accessToken, proxyOptions);
+    return await getClaudeUsageLegacy(accessToken, proxyOptions, signal);
   } catch (error) {
     return { message: `Claude connected. Unable to fetch usage: ${error.message}` };
   }
@@ -133,10 +136,11 @@ async function fetchClaudeUsageRaw(accessToken, proxyOptions = null) {
 /**
  * Legacy Claude usage for API key / org admin users
  */
-async function getClaudeUsageLegacy(accessToken, proxyOptions = null) {
+async function getClaudeUsageLegacy(accessToken, proxyOptions = null, signal) {
   try {
     const settingsResponse = await proxyAwareFetch(CLAUDE_CONFIG.settingsUrl, {
       method: "GET",
+      signal,
       headers: {
         "Authorization": `Bearer ${accessToken}`,
         "anthropic-version": CLAUDE_CONFIG.apiVersion,
@@ -151,6 +155,7 @@ async function getClaudeUsageLegacy(accessToken, proxyOptions = null) {
           CLAUDE_CONFIG.usageUrl.replace("{org_id}", settings.organization_id),
           {
             method: "GET",
+      signal,
             headers: {
               "Authorization": `Bearer ${accessToken}`,
               "anthropic-version": CLAUDE_CONFIG.apiVersion,

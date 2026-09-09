@@ -49,6 +49,44 @@ function githubMonthlyResetMs(status, errorText, provider) {
  * @param {string|null} model - Model name for per-model rate limit filtering
  */
 export async function getProviderCredentials(provider, excludeConnectionIds = null, model = null, options = {}) {
+  const providerId = resolveProviderId(provider);
+  const settingsBeforePoll = await getSettings();
+  const snapshots = new Map();
+  const quotaEnabled = settingsBeforePoll.quotaAwareSelection !== false
+    && (Array.isArray(settingsBeforePoll.quotaAwareProviders) ? settingsBeforePoll.quotaAwareProviders : ["claude", "codex"]).includes(providerId)
+    && USAGE_FETCHERS[providerId];
+  if (quotaEnabled) {
+    const ttlMs = Number(settingsBeforePoll.quotaCacheTtlMs) > 0
+      ? Number(settingsBeforePoll.quotaCacheTtlMs) : DEFAULT_QUOTA_CACHE_TTL_MS;
+    const cache = getQuotaCache(ttlMs);
+    const candidates = await getProviderConnections({ provider: providerId, isActive: true });
+    await Promise.all(candidates.map(async (conn) => {
+      const snap = await cache.getOrFetch(JSON.stringify([providerId, conn.id, conn.accessToken, model]), async () => {
+        const controller = new AbortController();
+        let timer;
+        try {
+          return await Promise.race([
+            (async () => {
+              const proxy = await resolveConnectionProxyConfig(conn.providerSpecificData || {});
+              controller.signal.throwIfAborted();
+              const usage = await USAGE_FETCHERS[providerId](conn.accessToken, { ...proxy, strictProxy: false }, { force: false, signal: controller.signal });
+              return normalizeQuotasToSnapshot(providerId, usage, model);
+            })(),
+            new Promise((_, reject) => {
+              timer = setTimeout(() => {
+                controller.abort();
+                reject(new Error("Quota polling timed out"));
+              }, 2000);
+            }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
+      });
+      snapshots.set(conn.id, { token: conn.accessToken, snap });
+    }));
+  }
+  // Re-read connection state under the mutex after polling; selection updates remain serialized.
   // Normalize to Set for consistent handling
   const excludeSet = excludeConnectionIds instanceof Set
     ? excludeConnectionIds
@@ -161,29 +199,13 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     const quotaProviders = Array.isArray(settings.quotaAwareProviders)
       ? settings.quotaAwareProviders
       : ["claude", "codex"];
-    const ttlMs = Number(settings.quotaCacheTtlMs) > 0
-      ? Number(settings.quotaCacheTtlMs)
-      : DEFAULT_QUOTA_CACHE_TTL_MS;
-
     let selectable = availableConnections;
     let quotaBlockedResets = [];
     if (quotaAwareOn && quotaProviders.includes(providerId) && USAGE_FETCHERS[providerId]) {
-      const cache = getQuotaCache(ttlMs);
-      const fetchUsage = USAGE_FETCHERS[providerId];
       const annotated = [];
       for (const conn of availableConnections) {
-        const proxy = await resolveConnectionProxyConfig(conn.providerSpecificData || {});
-        const proxyOptions = {
-          connectionProxyEnabled: proxy.connectionProxyEnabled === true,
-          connectionProxyUrl: proxy.connectionProxyUrl || "",
-          connectionNoProxy: proxy.connectionNoProxy || "",
-          vercelRelayUrl: proxy.vercelRelayUrl || "",
-          strictProxy: false,
-        };
-        const snap = await cache.getOrFetch(conn.id, async () => {
-          const usage = await fetchUsage(conn.accessToken, proxyOptions, { force: false });
-          return normalizeQuotasToSnapshot(providerId, usage);
-        });
+        const polled = snapshots.get(conn.id);
+        const snap = polled?.token === conn.accessToken ? polled.snap : null;
         if (snap?.blockingExhausted) {
           if (snap.blockingResetAt) quotaBlockedResets.push(snap.blockingResetAt);
           log.info(
