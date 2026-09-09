@@ -114,15 +114,16 @@ export function createErrorResult(statusCode, message, resetsAtMs) {
  * @returns {Response}
  */
 export function unavailableResponse(statusCode, message, retryAfter, retryAfterHuman) {
-  const retryAfterSec = Math.max(Math.ceil((new Date(retryAfter).getTime() - Date.now()) / 1000), 1);
-  const msg = `${message} (${retryAfterHuman})`;
+  const resetMs = retryAfter ? Date.parse(retryAfter) : Number.NaN;
+  const retryAfterSec = Number.isFinite(resetMs) ? Math.max(Math.ceil((resetMs - Date.now()) / 1000), 1) : null;
+  const msg = retryAfterHuman ? `${message} (${retryAfterHuman})` : message;
   return new Response(
     JSON.stringify({ error: { message: msg } }),
     {
       status: statusCode,
       headers: {
         "Content-Type": "application/json",
-        "Retry-After": String(retryAfterSec)
+        ...(retryAfterSec !== null ? { "Retry-After": String(retryAfterSec) } : {})
       }
     }
   );

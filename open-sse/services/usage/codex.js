@@ -97,9 +97,10 @@ function getCodexSparkRateLimit(data) {
   }) || null;
 }
 
-export async function getCodexUsage(accessToken, proxyOptions = null) {
+export async function getCodexUsage(accessToken, proxyOptions = null, options = {}) {
   try {
     const response = await proxyAwareFetch(CODEX_CONFIG.usageUrl, {
+      signal: options.signal,
       method: "GET",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
