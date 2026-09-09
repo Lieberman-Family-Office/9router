@@ -1,4 +1,5 @@
-import { getModelQuotaFamily, getModelUpstreamId } from "../../../open-sse/config/providerModels.js";
+import { getModelUpstreamId } from "../../../open-sse/config/providerModels.js";
+import { stripThinkingSuffix } from "../../../open-sse/translator/concerns/thinkingUnified.js";
 
 export const DEFAULT_QUOTA_CACHE_TTL_MS = 45_000;
 export const DEFAULT_STALE_OK_MS = 300_000;
@@ -60,14 +61,17 @@ function fractionFromQuota(quota) {
 }
 
 export function normalizeQuotasToSnapshot(providerId, usage, model = null) {
-  const modelId = String(model || "").replace(/\([^()]+\)\s*$/, "").trim();
+  const modelId = stripThinkingSuffix(String(model || "")).trim();
   let sessionKey = PROVIDER_SESSION_KEYS[providerId] || "session";
   let entries = Object.entries(usage?.quotas || {});
   if (providerId === "codex") {
-    const family = getModelQuotaFamily("cx", modelId) === "review" ? "review"
-      : getModelUpstreamId("cx", modelId) === "gpt-5.3-codex-spark" ? "spark" : "";
-    sessionKey = family ? `${family}_session` : "session";
-    entries = entries.filter(([name]) => [sessionKey, family ? `${family}_weekly` : "weekly"].includes(name));
+    // Local admission policy, not entitlement proof: only exact Spark + reported Pro + Spark windows gets separate limits.
+    // Ordinary requests (including local review aliases) use general limits, not GitHub review windows.
+    const spark = stripThinkingSuffix(getModelUpstreamId("cx", modelId)) === "gpt-5.3-codex-spark"
+      && usage?.plan === "pro"
+      && entries.some(([name, quota]) => ["spark_session", "spark_weekly"].includes(name) && quota && typeof quota === "object");
+    sessionKey = spark ? "spark_session" : "session";
+    entries = entries.filter(([name]) => [sessionKey, spark ? "spark_weekly" : "weekly"].includes(name));
   } else if (providerId === "claude") {
     entries = entries.filter(([name]) => {
       const match = /^weekly (.+) \(7d\)$/.exec(name);

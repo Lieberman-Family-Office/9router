@@ -64,7 +64,7 @@ describe("polling isolation", () => {
   it("shares account usage across concurrent models without persisting raw token keys", async () => {
     const token = "mock-private-credential";
     mocks.getProviderConnections.mockResolvedValue([{ id: "cross-model", accessToken: token }]);
-    mocks.getCodexUsage.mockResolvedValue({ quotas: { weekly: { remaining: 50 }, spark_weekly: { remaining: 0 } } });
+    mocks.getCodexUsage.mockResolvedValue({ plan: "pro", quotas: { weekly: { remaining: 50 }, spark_weekly: { remaining: 0 } } });
     const keys = [];
     const originalSet = Map.prototype.set;
     const spy = vi.spyOn(Map.prototype, "set").mockImplementation(function(key, value) { keys.push(key); return originalSet.call(this, key, value); });
@@ -104,8 +104,15 @@ describe("polling isolation", () => {
       const pending = getProviderCredentials(provider);
       await vi.advanceTimersByTimeAsync(0);
       expect(signal.aborted).toBe(false);
-      await expect(getProviderCredentials("other")).resolves.toMatchObject({ connectionId: `slow-${provider}-other` });
+      let unrelated;
+      const other = getProviderCredentials("other").then(value => { unrelated = value; });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(unrelated?.connectionId).toBe(`slow-${provider}-other`);
+      await other;
+      let completed = false;
+      pending.then(() => { completed = true; });
       await vi.advanceTimersByTimeAsync(2000);
+      expect(completed).toBe(true);
       await expect(pending).resolves.toMatchObject({ connectionId: `slow-${provider}-${provider}` });
       expect(signal.aborted).toBe(true);
     } finally { vi.useRealTimers(); }

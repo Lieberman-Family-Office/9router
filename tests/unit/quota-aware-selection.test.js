@@ -8,11 +8,34 @@ import {
 } from "../../src/sse/services/quotaAwareSelection.js";
 
 describe("scoped quota windows", () => {
-  it("selects Codex normal, Spark and registry review families independently", () => {
-    const usage = { quotas: { session: { remaining: 80 }, weekly: { remaining: 50 }, spark_weekly: { remaining: 0 }, review_weekly: { remaining: 0 } } };
-    expect(normalizeQuotasToSnapshot("codex", usage, "gpt-6-astra").blockingExhausted).toBe(false);
-    expect(normalizeQuotasToSnapshot("codex", usage, "gpt-5.3-codex-spark").blockingExhausted).toBe(true);
-    expect(normalizeQuotasToSnapshot("codex", usage, "gpt-5.6-sol-review").blockingExhausted).toBe(true);
+  it.each(["gpt-5.6-sol-review", "gpt-5.6-sol-review(high)"])("uses general limits for local review %s", model => {
+    for (const remaining of [0, 50]) {
+      const usage = { plan: "pro", quotas: { weekly: { remaining }, review_weekly: { remaining: remaining ? 0 : 50 } } };
+      expect(normalizeQuotasToSnapshot("codex", usage, model).blockingExhausted).toBe(remaining === 0);
+    }
+  });
+  it.each(["gpt-5.3-codex-spark", "gpt-5.3-codex-spark(high)", "gpt-5.3-codex-spark-review", "gpt-5.3-codex-spark-review(xhigh)"])("admits exact Spark aliases using Pro Spark windows: %s", model => {
+    for (const remaining of [0, 50]) {
+      const usage = { plan: "pro", quotas: { weekly: { remaining: remaining ? 0 : 50 }, spark_weekly: { remaining }, review_weekly: { remaining: 0 } } };
+      expect(normalizeQuotasToSnapshot("codex", usage, model).blockingExhausted).toBe(remaining === 0);
+    }
+  });
+  it.each([undefined, "unknown", "plus", "team"])("retains general limits for Spark without reported Pro: %s", plan => {
+    for (const remaining of [0, 50]) {
+      const usage = { plan, quotas: { weekly: { remaining }, spark_weekly: { remaining: remaining ? 0 : 50 } } };
+      expect(normalizeQuotasToSnapshot("codex", usage, "gpt-5.3-codex-spark").blockingExhausted).toBe(remaining === 0);
+    }
+  });
+  it("retains general limits for missing Spark windows and future Spark models", () => {
+    for (const remaining of [0, 50]) {
+      const usage = { plan: "pro", quotas: { weekly: { remaining } } };
+      expect(normalizeQuotasToSnapshot("codex", usage, "gpt-5.3-codex-spark").blockingExhausted).toBe(remaining === 0);
+      usage.quotas.spark_weekly = { remaining: remaining ? 0 : 50 };
+      expect(normalizeQuotasToSnapshot("codex", usage, "gpt-6-codex-spark").blockingExhausted).toBe(remaining === 0);
+    }
+  });
+  it("preserves the session-only exhaustion policy", () => {
+    expect(normalizeQuotasToSnapshot("codex", { plan: "pro", quotas: { spark_session: { remaining: 0 } } }, "gpt-5.3-codex-spark").blockingExhausted).toBe(false);
   });
   it("uses the latest applicable Claude reset, refusing unknown or invalid resets", () => {
     const early = "2026-10-01T01:00:00.000Z";
