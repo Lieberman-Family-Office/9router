@@ -55,6 +55,8 @@ DEFAULT_GATE_PERSIST_S = 600.0
 GATE_SCHEMA = "og.memory_gate.v1"
 NINE_ROUTER_DIRNAME = ".9router"
 ISO_UTC_FMT = "%Y-%m-%dT%H:%M:%SZ"
+GATE_STATE_REL = (NINE_ROUTER_DIRNAME, "state", "memory-gate.json")
+GATE_TMP_SUFFIX = ".tmp"
 
 
 @dataclass
@@ -115,7 +117,7 @@ def update_gate_latch(
 
 
 def gate_path(home: Path) -> Path:
-    return home / NINE_ROUTER_DIRNAME / "state" / "memory-gate.json"
+    return Path(os.path.realpath(home)).joinpath(*GATE_STATE_REL)
 
 
 def _iso_utc(ts: Optional[float]) -> Optional[str]:
@@ -128,13 +130,11 @@ def _iso_utc(ts: Optional[float]) -> Optional[str]:
     )
 
 
-def safe_path_under(path: Path, *, root: Path) -> Path:
+def safe_path_under(path: Path | str, *, root: Path | str) -> str:
     """Canonicalize ``path`` and refuse escapes outside ``root`` (S8707)."""
-    resolved = Path(os.path.realpath(path))
-    base = Path(os.path.realpath(root))
-    base_prefix = str(base) + os.sep
-    resolved_s = str(resolved)
-    if resolved_s != str(base) and not resolved_s.startswith(base_prefix):
+    resolved = os.path.realpath(path)
+    base_dir = os.path.realpath(root)
+    if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
         raise ValueError(f"path {path!r} is outside the allowed directory")
     return resolved
 
@@ -176,38 +176,36 @@ def build_gate_payload(
 
 
 def write_gate_file(
-    path: Path,
     *,
+    home: Path,
     payload: Mapping[str, object],
     uid: Optional[int] = None,
-    root: Optional[Path] = None,
-) -> None:
-    """Atomically write the gate file.
+) -> Path:
+    """Atomically write the gate file under ``home/.9router/state/``.
 
-    When ``uid`` is set (root LaunchDaemon writing into a user home), chown the
-    state directory and gate file so the interactive user / Cursor hooks can
-    read and update it. Best-effort: chown failure does not raise.
-
-    ``root`` bounds writes (defaults to ``path.parent``). Paths that escape
-    ``root`` after canonicalization raise ``ValueError``.
+    Path is derived only from ``home`` plus fixed relative segments — never from
+    a caller-supplied file path — then canonicalized with ``safe_path_under``.
+    When ``uid`` is set, chown is best-effort and does not raise.
     """
-    allowed_root = root if root is not None else path.parent
-    path = safe_path_under(path, root=allowed_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp = safe_path_under(tmp, root=allowed_root)
+    home_root = os.path.realpath(home)
+    candidate = Path(home_root).joinpath(*GATE_STATE_REL)
+    path_s = safe_path_under(candidate, root=home_root)
+    parent_s = os.path.dirname(path_s)
+    os.makedirs(parent_s, exist_ok=True)
+    tmp_s = safe_path_under(path_s + GATE_TMP_SUFFIX, root=home_root)
     text = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
-    if uid is None:
-        return
-    for target in (path.parent, path):
-        try:
-            os.chown(target, uid, -1)
-        except OSError:
-            # Best-effort only: gate bytes are already written; ownership fix
-            # may fail on some FS layouts and must not abort the cycle.
-            continue
+    with open(tmp_s, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    os.replace(tmp_s, path_s)
+    if uid is not None:
+        for target in (parent_s, path_s):
+            try:
+                os.chown(target, uid, -1)
+            except OSError:
+                # Best-effort only: gate bytes are already written; ownership fix
+                # may fail on some FS layouts and must not abort the cycle.
+                continue
+    return Path(path_s)
 
 
 def notify_memory_gate(
@@ -761,12 +759,7 @@ def cycle(
         event=gate_event,
     )
     try:
-        write_gate_file(
-            gate_path(home),
-            payload=gate_payload,
-            uid=uid,
-            root=home,
-        )
+        write_gate_file(home=home, payload=gate_payload, uid=uid)
     except (OSError, ValueError) as exc:
         notes = list(notes) + [f"gate_write:{type(exc).__name__}"]
     notify_result = None
