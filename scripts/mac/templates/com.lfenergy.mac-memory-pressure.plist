@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Mac memory-pressure monitor + safe remediation.
+
+  Install (admin; unsubstituted __HOME__/__UID__ fails loudly):
+
+    sed -e "s|__HOME__|$HOME|g" -e "s|__UID__|$(id -u)|g" \
+      scripts/mac/templates/com.lfenergy.mac-memory-pressure.plist \
+      > /tmp/com.lfenergy.mac-memory-pressure.plist
+    # copy script to $HOME/.9router/bin/mac_memory_pressure.py first
+    sudo cp /tmp/com.lfenergy.mac-memory-pressure.plist \
+      /Library/LaunchDaemons/com.lfenergy.mac-memory-pressure.plist
+    sudo launchctl bootstrap system \
+      /Library/LaunchDaemons/com.lfenergy.mac-memory-pressure.plist
+    sudo launchctl kickstart -k system/com.lfenergy.mac-memory-pressure
+
+  Does NOT kill Cursor/agents. May purge caches and kickstart 9router/helper
+  when compressor/swap bands stay elevated.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.lfenergy.mac-memory-pressure</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>__HOME__/.9router/bin/mac_memory_pressure.py</string>
+    <string>--loop</string>
+    <string>--home</string>
+    <string>__HOME__</string>
+    <string>--uid</string>
+    <string>__UID__</string>
+    <string>--ok-interval</string>
+    <string>300</string>
+    <string>--stress-interval</string>
+    <string>60</string>
+    <string>--fail-threshold</string>
+    <string>2</string>
+    <string>--cooldown</string>
+    <string>1800</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>StandardOutPath</key>
+  <string>__HOME__/.9router/logs/memory-pressure.launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/.9router/logs/memory-pressure.launchd.err.log</string>
+</dict>
+</plist>

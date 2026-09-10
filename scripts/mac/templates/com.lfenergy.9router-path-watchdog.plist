@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  9router path watchdog — probe + kickstart for hung-alive Tailscale/9router.
+
+  Install (requires admin; substitutes placeholders — an unsubstituted
+  __HOME__/__UID__ install fails loudly):
+
+    HOME_ESC=$(printf %q "$HOME")
+    UID_NOW=$(id -u)
+    sed -e "s|__HOME__|$HOME|g" -e "s|__UID__|$UID_NOW|g" \
+      scripts/mac/templates/com.lfenergy.9router-path-watchdog.plist \
+      > /tmp/com.lfenergy.9router-path-watchdog.plist
+    # copy script to $HOME/.9router/bin/9router_path_watchdog.py first
+    sudo cp /tmp/com.lfenergy.9router-path-watchdog.plist \
+      /Library/LaunchDaemons/com.lfenergy.9router-path-watchdog.plist
+    sudo launchctl bootstrap system \
+      /Library/LaunchDaemons/com.lfenergy.9router-path-watchdog.plist
+    sudo launchctl kickstart -k system/com.lfenergy.9router-path-watchdog
+
+  Runs as root so it can kickstart system Tailscale and gui/UID LaunchAgents.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.lfenergy.9router-path-watchdog</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>__HOME__/.9router/bin/9router_path_watchdog.py</string>
+    <string>--loop</string>
+    <string>--home</string>
+    <string>__HOME__</string>
+    <string>--uid</string>
+    <string>__UID__</string>
+    <string>--interval</string>
+    <string>30</string>
+    <string>--timeout</string>
+    <string>5</string>
+    <string>--fail-threshold</string>
+    <string>2</string>
+    <string>--cooldown</string>
+    <string>180</string>
+    <string>--ts-bin</string>
+    <string>/opt/homebrew/bin/tailscale</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+
+  <key>StandardOutPath</key>
+  <string>__HOME__/.9router/logs/path-watchdog.launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/.9router/logs/path-watchdog.launchd.err.log</string>
+</dict>
+</plist>
