@@ -370,10 +370,25 @@ def test_write_gate_file_atomic(mp, tmp_path):
             "purge_anchor_wall": None,
             "notify_sent_at": None,
         },
+        root=tmp_path,
     )
     assert path.is_file()
     data = __import__("json").loads(path.read_text())
     assert data["state"] == "clear"
+
+
+def test_write_gate_file_rejects_path_escape(mp, tmp_path):
+    outside = tmp_path.parent / "escape-memory-gate.json"
+    try:
+        mp.write_gate_file(
+            outside,
+            payload={"schema": "og.memory_gate.v1", "state": "clear"},
+            root=tmp_path,
+        )
+    except ValueError as exc:
+        assert "outside the allowed directory" in str(exc)
+    else:
+        raise AssertionError("expected ValueError for path escape")
 
 
 def test_write_gate_file_chowns_when_uid_set(mp, tmp_path, monkeypatch):
@@ -388,9 +403,11 @@ def test_write_gate_file_chowns_when_uid_set(mp, tmp_path, monkeypatch):
         path,
         payload={"schema": "og.memory_gate.v1", "state": "clear"},
         uid=501,
+        root=tmp_path,
     )
-    assert (str(path.parent), 501, -1) in seen
-    assert (str(path), 501, -1) in seen
+    resolved = path.resolve()
+    assert (str(resolved.parent), 501, -1) in seen
+    assert (str(resolved), 501, -1) in seen
 
 
 def test_notify_memory_gate_dry_run(mp):

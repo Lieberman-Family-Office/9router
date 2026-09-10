@@ -53,6 +53,8 @@ HOMEBREW_CACHE_MAX_AGE_S = 14 * 86400
 
 DEFAULT_GATE_PERSIST_S = 600.0
 GATE_SCHEMA = "og.memory_gate.v1"
+NINE_ROUTER_DIRNAME = ".9router"
+ISO_UTC_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 @dataclass
@@ -113,7 +115,7 @@ def update_gate_latch(
 
 
 def gate_path(home: Path) -> Path:
-    return home / ".9router" / "state" / "memory-gate.json"
+    return home / NINE_ROUTER_DIRNAME / "state" / "memory-gate.json"
 
 
 def _iso_utc(ts: Optional[float]) -> Optional[str]:
@@ -122,8 +124,19 @@ def _iso_utc(ts: Optional[float]) -> Optional[str]:
     return (
         datetime.fromtimestamp(ts, tz=timezone.utc)
         .replace(microsecond=0)
-        .strftime("%Y-%m-%dT%H:%M:%SZ")
+        .strftime(ISO_UTC_FMT)
     )
+
+
+def safe_path_under(path: Path, *, root: Path) -> Path:
+    """Canonicalize ``path`` and refuse escapes outside ``root`` (S8707)."""
+    resolved = Path(os.path.realpath(path))
+    base = Path(os.path.realpath(root))
+    base_prefix = str(base) + os.sep
+    resolved_s = str(resolved)
+    if resolved_s != str(base) and not resolved_s.startswith(base_prefix):
+        raise ValueError(f"path {path!r} is outside the allowed directory")
+    return resolved
 
 
 def build_gate_payload(
@@ -167,15 +180,22 @@ def write_gate_file(
     *,
     payload: Mapping[str, object],
     uid: Optional[int] = None,
+    root: Optional[Path] = None,
 ) -> None:
     """Atomically write the gate file.
 
     When ``uid`` is set (root LaunchDaemon writing into a user home), chown the
     state directory and gate file so the interactive user / Cursor hooks can
     read and update it. Best-effort: chown failure does not raise.
+
+    ``root`` bounds writes (defaults to ``path.parent``). Paths that escape
+    ``root`` after canonicalization raise ``ValueError``.
     """
+    allowed_root = root if root is not None else path.parent
+    path = safe_path_under(path, root=allowed_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp = safe_path_under(tmp, root=allowed_root)
     text = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
     tmp.write_text(text, encoding="utf-8")
     os.replace(tmp, path)
@@ -185,7 +205,9 @@ def write_gate_file(
         try:
             os.chown(target, uid, -1)
         except OSError:
-            pass
+            # Best-effort only: gate bytes are already written; ownership fix
+            # may fail on some FS layouts and must not abort the cycle.
+            continue
 
 
 def notify_memory_gate(
@@ -359,6 +381,69 @@ def sample_memory(
     )
 
 
+def _proc_detail_from_pid(
+    pid: int,
+    command: str,
+    runner: Callable[..., subprocess.CompletedProcess],
+) -> Optional[ProcInfo]:
+    detail = runner(
+        [PS, "-p", str(pid), "-o", "rss=,etime="],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    fields = (detail.stdout or "").strip().split()
+    if len(fields) < 2:
+        return None
+    try:
+        rss_kb = int(fields[0])
+        etime_s = parse_etime_to_seconds(fields[1])
+    except ValueError:
+        return None
+    return ProcInfo(
+        pid=pid,
+        rss_kb=rss_kb,
+        etime_s=etime_s,
+        command=command[:200],
+    )
+
+
+def _procs_matching_pattern(
+    pattern: str,
+    runner: Callable[..., subprocess.CompletedProcess],
+) -> list[ProcInfo]:
+    pg = runner(
+        ["/usr/bin/pgrep", "-lf", pattern],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    rows: list[ProcInfo] = []
+    for line in (pg.stdout or "").splitlines():
+        parts = line.split(None, 1)
+        if len(parts) < 2:
+            continue
+        try:
+            pid = int(parts[0])
+        except ValueError:
+            continue
+        info = _proc_detail_from_pid(pid, parts[1], runner)
+        if info is not None:
+            rows.append(info)
+    return rows
+
+
+def _dedupe_procs_by_pid(rows: Sequence[ProcInfo]) -> list[ProcInfo]:
+    by_pid: dict[int, ProcInfo] = {}
+    for p in rows:
+        prev = by_pid.get(p.pid)
+        if prev is None or p.rss_kb > prev.rss_kb:
+            by_pid[p.pid] = p
+    return list(by_pid.values())
+
+
 def list_top_rss(
     *,
     top_n: int = DEFAULT_TOP_N,
@@ -367,51 +452,12 @@ def list_top_rss(
     # Targeted lookup only — full `ps -ax` can hang under swap thrash.
     rows: list[ProcInfo] = []
     for pattern in ("next-server", "combo-helper", "Cursor Helper", "Cursor$"):
-        pg = runner(
-            ["/usr/bin/pgrep", "-lf", pattern],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-        for line in (pg.stdout or "").splitlines():
-            parts = line.split(None, 1)
-            if len(parts) < 2:
-                continue
-            try:
-                pid = int(parts[0])
-            except ValueError:
-                continue
-            detail = runner(
-                [PS, "-p", str(pid), "-o", "rss=,etime="],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-            )
-            fields = (detail.stdout or "").strip().split()
-            if len(fields) < 2:
-                continue
-            try:
-                rss_kb = int(fields[0])
-                etime_s = parse_etime_to_seconds(fields[1])
-            except ValueError:
-                continue
-            rows.append(
-                ProcInfo(
-                    pid=pid,
-                    rss_kb=rss_kb,
-                    etime_s=etime_s,
-                    command=parts[1][:200],
-                )
-            )
-
-    by_pid = {}
-    for p in rows:
-        prev = by_pid.get(p.pid)
-        if prev is None or p.rss_kb > prev.rss_kb:
-            by_pid[p.pid] = p
-    ranked = sorted(by_pid.values(), key=lambda p: p.rss_kb, reverse=True)
+        rows.extend(_procs_matching_pattern(pattern, runner))
+    ranked = sorted(
+        _dedupe_procs_by_pid(rows),
+        key=lambda p: p.rss_kb,
+        reverse=True,
+    )
     return ranked[:top_n]
 
 
@@ -715,14 +761,19 @@ def cycle(
         event=gate_event,
     )
     try:
-        write_gate_file(gate_path(home), payload=gate_payload, uid=uid)
-    except OSError as exc:
+        write_gate_file(
+            gate_path(home),
+            payload=gate_payload,
+            uid=uid,
+            root=home,
+        )
+    except (OSError, ValueError) as exc:
         notes = list(notes) + [f"gate_write:{type(exc).__name__}"]
     notify_result = None
     if gate_event == "latch":
         notify_result = notify_memory_gate(uid=uid, dry_run=dry_run)
     event = {
-        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started)),
+        "ts": time.strftime(ISO_UTC_FMT, time.gmtime(started)),
         "band": band,
         "stress_streak": state.stress_streak,
         "compressor_gb": round(sample.compressor_gb, 2),
@@ -753,7 +804,7 @@ def cycle(
         event["notify_result"] = notify_result
     if top_err:
         event["top_rss_error"] = top_err
-    path = log_path or (home / ".9router" / "logs" / "memory-pressure.log")
+    path = log_path or (home / NINE_ROUTER_DIRNAME / "logs" / "memory-pressure.log")
     log_event(path, event)
     print(json.dumps(event, sort_keys=True), flush=True)
     if applied and any(not a.startswith("dry_run:") for a in applied):
@@ -798,9 +849,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 )
             except Exception as exc:  # noqa: BLE001
                 log_event(
-                    home / ".9router" / "logs" / "memory-pressure.log",
+                    home / NINE_ROUTER_DIRNAME / "logs" / "memory-pressure.log",
                     {
-                        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "ts": time.strftime(ISO_UTC_FMT, time.gmtime()),
                         "band": "error",
                         "fatal": f"{type(exc).__name__}:{exc}",
                     },
