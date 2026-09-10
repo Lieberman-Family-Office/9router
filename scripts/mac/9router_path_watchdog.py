@@ -83,7 +83,6 @@ def http_probe(url: str, *, timeout_s: float) -> tuple[bool, str]:
     except Exception as exc:  # noqa: BLE001 — probe must never raise
         return False, f"{type(exc).__name__}:{exc}"
 
-
 def resolve_tailscale_bin(explicit: Optional[str] = None) -> str:
     candidates = []
     if explicit:
@@ -98,6 +97,7 @@ def resolve_tailscale_bin(explicit: Optional[str] = None) -> str:
     for path in candidates:
         if path and Path(path).is_file() and os.access(path, os.X_OK):
             return path
+    # Last resort: PATH lookup (user shells); LaunchDaemon PATH is minimal.
     which = subprocess.run(
         ["/usr/bin/which", "tailscale"],
         capture_output=True,
@@ -190,11 +190,8 @@ def run_probes(
     ok, detail = tailscale_backend_running(
         socket_path=ts_socket, ts_bin=ts_bin, runner=runner
     )
-    results.append(
-        ProbeResult("ts_backend", ok, detail, PROBE_TARGETS["ts_backend"])
-    )
+    results.append(ProbeResult("ts_backend", ok, detail, PROBE_TARGETS["ts_backend"]))
     return results
-
 
 def decide_kicks(
     results: Sequence[ProbeResult],
@@ -236,12 +233,7 @@ def kickstart_commands(*, uid: int, targets: Iterable[str]) -> list[list[str]]:
             )
         elif target == TARGET_9ROUTER:
             cmds.append(
-                [
-                    "/bin/launchctl",
-                    "kickstart",
-                    "-k",
-                    f"gui/{uid}/com.lfenergy.9router",
-                ]
+                ["/bin/launchctl", "kickstart", "-k", f"gui/{uid}/com.lfenergy.9router"]
             )
         elif target == TARGET_HELPER:
             cmds.append(
@@ -341,7 +333,6 @@ def cycle(
     if not event["ok"]:
         return 1
     return 0
-
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
