@@ -1,0 +1,545 @@
+#!/usr/bin/env python3
+"""Monitor Mac memory/compressor/swap pressure; apply safe remediations.
+
+Root LaunchDaemon. Does NOT kill Cursor/agent sessions or reboot.
+
+Bands (page size typically 16 KiB on Apple Silicon):
+  ok       — compressor < 20 GB and swap used < 8 GB
+  warn     — compressor >= 20 GB OR swap used >= 8 GB
+  critical — compressor >= 28 GB OR swap used >= 16 GB
+
+Under warn/critical (2 consecutive samples): purge; optionally kickstart
+9router / combo-helper when RSS/uptime gates match; under critical also
+trim Homebrew download caches older than 14 days.
+
+Logs JSON lines to <home>/.9router/logs/memory-pressure.log.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable, Mapping, MutableMapping, Optional, Sequence
+
+PAGE_SIZE_DEFAULT = 16384
+
+WARN_COMPRESSOR_GB = 20.0
+WARN_SWAP_GB = 8.0
+CRITICAL_COMPRESSOR_GB = 28.0
+CRITICAL_SWAP_GB = 16.0
+
+NINE_ROUTER_RSS_MB = 1536.0  # 1.5 GB
+NINE_ROUTER_UPTIME_S = 12 * 3600
+HELPER_RSS_MB = 512.0
+
+DEFAULT_OK_INTERVAL_S = 300.0
+DEFAULT_STRESS_INTERVAL_S = 60.0
+DEFAULT_FAIL_THRESHOLD = 2
+DEFAULT_COOLDOWN_S = 1800.0  # 30 min
+DEFAULT_TOP_N = 15
+HOMEBREW_CACHE_MAX_AGE_S = 14 * 86400
+
+VM_STAT = "/usr/bin/vm_stat"
+SYSCTL = "/usr/sbin/sysctl"
+PURGE = "/usr/sbin/purge"
+PS = "/bin/ps"
+LAUNCHCTL = "/bin/launchctl"
+
+CLASS_PURGE = "purge"
+CLASS_KICK = "kick"
+CLASS_CACHE = "cache"
+
+
+@dataclass
+class MemSample:
+    page_size: int
+    compressor_pages: int
+    purgeable_pages: int
+    swap_used_mb: float
+    swap_total_mb: float
+    free_pct: Optional[float] = None
+
+    @property
+    def compressor_gb(self) -> float:
+        return (self.compressor_pages * self.page_size) / (1024.0**3)
+
+    @property
+    def swap_used_gb(self) -> float:
+        return self.swap_used_mb / 1024.0
+
+
+@dataclass
+class ProcInfo:
+    pid: int
+    rss_kb: int
+    etime_s: float
+    command: str
+
+    @property
+    def rss_mb(self) -> float:
+        return self.rss_kb / 1024.0
+
+
+@dataclass
+class PressureState:
+    stress_streak: int = 0
+    last_remediation_mono: MutableMapping[str, float] = field(default_factory=dict)
+
+
+def classify_band(sample: MemSample) -> str:
+    if (
+        sample.compressor_gb >= CRITICAL_COMPRESSOR_GB
+        or sample.swap_used_gb >= CRITICAL_SWAP_GB
+    ):
+        return "critical"
+    if (
+        sample.compressor_gb >= WARN_COMPRESSOR_GB or sample.swap_used_gb >= WARN_SWAP_GB
+    ):
+        return "warn"
+    return "ok"
+
+
+def parse_vm_stat(text: str, *, page_size: int = PAGE_SIZE_DEFAULT) -> dict:
+    """Parse vm_stat output into a dict of int counters."""
+    out: dict = {"page_size": page_size}
+    m = re.search(r"page size of\s+(\d+)\s+bytes", text)
+    if m:
+        out["page_size"] = int(m.group(1))
+    for line in text.splitlines():
+        if ":" not in line:
+            continue
+        key, _, rest = line.partition(":")
+        key = key.strip().strip('"')
+        num = re.search(r"(\d+)", rest.replace(".", ""))
+        if not num:
+            continue
+        norm = key.lower().replace(" ", "_")
+        out[norm] = int(num.group(1))
+    return out
+
+
+def parse_swapusage(text: str) -> tuple[float, float]:
+    """Return (used_mb, total_mb) from sysctl vm.swapusage."""
+    total_m = re.search(r"total\s*=\s*([\d.]+)M", text)
+    used_m = re.search(r"used\s*=\s*([\d.]+)M", text)
+    if not total_m or not used_m:
+        return 0.0, 0.0
+    return float(used_m.group(1)), float(total_m.group(1))
+
+
+def parse_etime_to_seconds(etime: str) -> float:
+    """Parse ps etime ([[dd-]hh:]mm:ss) to seconds."""
+    etime = etime.strip()
+    days = 0
+    if "-" in etime:
+        day_s, etime = etime.split("-", 1)
+        days = int(day_s)
+    parts = [int(p) for p in etime.split(":")]
+    if len(parts) == 3:
+        hh, mm, ss = parts
+    elif len(parts) == 2:
+        hh = 0
+        mm, ss = parts
+    else:
+        return float(days * 86400)
+    return float(days * 86400 + hh * 3600 + mm * 60 + ss)
+
+
+def sample_memory(
+    *,
+    runner: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+) -> MemSample:
+    vm = runner([VM_STAT], capture_output=True, text=True, timeout=15, check=False)
+    parsed = parse_vm_stat(vm.stdout or "", page_size=PAGE_SIZE_DEFAULT)
+    page_size = int(parsed.get("page_size", PAGE_SIZE_DEFAULT))
+    compressor = int(
+        parsed.get("pages_occupied_by_compressor")
+        or parsed.get("pages_stored_in_compressor")
+        or 0
+    )
+    purgeable = int(parsed.get("pages_purgeable") or 0)
+    sw = runner(
+        [SYSCTL, "vm.swapusage"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    used_mb, total_mb = parse_swapusage(sw.stdout or "")
+    return MemSample(
+        page_size=page_size,
+        compressor_pages=compressor,
+        purgeable_pages=purgeable,
+        swap_used_mb=used_mb,
+        swap_total_mb=total_mb,
+        free_pct=None,
+    )
+
+
+def list_top_rss(
+    *,
+    top_n: int = DEFAULT_TOP_N,
+    runner: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+) -> list[ProcInfo]:
+    proc = runner(
+        [PS, "-axo", "pid=,rss=,etime=,command="],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    rows: list[ProcInfo] = []
+    for line in (proc.stdout or "").splitlines():
+        parts = line.split(None, 3)
+        if len(parts) < 4:
+            continue
+        try:
+            pid = int(parts[0])
+            rss_kb = int(parts[1])
+            etime_s = parse_etime_to_seconds(parts[2])
+        except ValueError:
+            continue
+        rows.append(
+            ProcInfo(
+                pid=pid,
+                rss_kb=rss_kb,
+                etime_s=etime_s,
+                command=parts[3][:200],
+            )
+        )
+    rows.sort(key=lambda p: p.rss_kb, reverse=True)
+    return rows[:top_n]
+
+
+def find_proc(procs: Sequence[ProcInfo], *needles: str) -> Optional[ProcInfo]:
+    for p in procs:
+        cmd = p.command.lower()
+        if all(n.lower() in cmd for n in needles):
+            return p
+    return None
+
+
+def decide_remediations(
+    *,
+    band: str,
+    stress_streak: int,
+    fail_threshold: int,
+    sample: MemSample,
+    procs: Sequence[ProcInfo],
+    now_mono: float,
+    last_remediation_mono: Mapping[str, float],
+    cooldown_s: float,
+) -> tuple[list[str], list[str]]:
+    notes: list[str] = []
+    actions: list[str] = []
+    if band == "ok":
+        return actions, notes
+    if stress_streak < fail_threshold:
+        notes.append(f"streak:{stress_streak}<{fail_threshold}")
+        return actions, notes
+
+    def cooled(cls: str) -> bool:
+        last = last_remediation_mono.get(cls)
+        if last is None:
+            return False
+        return (now_mono - last) < cooldown_s
+
+    if cooled(CLASS_PURGE):
+        notes.append("purge:cooldown")
+    else:
+        actions.append("purge")
+
+    nine = find_proc(procs, "next-server") or find_proc(procs, "9router")
+    helper = find_proc(procs, "combo-helper")
+
+    if cooled(CLASS_KICK):
+        notes.append("kick:cooldown")
+    else:
+        if nine and (
+            nine.rss_mb >= NINE_ROUTER_RSS_MB or nine.etime_s >= NINE_ROUTER_UPTIME_S
+        ):
+            actions.append("kick:9router")
+            notes.append(
+                f"9router:rss_mb={nine.rss_mb:.0f}:etime_s={nine.etime_s:.0f}"
+            )
+        elif nine:
+            notes.append(
+                f"9router:skip:rss_mb={nine.rss_mb:.0f}:etime_s={nine.etime_s:.0f}"
+            )
+        else:
+            notes.append("9router:not_found")
+        if helper and helper.rss_mb >= HELPER_RSS_MB:
+            actions.append("kick:helper")
+            notes.append(f"helper:rss_mb={helper.rss_mb:.0f}")
+        elif helper:
+            notes.append(f"helper:skip:rss_mb={helper.rss_mb:.0f}")
+        else:
+            notes.append("helper:not_found")
+
+    if band == "critical":
+        if cooled(CLASS_CACHE):
+            notes.append("cache:cooldown")
+        else:
+            actions.append("cache:homebrew")
+            notes.append(f"purgeable_pages={sample.purgeable_pages}")
+    return actions, notes
+
+
+def apply_purge(
+    *,
+    dry_run: bool,
+    runner: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+) -> str:
+    if dry_run:
+        return "dry_run:purge"
+    proc = runner([PURGE], capture_output=True, text=True, timeout=120, check=False)
+    if proc.returncode == 0:
+        return "purged"
+    err = (proc.stderr or proc.stdout or "").strip()[:160]
+    return f"purge_failed:rc={proc.returncode}:{err}"
+
+
+def apply_kick(
+    target: str,
+    *,
+    uid: int,
+    dry_run: bool,
+    runner: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+) -> str:
+    if target == "9router":
+        label = f"gui/{uid}/com.lfenergy.9router"
+    elif target == "helper":
+        label = f"gui/{uid}/com.lfenergy.9router-combo-helper"
+    else:
+        return f"kick_unknown:{target}"
+    cmd = [LAUNCHCTL, "kickstart", "-k", label]
+    if dry_run:
+        return f"dry_run:{' '.join(cmd)}"
+    proc = runner(cmd, capture_output=True, text=True, timeout=60, check=False)
+    if proc.returncode == 0:
+        return f"kicked:{label}"
+    err = (proc.stderr or proc.stdout or "").strip()[:160]
+    return f"kick_failed:rc={proc.returncode}:{label}:{err}"
+
+
+def trim_homebrew_cache(
+    home: Path,
+    *,
+    dry_run: bool,
+    now: Optional[float] = None,
+    max_age_s: float = HOMEBREW_CACHE_MAX_AGE_S,
+) -> str:
+    root = home / "Library" / "Caches" / "Homebrew" / "downloads"
+    if not root.is_dir():
+        return "cache:homebrew:absent"
+    now_ts = time.time() if now is None else now
+    removed = 0
+    bytes_freed = 0
+    for path in root.iterdir():
+        if not path.is_file():
+            continue
+        try:
+            age = now_ts - path.stat().st_mtime
+        except OSError:
+            continue
+        if age < max_age_s:
+            continue
+        try:
+            size = path.stat().st_size
+        except OSError:
+            size = 0
+        if dry_run:
+            removed += 1
+            bytes_freed += size
+            continue
+        try:
+            path.unlink()
+            removed += 1
+            bytes_freed += size
+        except OSError:
+            continue
+    prefix = "dry_run:" if dry_run else ""
+    return f"{prefix}cache:homebrew:removed={removed}:bytes={bytes_freed}"
+
+
+def apply_actions(
+    actions: Sequence[str],
+    *,
+    home: Path,
+    uid: int,
+    dry_run: bool,
+    state: PressureState,
+    now_mono: float,
+    runner: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+) -> list[str]:
+    results: list[str] = []
+    for action in actions:
+        if action == "purge":
+            results.append(apply_purge(dry_run=dry_run, runner=runner))
+            if not dry_run:
+                state.last_remediation_mono[CLASS_PURGE] = now_mono
+        elif action.startswith("kick:"):
+            target = action.split(":", 1)[1]
+            results.append(apply_kick(target, uid=uid, dry_run=dry_run, runner=runner))
+            if not dry_run:
+                state.last_remediation_mono[CLASS_KICK] = now_mono
+        elif action == "cache:homebrew":
+            results.append(trim_homebrew_cache(home, dry_run=dry_run))
+            if not dry_run:
+                state.last_remediation_mono[CLASS_CACHE] = now_mono
+        else:
+            results.append(f"unknown_action:{action}")
+    return results
+
+
+def log_event(log_path: Path, event: Mapping[str, object]) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(event, sort_keys=True, separators=(",", ":"))
+    with log_path.open("a", encoding="utf-8") as fh:
+        fh.write(line + "\n")
+
+
+def cycle(
+    *,
+    home: Path,
+    uid: int,
+    state: PressureState,
+    fail_threshold: int,
+    cooldown_s: float,
+    top_n: int,
+    dry_run: bool,
+    log_path: Optional[Path] = None,
+) -> tuple[int, str]:
+    started = time.time()
+    sample = sample_memory()
+    band = classify_band(sample)
+    if band == "ok":
+        state.stress_streak = 0
+    else:
+        state.stress_streak += 1
+    try:
+        procs = list_top_rss(top_n=top_n)
+    except Exception as exc:  # noqa: BLE001
+        procs = []
+        top_err = f"{type(exc).__name__}:{exc}"
+    else:
+        top_err = None
+    actions, notes = decide_remediations(
+        band=band,
+        stress_streak=state.stress_streak,
+        fail_threshold=fail_threshold,
+        sample=sample,
+        procs=procs,
+        now_mono=time.monotonic(),
+        last_remediation_mono=state.last_remediation_mono,
+        cooldown_s=cooldown_s,
+    )
+    applied = apply_actions(
+        actions,
+        home=home,
+        uid=uid,
+        dry_run=dry_run,
+        state=state,
+        now_mono=time.monotonic(),
+    )
+    event = {
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started)),
+        "band": band,
+        "stress_streak": state.stress_streak,
+        "compressor_gb": round(sample.compressor_gb, 2),
+        "swap_used_gb": round(sample.swap_used_gb, 2),
+        "swap_total_gb": round(sample.swap_total_mb / 1024.0, 2),
+        "purgeable_pages": sample.purgeable_pages,
+        "free_pct": sample.free_pct,
+        "page_size": sample.page_size,
+        "top_rss": [
+            {
+                "pid": p.pid,
+                "rss_mb": round(p.rss_mb, 1),
+                "etime_s": int(p.etime_s),
+                "command": p.command[:160],
+            }
+            for p in procs
+        ],
+        "notes": notes,
+        "actions": actions,
+        "applied": applied,
+        "dry_run": dry_run,
+        "uid": uid,
+        "home": str(home),
+    }
+    if top_err:
+        event["top_rss_error"] = top_err
+    path = log_path or (home / ".9router" / "logs" / "memory-pressure.log")
+    log_event(path, event)
+    print(json.dumps(event, sort_keys=True), flush=True)
+    if applied and any(not a.startswith("dry_run:") for a in applied):
+        return 2, band
+    if band != "ok":
+        return 1, band
+    return 0, band
+
+
+def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--home", type=Path, required=True)
+    p.add_argument("--uid", type=int, required=True)
+    p.add_argument("--loop", action="store_true")
+    p.add_argument("--ok-interval", type=float, default=DEFAULT_OK_INTERVAL_S)
+    p.add_argument("--stress-interval", type=float, default=DEFAULT_STRESS_INTERVAL_S)
+    p.add_argument("--fail-threshold", type=int, default=DEFAULT_FAIL_THRESHOLD)
+    p.add_argument("--cooldown", type=float, default=DEFAULT_COOLDOWN_S)
+    p.add_argument("--top-n", type=int, default=DEFAULT_TOP_N)
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--once", action="store_true")
+    return p.parse_args(argv)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    args = parse_args(argv)
+    home = args.home.expanduser().resolve()
+    state = PressureState()
+    if args.loop:
+        while True:
+            try:
+                _rc, band = cycle(
+                    home=home,
+                    uid=args.uid,
+                    state=state,
+                    fail_threshold=args.fail_threshold,
+                    cooldown_s=args.cooldown,
+                    top_n=args.top_n,
+                    dry_run=args.dry_run,
+                )
+            except Exception as exc:  # noqa: BLE001
+                log_event(
+                    home / ".9router" / "logs" / "memory-pressure.log",
+                    {
+                        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "band": "error",
+                        "fatal": f"{type(exc).__name__}:{exc}",
+                    },
+                )
+                band = "warn"
+            sleep_s = args.ok_interval if band == "ok" else args.stress_interval
+            time.sleep(max(5.0, float(sleep_s)))
+    rc, _band = cycle(
+        home=home,
+        uid=args.uid,
+        state=state,
+        fail_threshold=args.fail_threshold,
+        cooldown_s=args.cooldown,
+        top_n=args.top_n,
+        dry_run=args.dry_run,
+    )
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main())
