@@ -188,6 +188,69 @@ def sample_memory(
     )
 
 
+def _proc_detail_from_pid(
+    pid: int,
+    command: str,
+    runner: Callable[..., subprocess.CompletedProcess],
+) -> Optional[ProcInfo]:
+    detail = runner(
+        [PS, "-p", str(pid), "-o", "rss=,etime="],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+    fields = (detail.stdout or "").strip().split()
+    if len(fields) < 2:
+        return None
+    try:
+        rss_kb = int(fields[0])
+        etime_s = parse_etime_to_seconds(fields[1])
+    except ValueError:
+        return None
+    return ProcInfo(
+        pid=pid,
+        rss_kb=rss_kb,
+        etime_s=etime_s,
+        command=command[:200],
+    )
+
+
+def _procs_matching_pattern(
+    pattern: str,
+    runner: Callable[..., subprocess.CompletedProcess],
+) -> list[ProcInfo]:
+    pg = runner(
+        ["/usr/bin/pgrep", "-lf", pattern],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    rows: list[ProcInfo] = []
+    for line in (pg.stdout or "").splitlines():
+        parts = line.split(None, 1)
+        if len(parts) < 2:
+            continue
+        try:
+            pid = int(parts[0])
+        except ValueError:
+            continue
+        info = _proc_detail_from_pid(pid, parts[1], runner)
+        if info is not None:
+            rows.append(info)
+    return rows
+
+
+def _dedupe_procs_by_pid(rows: Sequence[ProcInfo]) -> list[ProcInfo]:
+    by_pid: dict[int, ProcInfo] = {}
+    for p in rows:
+        prev = by_pid.get(p.pid)
+        if prev is None or p.rss_kb > prev.rss_kb:
+            by_pid[p.pid] = p
+    return list(by_pid.values())
+
+
 def list_top_rss(
     *,
     top_n: int = DEFAULT_TOP_N,
@@ -196,51 +259,12 @@ def list_top_rss(
     # Targeted lookup only — full `ps -ax` can hang under swap thrash.
     rows: list[ProcInfo] = []
     for pattern in ("next-server", "combo-helper", "Cursor Helper", "Cursor$"):
-        pg = runner(
-            ["/usr/bin/pgrep", "-lf", pattern],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-        for line in (pg.stdout or "").splitlines():
-            parts = line.split(None, 1)
-            if len(parts) < 2:
-                continue
-            try:
-                pid = int(parts[0])
-            except ValueError:
-                continue
-            detail = runner(
-                [PS, "-p", str(pid), "-o", "rss=,etime="],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-            )
-            fields = (detail.stdout or "").strip().split()
-            if len(fields) < 2:
-                continue
-            try:
-                rss_kb = int(fields[0])
-                etime_s = parse_etime_to_seconds(fields[1])
-            except ValueError:
-                continue
-            rows.append(
-                ProcInfo(
-                    pid=pid,
-                    rss_kb=rss_kb,
-                    etime_s=etime_s,
-                    command=parts[1][:200],
-                )
-            )
-
-    by_pid = {}
-    for p in rows:
-        prev = by_pid.get(p.pid)
-        if prev is None or p.rss_kb > prev.rss_kb:
-            by_pid[p.pid] = p
-    ranked = sorted(by_pid.values(), key=lambda p: p.rss_kb, reverse=True)
+        rows.extend(_procs_matching_pattern(pattern, runner))
+    ranked = sorted(
+        _dedupe_procs_by_pid(rows),
+        key=lambda p: p.rss_kb,
+        reverse=True,
+    )
     return ranked[:top_n]
 
 
