@@ -40,6 +40,8 @@
     <string>2</string>
     <string>--cooldown</string>
     <string>1800</string>
+    <string>--gate-persist</string>
+    <string>600</string>
   </array>
 
   <key>RunAtLoad</key>
