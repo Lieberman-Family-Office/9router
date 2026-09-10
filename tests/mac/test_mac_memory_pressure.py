@@ -217,3 +217,197 @@ def test_trim_homebrew_cache_age_gate(mp, tmp_path):
     assert "removed=1" in msg
     assert not old.exists()
     assert new.exists()
+
+
+def test_gate_latch_requires_persist_window(mp):
+    latch = mp.GateLatchState()
+    latch, event = mp.update_gate_latch(
+        band="critical",
+        applied=["purge"],
+        notes=[],
+        now_wall=1_000.0,
+        persist_s=600.0,
+        latch=latch,
+    )
+    assert event is None
+    assert latch.purge_anchor_wall == 1_000.0
+    assert latch.latched is False
+
+    latch, event = mp.update_gate_latch(
+        band="critical",
+        applied=[],
+        notes=["purge:cooldown"],
+        now_wall=1_500.0,
+        persist_s=600.0,
+        latch=latch,
+    )
+    assert event is None
+    assert latch.latched is False
+
+    latch, event = mp.update_gate_latch(
+        band="critical",
+        applied=[],
+        notes=["purge:cooldown"],
+        now_wall=1_600.0,
+        persist_s=600.0,
+        latch=latch,
+    )
+    assert event == "latch"
+    assert latch.latched is True
+    assert latch.notify_sent is True
+    assert latch.latched_at_wall == 1_600.0
+
+
+def test_gate_clear_only_on_ok(mp):
+    latch = mp.GateLatchState(
+        purge_anchor_wall=1_000.0,
+        latched=True,
+        notify_sent=True,
+        latched_at_wall=1_600.0,
+    )
+    latch, event = mp.update_gate_latch(
+        band="warn",
+        applied=[],
+        notes=[],
+        now_wall=2_000.0,
+        persist_s=600.0,
+        latch=latch,
+    )
+    assert event is None
+    assert latch.latched is True
+
+    latch, event = mp.update_gate_latch(
+        band="ok",
+        applied=[],
+        notes=[],
+        now_wall=2_100.0,
+        persist_s=600.0,
+        latch=latch,
+    )
+    assert event == "clear"
+    assert latch.latched is False
+    assert latch.purge_anchor_wall is None
+    assert latch.notify_sent is False
+
+
+def test_gate_anchor_not_reset_while_critical(mp):
+    latch = mp.GateLatchState()
+    latch, _ = mp.update_gate_latch(
+        band="critical",
+        applied=["purge"],
+        notes=[],
+        now_wall=1_000.0,
+        persist_s=600.0,
+        latch=latch,
+    )
+    latch, _ = mp.update_gate_latch(
+        band="critical",
+        applied=["purge"],
+        notes=[],
+        now_wall=1_100.0,
+        persist_s=600.0,
+        latch=latch,
+    )
+    assert latch.purge_anchor_wall == 1_000.0
+
+
+def test_gate_anchor_from_purged_applied_token(mp):
+    latch = mp.GateLatchState()
+    latch, event = mp.update_gate_latch(
+        band="critical",
+        applied=["purged"],
+        notes=[],
+        now_wall=1_000.0,
+        persist_s=600.0,
+        latch=latch,
+    )
+    assert event is None
+    assert latch.purge_anchor_wall == 1_000.0
+
+
+def test_build_gate_payload_active(mp):
+    sample = mp.MemSample(
+        page_size=16384,
+        compressor_pages=int(30 * (1024**3) / 16384),
+        purgeable_pages=0,
+        swap_used_mb=20 * 1024,
+        swap_total_mb=22 * 1024,
+    )
+    latch = mp.GateLatchState(
+        purge_anchor_wall=1_000.0,
+        latched=True,
+        notify_sent=True,
+        latched_at_wall=1_600.0,
+    )
+    payload = mp.build_gate_payload(
+        latch=latch,
+        band="critical",
+        sample=sample,
+        persist_s=600.0,
+        now_wall=1_600.0,
+        event="latch",
+    )
+    assert payload["schema"] == "og.memory_gate.v1"
+    assert payload["state"] == "active"
+    assert payload["persist_s"] == 600.0
+    assert payload["reason"] == "critical_persisted_after_purge"
+
+
+def test_write_gate_file_atomic(mp, tmp_path):
+    written = mp.write_gate_file(
+        home=tmp_path,
+        payload={
+            "schema": "og.memory_gate.v1",
+            "state": "clear",
+            "reason": "band_ok",
+            "latched_at": None,
+            "cleared_at": "2026-09-10T00:00:00Z",
+            "persist_s": 600,
+            "band": "ok",
+            "compressor_gb": 1.0,
+            "swap_used_gb": 1.0,
+            "purge_anchor_wall": None,
+            "notify_sent_at": None,
+        },
+    )
+    assert written == mp.gate_path(tmp_path)
+    assert written.is_file()
+    data = __import__("json").loads(written.read_text())
+    assert data["state"] == "clear"
+
+
+def test_write_gate_file_rejects_path_escape(mp, tmp_path, monkeypatch):
+    def evil_joinpath(self, *parts):
+        return tmp_path.parent / "escape-memory-gate.json"
+
+    monkeypatch.setattr(mp.Path, "joinpath", evil_joinpath)
+    try:
+        mp.write_gate_file(
+            home=tmp_path,
+            payload={"schema": "og.memory_gate.v1", "state": "clear"},
+        )
+    except ValueError as exc:
+        assert "outside the allowed directory" in str(exc)
+    else:
+        raise AssertionError("expected ValueError for path escape")
+
+
+def test_write_gate_file_chowns_when_uid_set(mp, tmp_path, monkeypatch):
+    seen = []
+
+    def fake_chown(target, uid, gid):
+        seen.append((str(target), uid, gid))
+
+    monkeypatch.setattr(mp.os, "chown", fake_chown)
+    written = mp.write_gate_file(
+        home=tmp_path,
+        payload={"schema": "og.memory_gate.v1", "state": "clear"},
+        uid=501,
+    )
+    assert (str(written.parent), 501, -1) in seen
+    assert (str(written), 501, -1) in seen
+
+
+def test_notify_memory_gate_dry_run(mp):
+    out = mp.notify_memory_gate(uid=501, dry_run=True)
+    assert out == "dry_run:notify"

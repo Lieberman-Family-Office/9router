@@ -12,6 +12,10 @@ Under warn/critical (2 consecutive samples): purge; optionally kickstart
 9router / combo-helper when RSS/uptime gates match; under critical also
 trim Homebrew download caches older than 14 days.
 
+Memory gate (<home>/.9router/state/memory-gate.json): after a critical
+purge, the latch stays active for --gate-persist seconds (default 600).
+While active, Cursor hooks deny nested Task tool calls.
+
 Logs JSON lines to <home>/.9router/logs/memory-pressure.log.
 """
 
@@ -19,11 +23,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Mapping, MutableMapping, Optional, Sequence
 
@@ -44,6 +50,190 @@ DEFAULT_FAIL_THRESHOLD = 2
 DEFAULT_COOLDOWN_S = 1800.0  # 30 min
 DEFAULT_TOP_N = 15
 HOMEBREW_CACHE_MAX_AGE_S = 14 * 86400
+
+DEFAULT_GATE_PERSIST_S = 600.0
+GATE_SCHEMA = "og.memory_gate.v1"
+NINE_ROUTER_DIRNAME = ".9router"
+ISO_UTC_FMT = "%Y-%m-%dT%H:%M:%SZ"
+GATE_STATE_REL = (NINE_ROUTER_DIRNAME, "state", "memory-gate.json")
+GATE_TMP_SUFFIX = ".tmp"
+
+
+@dataclass
+class GateLatchState:
+    purge_anchor_wall: Optional[float] = None
+    latched: bool = False
+    notify_sent: bool = False
+    latched_at_wall: Optional[float] = None
+
+
+def update_gate_latch(
+    *,
+    band: str,
+    applied: Sequence[str],
+    notes: Sequence[str],
+    now_wall: float,
+    persist_s: float,
+    latch: GateLatchState,
+) -> tuple[GateLatchState, Optional[str]]:
+    """Advance latch state. Returns (new_state, event) with event in {None, latch, clear}."""
+    new = GateLatchState(
+        purge_anchor_wall=latch.purge_anchor_wall,
+        latched=latch.latched,
+        notify_sent=latch.notify_sent,
+        latched_at_wall=latch.latched_at_wall,
+    )
+
+    if band == "ok":
+        was = new.latched
+        new.purge_anchor_wall = None
+        new.latched = False
+        new.notify_sent = False
+        new.latched_at_wall = None
+        return new, ("clear" if was else None)
+
+    purge_signal = any(
+        a == "purge"
+        or a == "purged"
+        or a.startswith("dry_run:purge")
+        for a in applied
+    ) or ("purge:cooldown" in notes and band == "critical")
+
+    if band == "critical" and purge_signal and new.purge_anchor_wall is None:
+        new.purge_anchor_wall = now_wall
+
+    if (
+        band == "critical"
+        and new.purge_anchor_wall is not None
+        and (now_wall - new.purge_anchor_wall) >= persist_s
+        and not new.latched
+    ):
+        new.latched = True
+        new.notify_sent = True
+        new.latched_at_wall = now_wall
+        return new, "latch"
+
+    return new, None
+
+
+def gate_path(home: Path) -> Path:
+    return Path(os.path.realpath(home)).joinpath(*GATE_STATE_REL)
+
+
+def _iso_utc(ts: Optional[float]) -> Optional[str]:
+    if ts is None:
+        return None
+    return (
+        datetime.fromtimestamp(ts, tz=timezone.utc)
+        .replace(microsecond=0)
+        .strftime(ISO_UTC_FMT)
+    )
+
+
+def safe_path_under(path: Path | str, *, root: Path | str) -> str:
+    """Canonicalize ``path`` and refuse escapes outside ``root`` (S8707)."""
+    resolved = os.path.realpath(path)
+    base_dir = os.path.realpath(root)
+    if resolved != base_dir and not resolved.startswith(base_dir + os.sep):
+        raise ValueError(f"path {path!r} is outside the allowed directory")
+    return resolved
+
+
+def build_gate_payload(
+    *,
+    latch: GateLatchState,
+    band: str,
+    sample: MemSample,
+    persist_s: float,
+    now_wall: float,
+    event: Optional[str],
+) -> dict:
+    if latch.latched:
+        reason = "critical_persisted_after_purge"
+        state = "active"
+        cleared_at = None
+        latched_at = _iso_utc(latch.latched_at_wall)
+        notify_sent_at = latched_at if latch.notify_sent else None
+    else:
+        reason = "band_ok" if band == "ok" else "tracking"
+        state = "clear"
+        cleared_at = _iso_utc(now_wall) if event == "clear" else None
+        latched_at = None
+        notify_sent_at = None
+    return {
+        "schema": GATE_SCHEMA,
+        "state": state,
+        "reason": reason,
+        "latched_at": latched_at,
+        "cleared_at": cleared_at,
+        "persist_s": persist_s,
+        "band": band,
+        "compressor_gb": round(sample.compressor_gb, 2),
+        "swap_used_gb": round(sample.swap_used_gb, 2),
+        "purge_anchor_wall": _iso_utc(latch.purge_anchor_wall),
+        "notify_sent_at": notify_sent_at,
+    }
+
+
+def write_gate_file(
+    *,
+    home: Path,
+    payload: Mapping[str, object],
+    uid: Optional[int] = None,
+) -> Path:
+    """Atomically write the gate file under ``home/.9router/state/``.
+
+    Path is derived only from ``home`` plus fixed relative segments — never from
+    a caller-supplied file path — then canonicalized with ``safe_path_under``.
+    When ``uid`` is set, chown is best-effort and does not raise.
+    """
+    home_root = os.path.realpath(home)
+    candidate = Path(home_root).joinpath(*GATE_STATE_REL)
+    path_s = safe_path_under(candidate, root=home_root)
+    parent_s = os.path.dirname(path_s)
+    os.makedirs(parent_s, exist_ok=True)
+    tmp_s = safe_path_under(path_s + GATE_TMP_SUFFIX, root=home_root)
+    text = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    with open(tmp_s, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    os.replace(tmp_s, path_s)
+    if uid is not None:
+        for target in (parent_s, path_s):
+            try:
+                os.chown(target, uid, -1)
+            except OSError:
+                # Best-effort only: gate bytes are already written; ownership fix
+                # may fail on some FS layouts and must not abort the cycle.
+                continue
+    return Path(path_s)
+
+
+def notify_memory_gate(
+    *,
+    uid: int,
+    dry_run: bool,
+    runner: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+) -> str:
+    if dry_run:
+        return "dry_run:notify"
+    script = (
+        'display notification "Mac memory still critical after purge; '
+        'nested Task spawn is gated." with title "LF Energy memory gate"'
+    )
+    cmd = [
+        "/bin/launchctl",
+        "asuser",
+        str(uid),
+        "/usr/bin/osascript",
+        "-e",
+        script,
+    ]
+    try:
+        runner(cmd, capture_output=True, text=True, timeout=15, check=False)
+    except Exception as exc:  # noqa: BLE001
+        return f"notify:failed:{type(exc).__name__}"
+    return "notify:sent"
+
 
 VM_STAT = "/usr/bin/vm_stat"
 SYSCTL = "/usr/sbin/sysctl"
@@ -90,6 +280,7 @@ class ProcInfo:
 class PressureState:
     stress_streak: int = 0
     last_remediation_mono: MutableMapping[str, float] = field(default_factory=dict)
+    gate: GateLatchState = field(default_factory=GateLatchState)
 
 
 def classify_band(sample: MemSample) -> str:
@@ -511,6 +702,7 @@ def cycle(
     cooldown_s: float,
     top_n: int,
     dry_run: bool,
+    persist_s: float = DEFAULT_GATE_PERSIST_S,
     log_path: Optional[Path] = None,
 ) -> tuple[int, str]:
     """One sample/remediate cycle. Returns (exit_code, band)."""
@@ -549,8 +741,32 @@ def cycle(
         state=state,
         now_mono=time.monotonic(),
     )
+    gate_event: Optional[str]
+    state.gate, gate_event = update_gate_latch(
+        band=band,
+        applied=applied,
+        notes=notes,
+        now_wall=started,
+        persist_s=persist_s,
+        latch=state.gate,
+    )
+    gate_payload = build_gate_payload(
+        latch=state.gate,
+        band=band,
+        sample=sample,
+        persist_s=persist_s,
+        now_wall=started,
+        event=gate_event,
+    )
+    try:
+        write_gate_file(home=home, payload=gate_payload, uid=uid)
+    except (OSError, ValueError) as exc:
+        notes = list(notes) + [f"gate_write:{type(exc).__name__}"]
+    notify_result = None
+    if gate_event == "latch":
+        notify_result = notify_memory_gate(uid=uid, dry_run=dry_run)
     event = {
-        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started)),
+        "ts": time.strftime(ISO_UTC_FMT, time.gmtime(started)),
         "band": band,
         "stress_streak": state.stress_streak,
         "compressor_gb": round(sample.compressor_gb, 2),
@@ -574,10 +790,14 @@ def cycle(
         "dry_run": dry_run,
         "uid": uid,
         "home": str(home),
+        "gate_event": gate_event,
+        "gate_state": gate_payload["state"],
     }
+    if notify_result is not None:
+        event["notify_result"] = notify_result
     if top_err:
         event["top_rss_error"] = top_err
-    path = log_path or (home / ".9router" / "logs" / "memory-pressure.log")
+    path = log_path or (home / NINE_ROUTER_DIRNAME / "logs" / "memory-pressure.log")
     log_event(path, event)
     print(json.dumps(event, sort_keys=True), flush=True)
     if applied and any(not a.startswith("dry_run:") for a in applied):
@@ -596,6 +816,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--stress-interval", type=float, default=DEFAULT_STRESS_INTERVAL_S)
     p.add_argument("--fail-threshold", type=int, default=DEFAULT_FAIL_THRESHOLD)
     p.add_argument("--cooldown", type=float, default=DEFAULT_COOLDOWN_S)
+    p.add_argument("--gate-persist", type=float, default=DEFAULT_GATE_PERSIST_S)
     p.add_argument("--top-n", type=int, default=DEFAULT_TOP_N)
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--once", action="store_true")
@@ -617,12 +838,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     cooldown_s=args.cooldown,
                     top_n=args.top_n,
                     dry_run=args.dry_run,
+                    persist_s=args.gate_persist,
                 )
             except Exception as exc:  # noqa: BLE001
                 log_event(
-                    home / ".9router" / "logs" / "memory-pressure.log",
+                    home / NINE_ROUTER_DIRNAME / "logs" / "memory-pressure.log",
                     {
-                        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "ts": time.strftime(ISO_UTC_FMT, time.gmtime()),
                         "band": "error",
                         "fatal": f"{type(exc).__name__}:{exc}",
                     },
@@ -638,6 +860,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         cooldown_s=args.cooldown,
         top_n=args.top_n,
         dry_run=args.dry_run,
+        persist_s=args.gate_persist,
     )
     return rc
 
