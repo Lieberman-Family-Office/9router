@@ -39,8 +39,10 @@ DEFAULT_FAIL_THRESHOLD = 2
 DEFAULT_COOLDOWN_S = 180
 DEFAULT_TS_SOCKET = "/var/run/tailscaled.socket"
 DEFAULT_TS_BIN = "/opt/homebrew/bin/tailscale"
-LOCAL_9ROUTER = "http://127.0.0.1:20128/v1/models"
-LOCAL_HELPER = "http://127.0.0.1:20129/combo/subs-coding"
+LAUNCHCTL = "/bin/launchctl"
+# Plain HTTP is intentional: probes hit local/Tailscale TCP serve, not the public TLS edge.
+LOCAL_9ROUTER = "http://127.0.0.1:20128/v1/models"  # NOSONAR python:S5332
+LOCAL_HELPER = "http://127.0.0.1:20129/combo/subs-coding"  # NOSONAR python:S5332
 
 TARGET_TAILSCALE = "tailscale"
 TARGET_9ROUTER = "9router"
@@ -82,6 +84,7 @@ def http_probe(url: str, *, timeout_s: float) -> tuple[bool, str]:
         return False, f"http_{exc.code}"
     except Exception as exc:  # noqa: BLE001 — probe must never raise
         return False, f"{type(exc).__name__}:{exc}"
+
 
 def resolve_tailscale_bin(explicit: Optional[str] = None) -> str:
     candidates = []
@@ -179,7 +182,9 @@ def run_probes(
             )
         )
     else:
-        ok, detail = do_http(f"http://{ts_ip}:20128/v1/models")
+        # Plain HTTP: Tailscale TCP serve forwards to local 9router (no TLS on :20128).
+        hairpin_url = f"http://{ts_ip}:20128/v1/models"  # NOSONAR python:S5332
+        ok, detail = do_http(hairpin_url)
         results.append(
             ProbeResult("hairpin_ts", ok, detail, PROBE_TARGETS["hairpin_ts"])
         )
@@ -192,6 +197,7 @@ def run_probes(
     )
     results.append(ProbeResult("ts_backend", ok, detail, PROBE_TARGETS["ts_backend"]))
     return results
+
 
 def decide_kicks(
     results: Sequence[ProbeResult],
@@ -229,16 +235,16 @@ def kickstart_commands(*, uid: int, targets: Iterable[str]) -> list[list[str]]:
     for target in targets:
         if target == TARGET_TAILSCALE:
             cmds.append(
-                ["/bin/launchctl", "kickstart", "-k", "system/com.lfenergy.tailscaled"]
+                [LAUNCHCTL, "kickstart", "-k", "system/com.lfenergy.tailscaled"]
             )
         elif target == TARGET_9ROUTER:
             cmds.append(
-                ["/bin/launchctl", "kickstart", "-k", f"gui/{uid}/com.lfenergy.9router"]
+                [LAUNCHCTL, "kickstart", "-k", f"gui/{uid}/com.lfenergy.9router"]
             )
         elif target == TARGET_HELPER:
             cmds.append(
                 [
-                    "/bin/launchctl",
+                    LAUNCHCTL,
                     "kickstart",
                     "-k",
                     f"gui/{uid}/com.lfenergy.9router-combo-helper",
@@ -333,6 +339,7 @@ def cycle(
     if not event["ok"]:
         return 1
     return 0
+
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)

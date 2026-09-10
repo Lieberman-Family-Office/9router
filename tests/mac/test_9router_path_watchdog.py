@@ -16,7 +16,8 @@ def _load():
     # Register before exec so @dataclass can resolve cls.__module__.
     name = "og_9router_path_watchdog"
     spec = importlib.util.spec_from_file_location(name, SCRIPT)
-    assert spec and spec.loader
+    assert spec is not None
+    assert spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     import sys
 
@@ -74,6 +75,7 @@ def test_cooldown_suppresses_repeat_kick(wd):
         wd.ProbeResult("helper", True, "http_200", ("helper",)),
         wd.ProbeResult("ts_backend", False, "BackendState='Stopped'", ("tailscale",)),
     ]
+    # streak becomes 3 (>=2), but cooldown active
     kicks, notes = wd.decide_kicks(
         results, state, now_mono=150.0, fail_threshold=2, cooldown_s=180
     )

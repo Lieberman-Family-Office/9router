@@ -16,7 +16,8 @@ SCRIPT = (
 def _load():
     name = "og_mac_memory_pressure"
     spec = importlib.util.spec_from_file_location(name, SCRIPT)
-    assert spec and spec.loader
+    assert spec is not None
+    assert spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     sys.modules[name] = mod
     spec.loader.exec_module(mod)
@@ -122,13 +123,13 @@ def test_warn_triggers_purge_and_gated_kicks(mp):
     procs = [
         mp.ProcInfo(
             pid=10,
-            rss_kb=2_000_000,
+            rss_kb=2_000_000,  # ~1953 MB
             etime_s=100,
             command="/path/next-server (v16.3.4)",
         ),
         mp.ProcInfo(
             pid=11,
-            rss_kb=600_000,
+            rss_kb=600_000,  # ~586 MB
             etime_s=50,
             command="/Users/x/.9router/combo-helper/combo-helper -listen",
         ),
@@ -207,6 +208,7 @@ def test_trim_homebrew_cache_age_gate(mp, tmp_path):
     old.write_bytes(b"x" * 100)
     new.write_bytes(b"y" * 50)
     now = 1_700_000_000.0
+    # old = 20 days ago, new = 1 day ago
     import os
 
     os.utime(old, (now - 20 * 86400, now - 20 * 86400))

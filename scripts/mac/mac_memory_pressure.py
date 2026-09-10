@@ -99,14 +99,15 @@ def classify_band(sample: MemSample) -> str:
     ):
         return "critical"
     if (
-        sample.compressor_gb >= WARN_COMPRESSOR_GB or sample.swap_used_gb >= WARN_SWAP_GB
+        sample.compressor_gb >= WARN_COMPRESSOR_GB
+        or sample.swap_used_gb >= WARN_SWAP_GB
     ):
         return "warn"
     return "ok"
 
 
 def parse_vm_stat(text: str, *, page_size: int = PAGE_SIZE_DEFAULT) -> dict:
-    """Parse vm_stat output into a dict of int counters."""
+    """Parse `vm_stat` output into a dict of int counters."""
     out: dict = {"page_size": page_size}
     m = re.search(r"page size of\s+(\d+)\s+bytes", text)
     if m:
@@ -119,13 +120,15 @@ def parse_vm_stat(text: str, *, page_size: int = PAGE_SIZE_DEFAULT) -> dict:
         num = re.search(r"(\d+)", rest.replace(".", ""))
         if not num:
             continue
+        # Normalize keys used below
         norm = key.lower().replace(" ", "_")
         out[norm] = int(num.group(1))
     return out
 
 
 def parse_swapusage(text: str) -> tuple[float, float]:
-    """Return (used_mb, total_mb) from sysctl vm.swapusage."""
+    """Return (used_mb, total_mb) from `sysctl vm.swapusage`."""
+    # vm.swapusage: total = 22528.00M  used = 21250.88M  free = 1277.12M
     total_m = re.search(r"total\s*=\s*([\d.]+)M", text)
     used_m = re.search(r"used\s*=\s*([\d.]+)M", text)
     if not total_m or not used_m:
@@ -160,10 +163,11 @@ def sample_memory(
     page_size = int(parsed.get("page_size", PAGE_SIZE_DEFAULT))
     compressor = int(
         parsed.get("pages_occupied_by_compressor")
-        or parsed.get("pages_stored_in_compressor")
+        or parsed.get("pages_used_by_compressor")
         or 0
     )
     purgeable = int(parsed.get("pages_purgeable") or 0)
+
     sw = runner(
         [SYSCTL, "vm.swapusage"],
         capture_output=True,
@@ -172,6 +176,8 @@ def sample_memory(
         check=False,
     )
     used_mb, total_mb = parse_swapusage(sw.stdout or "")
+
+    # Skip memory_pressure — it can block for minutes under swap thrash.
     return MemSample(
         page_size=page_size,
         compressor_pages=compressor,
@@ -187,34 +193,55 @@ def list_top_rss(
     top_n: int = DEFAULT_TOP_N,
     runner: Callable[..., subprocess.CompletedProcess] = subprocess.run,
 ) -> list[ProcInfo]:
-    proc = runner(
-        [PS, "-axo", "pid=,rss=,etime=,command="],
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
+    # Targeted lookup only — full `ps -ax` can hang under swap thrash.
     rows: list[ProcInfo] = []
-    for line in (proc.stdout or "").splitlines():
-        parts = line.split(None, 3)
-        if len(parts) < 4:
-            continue
-        try:
-            pid = int(parts[0])
-            rss_kb = int(parts[1])
-            etime_s = parse_etime_to_seconds(parts[2])
-        except ValueError:
-            continue
-        rows.append(
-            ProcInfo(
-                pid=pid,
-                rss_kb=rss_kb,
-                etime_s=etime_s,
-                command=parts[3][:200],
-            )
+    for pattern in ("next-server", "combo-helper", "Cursor Helper", "Cursor$"):
+        pg = runner(
+            ["/usr/bin/pgrep", "-lf", pattern],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
         )
-    rows.sort(key=lambda p: p.rss_kb, reverse=True)
-    return rows[:top_n]
+        for line in (pg.stdout or "").splitlines():
+            parts = line.split(None, 1)
+            if len(parts) < 2:
+                continue
+            try:
+                pid = int(parts[0])
+            except ValueError:
+                continue
+            detail = runner(
+                [PS, "-p", str(pid), "-o", "rss=,etime="],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            fields = (detail.stdout or "").strip().split()
+            if len(fields) < 2:
+                continue
+            try:
+                rss_kb = int(fields[0])
+                etime_s = parse_etime_to_seconds(fields[1])
+            except ValueError:
+                continue
+            rows.append(
+                ProcInfo(
+                    pid=pid,
+                    rss_kb=rss_kb,
+                    etime_s=etime_s,
+                    command=parts[1][:200],
+                )
+            )
+
+    by_pid = {}
+    for p in rows:
+        prev = by_pid.get(p.pid)
+        if prev is None or p.rss_kb > prev.rss_kb:
+            by_pid[p.pid] = p
+    ranked = sorted(by_pid.values(), key=lambda p: p.rss_kb, reverse=True)
+    return ranked[:top_n]
 
 
 def find_proc(procs: Sequence[ProcInfo], *needles: str) -> Optional[ProcInfo]:
@@ -223,6 +250,43 @@ def find_proc(procs: Sequence[ProcInfo], *needles: str) -> Optional[ProcInfo]:
         if all(n.lower() in cmd for n in needles):
             return p
     return None
+
+
+def _cooled(
+    cls: str,
+    *,
+    now_mono: float,
+    last_remediation_mono: Mapping[str, float],
+    cooldown_s: float,
+) -> bool:
+    last = last_remediation_mono.get(cls)
+    if last is None:
+        return False
+    return (now_mono - last) < cooldown_s
+
+
+def _note_kick_candidate(
+    *,
+    label: str,
+    proc: Optional[ProcInfo],
+    rss_limit_mb: float,
+    uptime_limit_s: Optional[float],
+    actions: list[str],
+    notes: list[str],
+    kick_token: str,
+) -> None:
+    if proc is None:
+        notes.append(f"{label}:not_found")
+        return
+    over_rss = proc.rss_mb >= rss_limit_mb
+    over_uptime = (
+        uptime_limit_s is not None and proc.etime_s >= uptime_limit_s
+    )
+    if over_rss or over_uptime:
+        actions.append(kick_token)
+        notes.append(f"{label}:rss_mb={proc.rss_mb:.0f}:etime_s={proc.etime_s:.0f}")
+        return
+    notes.append(f"{label}:skip:rss_mb={proc.rss_mb:.0f}:etime_s={proc.etime_s:.0f}")
 
 
 def decide_remediations(
@@ -236,8 +300,10 @@ def decide_remediations(
     last_remediation_mono: Mapping[str, float],
     cooldown_s: float,
 ) -> tuple[list[str], list[str]]:
+    """Return (actions, notes). Actions are tokens: purge, kick:9router, …"""
     notes: list[str] = []
     actions: list[str] = []
+
     if band == "ok":
         return actions, notes
     if stress_streak < fail_threshold:
@@ -245,42 +311,41 @@ def decide_remediations(
         return actions, notes
 
     def cooled(cls: str) -> bool:
-        last = last_remediation_mono.get(cls)
-        if last is None:
-            return False
-        return (now_mono - last) < cooldown_s
+        return _cooled(
+            cls,
+            now_mono=now_mono,
+            last_remediation_mono=last_remediation_mono,
+            cooldown_s=cooldown_s,
+        )
 
     if cooled(CLASS_PURGE):
         notes.append("purge:cooldown")
     else:
         actions.append("purge")
 
-    nine = find_proc(procs, "next-server") or find_proc(procs, "9router")
-    helper = find_proc(procs, "combo-helper")
-
     if cooled(CLASS_KICK):
         notes.append("kick:cooldown")
     else:
-        if nine and (
-            nine.rss_mb >= NINE_ROUTER_RSS_MB or nine.etime_s >= NINE_ROUTER_UPTIME_S
-        ):
-            actions.append("kick:9router")
-            notes.append(
-                f"9router:rss_mb={nine.rss_mb:.0f}:etime_s={nine.etime_s:.0f}"
-            )
-        elif nine:
-            notes.append(
-                f"9router:skip:rss_mb={nine.rss_mb:.0f}:etime_s={nine.etime_s:.0f}"
-            )
-        else:
-            notes.append("9router:not_found")
-        if helper and helper.rss_mb >= HELPER_RSS_MB:
-            actions.append("kick:helper")
-            notes.append(f"helper:rss_mb={helper.rss_mb:.0f}")
-        elif helper:
-            notes.append(f"helper:skip:rss_mb={helper.rss_mb:.0f}")
-        else:
-            notes.append("helper:not_found")
+        nine = find_proc(procs, "next-server") or find_proc(procs, "9router")
+        helper = find_proc(procs, "combo-helper")
+        _note_kick_candidate(
+            label="9router",
+            proc=nine,
+            rss_limit_mb=NINE_ROUTER_RSS_MB,
+            uptime_limit_s=NINE_ROUTER_UPTIME_S,
+            actions=actions,
+            notes=notes,
+            kick_token="kick:9router",
+        )
+        _note_kick_candidate(
+            label="helper",
+            proc=helper,
+            rss_limit_mb=HELPER_RSS_MB,
+            uptime_limit_s=None,
+            actions=actions,
+            notes=notes,
+            kick_token="kick:helper",
+        )
 
     if band == "critical":
         if cooled(CLASS_CACHE):
@@ -288,6 +353,7 @@ def decide_remediations(
         else:
             actions.append("cache:homebrew")
             notes.append(f"purgeable_pages={sample.purgeable_pages}")
+
     return actions, notes
 
 
@@ -328,6 +394,24 @@ def apply_kick(
     return f"kick_failed:rc={proc.returncode}:{label}:{err}"
 
 
+def _homebrew_file_age_bytes(
+    path: Path, *, now_ts: float, max_age_s: float
+) -> Optional[int]:
+    """Return size if path is an old file; else None."""
+    if not path.is_file():
+        return None
+    try:
+        age = now_ts - path.stat().st_mtime
+    except OSError:
+        return None
+    if age < max_age_s:
+        return None
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
 def trim_homebrew_cache(
     home: Path,
     *,
@@ -335,6 +419,7 @@ def trim_homebrew_cache(
     now: Optional[float] = None,
     max_age_s: float = HOMEBREW_CACHE_MAX_AGE_S,
 ) -> str:
+    """Remove Homebrew download files older than max_age_s."""
     root = home / "Library" / "Caches" / "Homebrew" / "downloads"
     if not root.is_dir():
         return "cache:homebrew:absent"
@@ -342,28 +427,16 @@ def trim_homebrew_cache(
     removed = 0
     bytes_freed = 0
     for path in root.iterdir():
-        if not path.is_file():
+        size = _homebrew_file_age_bytes(path, now_ts=now_ts, max_age_s=max_age_s)
+        if size is None:
             continue
-        try:
-            age = now_ts - path.stat().st_mtime
-        except OSError:
-            continue
-        if age < max_age_s:
-            continue
-        try:
-            size = path.stat().st_size
-        except OSError:
-            size = 0
-        if dry_run:
-            removed += 1
-            bytes_freed += size
-            continue
-        try:
-            path.unlink()
-            removed += 1
-            bytes_freed += size
-        except OSError:
-            continue
+        if not dry_run:
+            try:
+                path.unlink()
+            except OSError:
+                continue
+        removed += 1
+        bytes_freed += size
     prefix = "dry_run:" if dry_run else ""
     return f"{prefix}cache:homebrew:removed={removed}:bytes={bytes_freed}"
 
@@ -416,6 +489,7 @@ def cycle(
     dry_run: bool,
     log_path: Optional[Path] = None,
 ) -> tuple[int, str]:
+    """One sample/remediate cycle. Returns (exit_code, band)."""
     started = time.time()
     sample = sample_memory()
     band = classify_band(sample)
@@ -423,6 +497,8 @@ def cycle(
         state.stress_streak = 0
     else:
         state.stress_streak += 1
+
+    # For top RSS, under ok we still sample lightly but may skip on error
     try:
         procs = list_top_rss(top_n=top_n)
     except Exception as exc:  # noqa: BLE001
@@ -430,6 +506,7 @@ def cycle(
         top_err = f"{type(exc).__name__}:{exc}"
     else:
         top_err = None
+
     actions, notes = decide_remediations(
         band=band,
         stress_streak=state.stress_streak,
