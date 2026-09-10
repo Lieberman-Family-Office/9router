@@ -52,10 +52,35 @@ def test_classify_ok_warn_critical(mp):
         page_size=16384,
         compressor_pages=int(10 * (1024**3) / 16384),
         purgeable_pages=0,
-        swap_used_mb=17 * 1024,
-        swap_total_mb=22 * 1024,
+        swap_used_mb=23 * 1024,
+        swap_total_mb=28 * 1024,
     )
     assert mp.classify_band(crit_swap) == "critical"
+
+    # Just under critical swap (22 GB): warn only
+    near_crit_swap = mp.MemSample(
+        page_size=16384,
+        compressor_pages=int(10 * (1024**3) / 16384),
+        purgeable_pages=0,
+        swap_used_mb=21 * 1024,
+        swap_total_mb=28 * 1024,
+    )
+    assert mp.classify_band(near_crit_swap) == "warn"
+
+    crit_compressor = mp.MemSample(
+        page_size=16384,
+        compressor_pages=int(32 * (1024**3) / 16384),
+        purgeable_pages=0,
+        swap_used_mb=4 * 1024,
+        swap_total_mb=20 * 1024,
+    )
+    assert mp.classify_band(crit_compressor) == "critical"
+
+
+def test_critical_and_gate_persist_defaults(mp):
+    assert mp.CRITICAL_COMPRESSOR_GB == 32.0
+    assert mp.CRITICAL_SWAP_GB == 22.0
+    assert mp.DEFAULT_GATE_PERSIST_S == 14400.0
 
 
 def test_parse_vm_stat_and_swap(mp):
