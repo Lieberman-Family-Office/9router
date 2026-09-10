@@ -41,7 +41,7 @@
     <string>--cooldown</string>
     <string>1800</string>
     <string>--gate-persist</string>
-    <string>600</string>
+    <string>14400</string>
   </array>
 
   <key>RunAtLoad</key>

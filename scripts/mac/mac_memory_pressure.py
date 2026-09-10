@@ -6,15 +6,15 @@ Root LaunchDaemon. Does NOT kill Cursor/agent sessions or reboot.
 Bands (page size typically 16 KiB on Apple Silicon):
   ok       — compressor < 20 GB and swap used < 8 GB
   warn     — compressor >= 20 GB OR swap used >= 8 GB
-  critical — compressor >= 28 GB OR swap used >= 16 GB
+  critical — compressor >= 32 GB OR swap used >= 22 GB
 
 Under warn/critical (2 consecutive samples): purge; optionally kickstart
 9router / combo-helper when RSS/uptime gates match; under critical also
 trim Homebrew download caches older than 14 days.
 
 Memory gate (<home>/.9router/state/memory-gate.json): after a critical
-purge, the latch stays active for --gate-persist seconds (default 600).
-While active, Cursor hooks deny nested Task tool calls.
+purge, the latch fires if band stays critical for --gate-persist seconds
+(default 14400 = 4h). While active, Cursor hooks deny nested Task tool calls.
 
 Logs JSON lines to <home>/.9router/logs/memory-pressure.log.
 """
@@ -37,8 +37,8 @@ PAGE_SIZE_DEFAULT = 16384
 
 WARN_COMPRESSOR_GB = 20.0
 WARN_SWAP_GB = 8.0
-CRITICAL_COMPRESSOR_GB = 28.0
-CRITICAL_SWAP_GB = 16.0
+CRITICAL_COMPRESSOR_GB = 32.0
+CRITICAL_SWAP_GB = 22.0
 
 NINE_ROUTER_RSS_MB = 1536.0  # 1.5 GB
 NINE_ROUTER_UPTIME_S = 12 * 3600
@@ -51,7 +51,7 @@ DEFAULT_COOLDOWN_S = 1800.0  # 30 min
 DEFAULT_TOP_N = 15
 HOMEBREW_CACHE_MAX_AGE_S = 14 * 86400
 
-DEFAULT_GATE_PERSIST_S = 600.0
+DEFAULT_GATE_PERSIST_S = 14400.0  # 4h critical after purge
 GATE_SCHEMA = "og.memory_gate.v1"
 NINE_ROUTER_DIRNAME = ".9router"
 ISO_UTC_FMT = "%Y-%m-%dT%H:%M:%SZ"
