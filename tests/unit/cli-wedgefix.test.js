@@ -53,7 +53,9 @@ describe("CLI wedgefix: startup kill is scoped to this port", () => {
   });
 
   it("cli.js no longer kills bare next-server from ps", () => {
-    expect(cliSource).not.toMatch(/\|\|\s*cmd\.includes\("next-server"\)/);
+    // ponytail: comment strip is regex-based, not a JS parser; fine for this file's // and /* */ comments.
+    const code = cliSource.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\s\/\/ .*$/gm, "");
+    expect(code).not.toContain("next-server");
     expect(cliSource).toContain("pidFromAppProcessLine(line, appPort, selfPid)");
   });
 });
