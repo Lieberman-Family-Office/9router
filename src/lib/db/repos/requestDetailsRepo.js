@@ -10,6 +10,37 @@ const CONFIG_CACHE_TTL_MS = 5000;
 let cachedConfig = null;
 let cachedConfigTs = 0;
 
+// REQUEST_DETAILS_MODE=metadata: persist requestDetails rows (status, latency, tokens,
+// upstream error status + redacted error text) WITHOUT request/response bodies, and
+// independently of ENABLE_REQUEST_LOGS=false (=true also turns on open-sse's file
+// logger, which writes full bodies and UNMASKED auth headers under logs/).
+const isMetadataOnly = () => process.env.REQUEST_DETAILS_MODE === "metadata";
+
+const SECRET_RE = /(bearer\s+)[^\s"',;]+|\b(sk|rk|pk)-[A-Za-z0-9_-]{4,}|\beyJ[A-Za-z0-9_-]{10,}(\.[A-Za-z0-9_-]+)*|\b(AIza[0-9A-Za-z_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[abprs]-[A-Za-z0-9-]{10,})/gi;
+const MAX_ERROR_TEXT = 500;
+
+function redactSecrets(text) {
+  return String(text).replace(SECRET_RE, (m, bearer) => (bearer ? `${bearer}[REDACTED]` : "[REDACTED]"));
+}
+
+// Keep only non-body fields. Error text is upstream-controlled and may echo the
+// request (prompt fragments, keys), so it is redacted and length-capped.
+function toMetadataRecord(record) {
+  const r = record.response || {};
+  const response = {};
+  if (r.status !== undefined) response.status = r.status;
+  if (r.error !== undefined && r.error !== null) response.error = redactSecrets(r.error).slice(0, MAX_ERROR_TEXT);
+  if (r.finish_reason !== undefined) response.finish_reason = r.finish_reason;
+  if (r.type !== undefined) response.type = r.type;
+  return {
+    id: record.id, provider: record.provider, model: record.model, connectionId: record.connectionId,
+    timestamp: record.timestamp, status: record.status, latency: record.latency, tokens: record.tokens,
+    request: { model: record.request?.model, stream: record.request?.stream },
+    response,
+    metadataOnly: true,
+  };
+}
+
 async function getObservabilityConfig() {
   if (cachedConfig && (Date.now() - cachedConfigTs) < CONFIG_CACHE_TTL_MS) return cachedConfig;
   try {
@@ -68,7 +99,7 @@ function sanitizeHeaders(headers) {
   return sanitized;
 }
 
-export const __test__ = { sanitizeHeaders };
+export const __test__ = { sanitizeHeaders, redactSecrets, toMetadataRecord };
 
 function generateDetailId(model) {
   const timestamp = new Date().toISOString();
@@ -102,7 +133,7 @@ async function flushToDatabase() {
           if (!item.timestamp) item.timestamp = new Date().toISOString();
           if (item.request?.headers) item.request.headers = sanitizeHeaders(item.request.headers);
 
-          const record = {
+          const full = {
             id: item.id,
             provider: item.provider || null,
             model: item.model || null,
@@ -117,6 +148,7 @@ async function flushToDatabase() {
             response: truncateField(item.response, config.maxJsonSize),
             pxpipe: item.pxpipe || undefined,
           };
+          const record = isMetadataOnly() ? toMetadataRecord({ ...full, request: item.request, response: item.response }) : full;
 
           db.run(
             `INSERT INTO requestDetails(id, timestamp, provider, model, connectionId, status, data) VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET timestamp = excluded.timestamp, provider = excluded.provider, model = excluded.model, connectionId = excluded.connectionId, status = excluded.status, data = excluded.data`,
@@ -142,7 +174,7 @@ async function flushToDatabase() {
 
 export async function saveRequestDetail(detail) {
   const config = await getObservabilityConfig();
-  if (!config.enabled) {return;}
+  if (!config.enabled && !isMetadataOnly()) {return;}
 
   writeBuffer.push(detail);
 
