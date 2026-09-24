@@ -62,6 +62,10 @@ export const ERROR_RULES = [
   { text: "no credentials",           cooldownMs: COOLDOWN.long },
   { text: "request not allowed",      cooldownMs: COOLDOWN.short },
   { text: "improperly formed request", cooldownMs: COOLDOWN.long },
+  // Hard usage-limit banners: 12 h lock. Must precede "rate limit" (substring of the first).
+  // Source: production's ~/.9router/apply-usage-limit-lock-patch.sh (cooldownMs:432e5).
+  { text: "user provided api key rate limit exceeded", cooldownMs: 12 * 60 * 60 * 1000 },
+  { text: "usage limit",              cooldownMs: 12 * 60 * 60 * 1000 },
   { text: "rate limit",               backoff: true },
   { text: "too many requests",        backoff: true },
   { text: "quota exceeded",           backoff: true },
