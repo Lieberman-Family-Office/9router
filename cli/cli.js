@@ -273,13 +273,11 @@ function killAllAppProcesses(appPort) {
           });
           const lines = output.split("\n").slice(1).filter(l => l.trim());
           lines.forEach(line => {
-            // Whitelist: real node process running 9router/cli.js, or next-server.
-            // Avoids killing editors/grep/strace/cursor that just have "9router" in cmdline.
+            // Whitelist: real node process running 9router/cli.js for THIS port.
+            // Do not kill bare next-server from WMI — use port-bound kill below.
+            const { isOwnNineRouterCli } = require("./src/cli/utils/killAppProcessMatch");
             const cmd = line.toLowerCase();
-            const isAppProcess =
-              (cmd.includes("node") && cmd.includes("9router") && (cmd.includes("cli.js") || cmd.includes("\\9router") || cmd.includes("/9router")))
-              || cmd.includes("next-server");
-            if (isAppProcess) {
+            if (isOwnNineRouterCli(cmd, appPort)) {
               const match = line.match(/^"(\d+)"/);
               if (match && match[1] && match[1] !== process.pid.toString()) {
                 pids.push(match[1]);
@@ -289,36 +287,53 @@ function killAllAppProcesses(appPort) {
         } catch (e) {
           // No processes found or error - continue
         }
-      } else {
-        // macOS/Linux: use ps to find all matching processes
+        // Port-bound listeners (next-server etc.)
         try {
+          const listened = execSync(
+            `powershell -NonInteractive -WindowStyle Hidden -Command "Get-NetTCPConnection -LocalPort ${appPort} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess"`,
+            { encoding: "utf8", windowsHide: true, timeout: 5000 }
+          );
+          listened.split(/\s+/).filter(Boolean).forEach((pid) => {
+            if (pid !== process.pid.toString()) pids.push(pid);
+          });
+        } catch {
+          /* no listeners */
+        }
+      } else {
+        // macOS/Linux: only CLIs that mention this port. Never kill bare
+        // next-server from ps — that wiped other instances (lab vs prod).
+        // Listeners on appPort are collected via lsof below.
+        try {
+          const { pidFromAppProcessLine } = require("./src/cli/utils/killAppProcessMatch");
           const output = execSync('ps aux 2>/dev/null', {
             encoding: 'utf8',
             timeout: 5000
           });
           const lines = output.split('\n');
+          const selfPid = process.pid.toString();
 
           lines.forEach(line => {
-            // Whitelist: real node process running 9router/cli.js, or next-server.
-            // Avoids killing grep/strace/editors/cursor that incidentally match "9router".
-            const cmd = line.toLowerCase();
-            const isAppProcess =
-              (cmd.includes("node") && cmd.includes("9router") && (cmd.includes("cli.js") || cmd.includes("/9router")))
-              || cmd.includes("next-server");
-            if (isAppProcess) {
-              const parts = line.trim().split(/\s+/);
-              const pid = parts[1];
-              if (pid && !isNaN(pid) && pid !== process.pid.toString()) {
-                pids.push(pid);
-              }
-            }
+            const pid = pidFromAppProcessLine(line, appPort, selfPid);
+            if (pid) pids.push(pid);
           });
         } catch (e) {
           // No processes found or error - continue
         }
+        try {
+          const listened = execSync(
+            `lsof -nP -iTCP:${appPort} -sTCP:LISTEN -t 2>/dev/null`,
+            { encoding: "utf8", timeout: 3000 }
+          );
+          listened.split(/\s+/).filter(Boolean).forEach((pid) => {
+            if (pid !== process.pid.toString()) pids.push(pid);
+          });
+        } catch {
+          /* no listeners */
+        }
       }
 
-      // Kill all found processes
+      // Kill all found processes (unique)
+      pids = [...new Set(pids)];
       if (pids.length > 0) {
         pids.forEach(pid => {
           try {
@@ -612,10 +627,24 @@ function startServer(updatePromise) {
   function spawnServer() {
     serverStartTime = Date.now();
     crashLog = [];
+    // Never pipe stderr to this parent: a stalled CLI event loop (tray -86,
+    // menu wait) fills the pipe and blocks next-server while :port still
+    // listens — the "wedged but alive" failure mode. Prefer a crash-log file,
+    // or ignore under attached/launchd mode.
+    const { resolveServerSpawnOptions } = require("./src/cli/utils/serverSpawnOptions");
+    const dataRoot = process.env.DATA_DIR || path.join(os.homedir(), ".9router");
+    const crashLogPath = path.join(dataRoot, "logs", "server-stderr.log");
+    const spawnOpts = resolveServerSpawnOptions({
+      showLog,
+      openCrashLog: () => {
+        fs.mkdirSync(path.dirname(crashLogPath), { recursive: true });
+        return fs.openSync(crashLogPath, "a");
+      },
+    });
     const child = spawn(RUNTIME, ["--dns-result-order=ipv4first", "--max-old-space-size=6144", serverPath], {
       cwd: standaloneDir,
-      stdio: showLog ? "inherit" : ["ignore", "ignore", "pipe"],
-      detached: true,
+      stdio: spawnOpts.stdio,
+      detached: spawnOpts.detached,
       windowsHide: true,
       env: {
         ...buildEnvWithRuntime(process.env),
@@ -623,12 +652,14 @@ function startServer(updatePromise) {
         HOSTNAME: host
       }
     });
-    if (!showLog && child.stderr) {
-      child.stderr.on("data", (data) => {
-        const lines = data.toString().split("\n").filter(Boolean);
-        crashLog.push(...lines);
-        if (crashLog.length > CRASH_LOG_LINES) crashLog = crashLog.slice(-CRASH_LOG_LINES);
-      });
+    // Best-effort: keep last lines of the crash log file for restart messages.
+    if (!showLog) {
+      try {
+        if (fs.existsSync(crashLogPath)) {
+          const lines = fs.readFileSync(crashLogPath, "utf8").split("\n").filter(Boolean);
+          crashLog = lines.slice(-CRASH_LOG_LINES);
+        }
+      } catch { /* ignore */ }
     }
     return child;
   }
