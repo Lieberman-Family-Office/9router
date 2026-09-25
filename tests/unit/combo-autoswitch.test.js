@@ -35,11 +35,13 @@ describe("detectRequiredCapabilities", () => {
     expect(r.has("vision")).toBe(true);
   });
 
-  it("web_search tool -> search", () => {
+  // combo.js: "search: temporarily disabled in auto-switch (feature not wired yet)".
+  // Lock the current behaviour; flip this back to `has("search") === true` when re-enabled.
+  it("web_search tool is NOT treated as a required capability (search auto-switch disabled)", () => {
     const r = detectRequiredCapabilities({ messages: [{ role: "user", content: "q" }], tools: [
       { type: "web_search" },
     ] });
-    expect(r.has("search")).toBe(true);
+    expect(r.has("search")).toBe(false);
   });
 
   it("responses input_image -> vision", () => {
@@ -65,10 +67,11 @@ describe("reorderByCapabilities", () => {
     expect(out).toHaveLength(2);
   });
 
+  // reorderByCapabilities returns a stably-sorted copy; order is what matters, not identity.
   it("keeps order when no model matches", () => {
     const models = ["deepseek/deepseek-chat", "deepseek/deepseek-reasoner"];
     const out = reorderByCapabilities(models, new Set(["vision"]));
-    expect(out).toBe(models);
+    expect(out).toEqual(models);
   });
 
   it("single model -> unchanged", () => {

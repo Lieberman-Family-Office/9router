@@ -14,14 +14,32 @@ describe("normalizeClaudePassthrough — haiku adaptive thinking (docs 11 §1)",
     expect(out.thinking).toEqual({ type: "adaptive" });
   });
 
-  it("hoists mid-conversation system messages into top-level system", () => {
-    const out = normalizeClaudePassthrough({
+  // Changed deliberately in 7e5f5a88 (2026-08-14): mid-conversation system messages are
+  // FOLDED into the neighbouring user turn instead of hoisted into body.system, so volatile
+  // reminders don't invalidate the prompt-cache prefix.
+  it("folds mid-conversation system messages into the preceding user turn (not body.system)", () => {
+    const input = {
       messages: [
         { role: "user", content: "hi" },
         { role: "system", content: "be brief" },
       ],
+    };
+    const out = normalizeClaudePassthrough(input);
+    expect(out.system).toBeUndefined();
+    expect(out.messages).toEqual([
+      { role: "user", content: [{ type: "text", text: "hi" }, { type: "text", text: "be brief" }] },
+    ]);
+    expect(out.messages.every((m) => m.role !== "system")).toBe(true);
+  });
+
+  it("a leading system message with no user turn before it becomes its own user turn", () => {
+    const out = normalizeClaudePassthrough({
+      messages: [
+        { role: "system", content: "be brief" },
+        { role: "user", content: "hi" },
+      ],
     });
-    expect(out.system).toEqual([{ type: "text", text: "be brief" }]);
+    expect(out.messages[0]).toEqual({ role: "user", content: [{ type: "text", text: "be brief" }] });
     expect(out.messages.every((m) => m.role !== "system")).toBe(true);
   });
 });
