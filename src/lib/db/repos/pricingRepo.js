@@ -53,7 +53,14 @@ export async function getPricingForModel(provider, model) {
   const userPricing = await getUserPricing();
   if (provider && userPricing[provider]?.[model]) return userPricing[provider][model];
   const { getPricingForModel: resolveConst } = await import("open-sse/providers/pricing.js");
-  return resolveConst(provider, model);
+  const exact = resolveConst(provider, model);
+  if (exact) return exact;
+  // Usage is logged with the effort label ("gpt-6-astra(max)"); price is per base model.
+  const { stripThinkingSuffix } = await import("open-sse/translator/concerns/thinkingUnified.js");
+  const base = stripThinkingSuffix(model);
+  if (base === model) return null;
+  if (provider && userPricing[provider]?.[base]) return userPricing[provider][base];
+  return resolveConst(provider, base);
 }
 
 // Atomic merge inside transaction (per-provider read-modify-write)
