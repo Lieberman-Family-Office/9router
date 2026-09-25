@@ -62,7 +62,7 @@ export function claudeToOpenAIResponse(chunk, state) {
       } else if (block?.type === CLAUDE_BLOCK.THINKING) {
         state.inThinkingBlock = true;
         state.currentBlockIndex = chunk.index;
-        results.push(createChunk(state, { content: "<think>" }));
+        // Thinking text travels as reasoning_content; no <think> tags in the answer text.
       } else if (block?.type === CLAUDE_BLOCK.TOOL_USE) {
         const toolCallIndex = state.toolCallIndex++;
         // Restore original tool name from mapping (Claude OAuth)
@@ -113,7 +113,6 @@ export function claudeToOpenAIResponse(chunk, state) {
         break;
       }
       if (state.inThinkingBlock && chunk.index === state.currentBlockIndex) {
-        results.push(createChunk(state, { content: "</think>" }));
         state.inThinkingBlock = false;
       }
       state.textBlockStarted = false;

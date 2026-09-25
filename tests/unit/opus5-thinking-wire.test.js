@@ -3,6 +3,8 @@
 import { describe, expect, it } from "vitest";
 import { translateRequest } from "../../open-sse/translator/index.js";
 import { getThinkingLevels } from "../../open-sse/providers/thinkingLevels.js";
+import { selectAnthropicBeta } from "../../open-sse/providers/shared.js";
+import { claudeToOpenAIResponse } from "../../open-sse/translator/response/claude-to-openai.js";
 
 const MODEL = "claude-opus-5-5";
 
@@ -51,6 +53,50 @@ describe("Opus 5 thinking is on and its text is visible", () => {
 
   it("still lets a client turn thinking off", () => {
     expect(wire(`${MODEL}(none)`).thinking).toEqual({ type: "disabled" });
+  });
+
+  it("does not ask Anthropic to redact thinking (it blanks the text even with display summarized)", () => {
+    for (const m of ["claude-opus-5-5", "claude-haiku-4-5"]) {
+      expect(selectAnthropicBeta(m)).not.toMatch(/redact-thinking/);
+    }
+  });
+
+  it("streams thinking as reasoning_content, with no <think> tags in the answer", () => {
+    const state = { toolCalls: new Map(), toolCallIndex: 0 };
+    const events = [
+      { type: "message_start", message: { id: "m1", model: "claude-opus-5-5" } },
+      { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } },
+      { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "Let me check." } },
+      { type: "content_block_stop", index: 0 },
+      { type: "content_block_start", index: 1, content_block: { type: "text", text: "" } },
+      { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "Answer." } },
+      { type: "content_block_stop", index: 1 },
+    ];
+    const deltas = events.flatMap((e) => claudeToOpenAIResponse(e, state) || []).map((c) => c.choices[0].delta);
+    expect(deltas.map((d) => d.reasoning_content || "").join("")).toBe("Let me check.");
+    expect(deltas.map((d) => d.content || "").join("")).toBe("Answer.");
+  });
+
+  it("a trailing assistant turn is closed with a user turn (Opus 5 rejects prefill)", () => {
+    const msgs = [{ role: "user", content: "hi" }, { role: "assistant", content: "Partial answer" }];
+    const out = translateRequest("openai", "claude", `${MODEL}(xhigh)`,
+      { model: `${MODEL}(xhigh)`, max_tokens: 1000, messages: msgs }, false, {}, "claude");
+    expect(out.messages.at(-1).role).toBe("user");
+    expect(out.messages.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
+  });
+
+  it("an empty trailing assistant turn is dropped rather than padded", () => {
+    const msgs = [{ role: "user", content: "hi" }, { role: "assistant", content: "" }];
+    const out = translateRequest("openai", "claude", MODEL,
+      { model: MODEL, max_tokens: 1000, messages: msgs }, false, {}, "claude");
+    expect(out.messages.map((m) => m.role)).toEqual(["user"]);
+  });
+
+  it("older models that allow prefill keep the trailing assistant turn", () => {
+    const msgs = [{ role: "user", content: "hi" }, { role: "assistant", content: "Partial" }];
+    const out = translateRequest("openai", "claude", "claude-haiku-4-5",
+      { model: "claude-haiku-4-5", max_tokens: 1000, messages: msgs }, false, {}, "claude");
+    expect(out.messages.at(-1).role).toBe("assistant");
   });
 
   it("non-Claude-5 adaptive models get no thinking added when none requested", () => {

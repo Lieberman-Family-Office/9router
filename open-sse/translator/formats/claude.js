@@ -89,6 +89,9 @@ export function fixToolUseOrdering(messages) {
 // Models that reject thinking.type "adaptive" + output_config.effort (Opus 4.5+/Sonnet 4.6+ only)
 const ADAPTIVE_THINKING_UNSUPPORTED = /haiku/i;
 
+// Models that reject assistant prefill (platform.claude.com errors doc: Claude 4.6+ and Mythos).
+const NO_PREFILL = /claude-(opus|sonnet)-(4[.-][6-9]|5)|claude-(fable|mythos)/i;
+
 function handlesThinkingBlocks(provider) {
   return provider === "claude" || provider?.startsWith("anthropic-compatible") || provider === "deepseek";
 }
@@ -327,6 +330,16 @@ export function prepareClaudeRequest(body, provider = null, apiKey = null, conne
     // Pass 1.5: Fix tool_use/tool_result ordering
     // Each tool_use must have tool_result in the NEXT message (not same message with other content)
     filtered = fixToolUseOrdering(filtered);
+
+    // Claude 4.6+ / Fable / Mythos reject a trailing assistant turn (prefill) with 400
+    // "The conversation must end with a user message". Drop an empty one; otherwise
+    // close the turn with a minimal user message so the request is valid.
+    if (NO_PREFILL.test(body.model || "") && filtered.at(-1)?.role === "assistant") {
+      if (!hasValidContent(filtered.at(-1))) filtered.pop();
+      if (filtered.at(-1)?.role === "assistant") {
+        filtered.push({ role: "user", content: [{ type: "text", text: "Continue." }] });
+      }
+    }
 
     body.messages = filtered;
 
