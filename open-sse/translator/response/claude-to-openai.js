@@ -89,7 +89,9 @@ export function claudeToOpenAIResponse(chunk, state) {
       if (delta?.type === "text_delta" && delta.text) {
         results.push(createChunk(state, { content: delta.text }));
       } else if (delta?.type === "thinking_delta" && delta.thinking) {
-        results.push(createChunk(state, reasoningDelta(delta.thinking)));
+        // Same text under the other names clients read (OpenRouter-style `reasoning`, `thinking`),
+        // to find which one Cursor displays. ponytail: drop the unused names once measured.
+        results.push(createChunk(state, { ...reasoningDelta(delta.thinking), reasoning: delta.thinking, thinking: delta.thinking }));
       } else if (delta?.type === "input_json_delta" && delta.partial_json) {
         const toolCall = state.toolCalls.get(chunk.index);
         if (toolCall) {
