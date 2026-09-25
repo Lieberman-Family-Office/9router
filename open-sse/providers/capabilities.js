@@ -152,6 +152,8 @@ export const PROVIDER_CAPABILITIES = {
   },
   "codex": {
     "gpt-6-astra": { reasoning: true, thinkingFormat: "openai" },
+    // Reasoning only (enables its effort levels); context/vision deliberately unchanged.
+    "gpt-6-sol": { reasoning: true, thinkingFormat: "openai" },
     "gpt-5.6-sol":               CODEX_GPT_56_SOL_CAPS,
     "gpt-5.6-sol-review":        CODEX_GPT_56_SOL_CAPS,
     "gpt-5.6-terra":             CODEX_GPT_56_DEFAULT_CAPS,
