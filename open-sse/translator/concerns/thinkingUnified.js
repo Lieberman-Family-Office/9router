@@ -379,7 +379,7 @@ export function applyThinking(targetFormat, model, body, provider = null, intent
   if (provider === "claude" && body.thinking?.type === "adaptive") {
     body.thinking.display = clientDisplay || "summarized";
   }
-  // Anthropic: at xhigh/max "set a large max_tokens ... starting at 64k". A 32k cap was
+  // Anthropic: at xhigh/max "set a large max_tokens ... starting at 64k"; high too, see the set. A 32k cap was
   // measured cutting Opus 5.5 xhigh off mid-thinking, then retried from scratch (6x, 2026-09-25).
   // Raise only; prepareClaudeRequest still clamps to the model's maxOutput.
   if (provider === "claude" && HIGH_EFFORT_OUTPUT_FLOOR_EFFORTS.has(body.output_config?.effort)) {
@@ -389,7 +389,8 @@ export function applyThinking(targetFormat, model, body, provider = null, intent
 }
 
 const HIGH_EFFORT_OUTPUT_FLOOR = 64000;
-const HIGH_EFFORT_OUTPUT_FLOOR_EFFORTS = new Set(["xhigh", "max"]);
+// high: measured 29,542 output tokens on one Opus 5.5 turn (2026-09-25), near the 32k cap.
+const HIGH_EFFORT_OUTPUT_FLOOR_EFFORTS = new Set(["high", "xhigh", "max"]);
 
 // Claude 5 models think when `thinking` is omitted (platform.claude.com thinking docs).
 const THINKING_ON_BY_DEFAULT = /claude-(opus|sonnet)-5/i;
