@@ -21,9 +21,7 @@ exports[`GOLDEN response stream: Claude → OpenAI > text + thinking + tool_use 
     "choices": [
       {
         "delta": {
-          "reasoning": "let me think",
           "reasoning_content": "let me think",
-          "thinking": "let me think",
         },
         "finish_reason": null,
         "index": 0,

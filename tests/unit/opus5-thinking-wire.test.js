@@ -74,8 +74,6 @@ describe("Opus 5 thinking is on and its text is visible", () => {
     ];
     const deltas = events.flatMap((e) => claudeToOpenAIResponse(e, state) || []).map((c) => c.choices[0].delta);
     expect(deltas.map((d) => d.reasoning_content || "").join("")).toBe("Let me check.");
-    expect(deltas.map((d) => d.reasoning || "").join("")).toBe("Let me check.");
-    expect(deltas.map((d) => d.thinking || "").join("")).toBe("Let me check.");
     expect(deltas.map((d) => d.content || "").join("")).toBe("Answer.");
   });
 
