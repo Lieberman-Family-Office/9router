@@ -23,14 +23,19 @@ afterAll(() => {
   else process.env.DATA_DIR = originalDataDir;
 });
 
+// saveRequestUsage deliberately drops a write identical to an existing row (same
+// timestamp, provider, model, connectionId, apiKey, prompt+completion tokens) — see
+// 0d216689 "deduplicate identical usage writes". Parallel test writes therefore vary a
+// dedupe-key field (completion tokens or connectionId) so each is a DISTINCT request;
+// the dedupe itself is locked by its own test below.
 describe("DB Concurrency — atomic safety", () => {
-  it("100 parallel saveRequestUsage → no count loss", async () => {
+  it("100 parallel distinct saveRequestUsage → no count loss", async () => {
     const N = 100;
     const promises = [];
     for (let i = 0; i < N; i++) {
       promises.push(db.saveRequestUsage({
         provider: "openai", model: "gpt-4", connectionId: "c1",
-        tokens: { prompt_tokens: 10, completion_tokens: 5 },
+        tokens: { prompt_tokens: 10, completion_tokens: 5 + i },
         endpoint: "/v1/chat", status: "ok",
       }));
     }
@@ -70,7 +75,7 @@ describe("DB Concurrency — atomic safety", () => {
     const ops = [];
     for (let i = 0; i < 50; i++) {
       ops.push(db.saveRequestUsage({
-        provider: "anthropic", model: `m-${i % 3}`, connectionId: "c2",
+        provider: "anthropic", model: `m-${i % 3}`, connectionId: `c2-${i}`,
         tokens: { prompt_tokens: 20 }, status: "ok",
       }));
       ops.push(db.setModelAlias(`a-${i}`, `target-${i}`));
@@ -154,7 +159,7 @@ describe("DB Concurrency — atomic safety", () => {
     const promises = [];
     for (let i = 0; i < N; i++) {
       promises.push(db.saveRequestUsage({
-        provider: "google", model: "gemini-pro", connectionId: "cG",
+        provider: "google", model: "gemini-pro", connectionId: `cG-${i}`,
         tokens: { prompt_tokens: 100, completion_tokens: 50 },
         status: "ok",
       }));
@@ -167,5 +172,16 @@ describe("DB Concurrency — atomic safety", () => {
     expect(g.requests).toBe(N);
     expect(g.promptTokens).toBe(N * 100);
     expect(g.completionTokens).toBe(N * 50);
+  });
+
+  it("identical usage writes (same timestamp + key fields) are deduplicated to one row", async () => {
+    const entry = () => ({
+      provider: "dedupe-prov", model: "m", connectionId: "cD",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      tokens: { prompt_tokens: 7, completion_tokens: 3 }, status: "ok",
+    });
+    await Promise.all(Array.from({ length: 10 }, () => db.saveRequestUsage(entry())));
+    const hist = await db.getUsageHistory({ provider: "dedupe-prov" });
+    expect(hist.length).toBe(1);
   });
 });

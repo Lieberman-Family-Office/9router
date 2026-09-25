@@ -193,7 +193,13 @@ describe("openaiToClaudeResponse", () => {
       }]
     };
 
-    const result = openaiToClaudeResponse(chunk, state);
+    // Tool args are buffered and sanitized only at finish_reason (openai-to-claude.js
+    // "Buffer args instead of streaming — sanitize at finish"), so send the args chunk
+    // and then the finishing chunk.
+    const result = [
+      ...openaiToClaudeResponse(chunk, state),
+      ...openaiToClaudeResponse({ ...chunk, choices: [{ delta: {}, finish_reason: "tool_calls" }] }, state),
+    ];
     const inputDelta = result.find(event => event.delta?.type === "input_json_delta");
 
     expect(inputDelta).toBeDefined();
