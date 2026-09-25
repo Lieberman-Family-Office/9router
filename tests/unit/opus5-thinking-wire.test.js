@@ -99,12 +99,13 @@ describe("Opus 5 thinking is on and its text is visible", () => {
     expect(out.messages.at(-1).role).toBe("assistant");
   });
 
-  it("xhigh/max get at least 64k output room; lower efforts and larger requests are untouched", () => {
+  it("high/xhigh/max get at least 64k output room; lower efforts and larger requests are untouched", () => {
     const maxTokens = (model, max_tokens) => translateRequest("openai", "claude", model,
       { model, max_tokens, messages: [{ role: "user", content: "hi" }] }, false, {}, "claude").max_tokens;
     expect(maxTokens(`${MODEL}(xhigh)`, 32000)).toBe(64000);
     expect(maxTokens(`${MODEL}(max)`, 32000)).toBe(64000);
-    expect(maxTokens(`${MODEL}(high)`, 32000)).toBe(32000);
+    expect(maxTokens(`${MODEL}(high)`, 32000)).toBe(64000);
+    expect(maxTokens(`${MODEL}(medium)`, 32000)).toBe(32000);
     expect(maxTokens(`${MODEL}(xhigh)`, 100000)).toBe(100000);
     expect(maxTokens(`${MODEL}(xhigh)`, 500000)).toBe(128000); // still clamped to the model's maxOutput
   });
