@@ -143,6 +143,15 @@ function normalizeOpenAILevel(level, supportedLevels) {
   return "xhigh";
 }
 
+// Anthropic effort enum is low|medium|high|xhigh|max; map anything else onto it.
+function toClaudeEffort(level, supportedLevels) {
+  if (level === "ultra") return "max";
+  if (level === "minimal") return "low";
+  if (level === "auto") return null; // omit → API default ("auto" is not a valid effort)
+  if (level === "xhigh" && !supportedLevels?.includes("xhigh")) return "high";
+  return level;
+}
+
 function toGeminiThinkingLevel(cfg) {
   const raw = cfg.mode === "auto" ? "high" : (toLevel(cfg) || "high");
   return effortToThinkingLevel(raw);
@@ -243,8 +252,8 @@ function applyFormat(fmt, body, cfg, caps, supportedLevels) {
       // shims (e.g. GitHub Copilot /v1/messages) default thinking off even for
       // Sonnet 5. Send both fields — the documented adaptive-thinking shape.
       body.thinking = { type: "adaptive" };
-      const level = toLevel(eff);
-      body.output_config = { effort: level === "xhigh" ? "high" : level };
+      const effort = toClaudeEffort(toLevel(eff), supportedLevels);
+      if (effort) body.output_config = { effort };
       break;
     }
     case "claude-budget": {
@@ -355,11 +364,23 @@ export function applyThinking(targetFormat, model, body, provider = null, intent
     stripAll(body);
     return body;
   }
-  if (!cfg) return body;
-
-  const fmt = resolveFormat(targetFormat, cleanModel, provider);
-  const supportedLevels = getThinkingLevels(provider, cleanModel);
-  stripAll(body);
-  applyFormat(fmt, body, cfg, caps, supportedLevels);
+  const clientDisplay = body.thinking?.display;
+  if (cfg) {
+    const fmt = resolveFormat(targetFormat, cleanModel, provider);
+    const supportedLevels = getThinkingLevels(provider, cleanModel);
+    stripAll(body);
+    applyFormat(fmt, body, cfg, caps, supportedLevels);
+  } else if (provider === "claude" && THINKING_ON_BY_DEFAULT.test(cleanModel)) {
+    // No thinking request: Opus 5 thinks anyway. Make it explicit so display can be set.
+    body.thinking = { type: "adaptive" };
+  }
+  // Anthropic defaults adaptive display to "omitted" on Opus 4.7+ (thinking text comes
+  // back empty). Ask for the summary unless the client chose. Native Anthropic only.
+  if (provider === "claude" && body.thinking?.type === "adaptive") {
+    body.thinking.display = clientDisplay || "summarized";
+  }
   return body;
 }
+
+// Claude 5 models think when `thinking` is omitted (platform.claude.com thinking docs).
+const THINKING_ON_BY_DEFAULT = /claude-(opus|sonnet)-5/i;
