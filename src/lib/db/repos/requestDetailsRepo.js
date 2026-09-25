@@ -51,6 +51,8 @@ function toMetadataRecord(record) {
   }
   if (r.finish_reason !== undefined) response.finish_reason = r.finish_reason;
   if (r.type !== undefined) response.type = r.type;
+  // Length only (never the text): shows whether thinking came back at all.
+  if (typeof r.thinking === "string") response.thinkingChars = r.thinking.length;
   return {
     id: record.id, provider: record.provider, model: record.model, connectionId: record.connectionId,
     timestamp: record.timestamp, status: record.status, latency: record.latency, tokens: record.tokens,

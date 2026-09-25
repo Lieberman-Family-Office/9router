@@ -68,11 +68,12 @@ describe("requestDetails metadata-only mode", () => {
       id: "meta-ok", provider: "openai", model: "gpt-x", status: "success",
       latency: { ttft: 5, total: 9 }, tokens: { prompt_tokens: 3, completion_tokens: 4 },
       request: { model: "gpt-x", stream: true, messages: [{ role: "user", content: PROMPT }] },
-      response: { content: `answer ${PROMPT}`, thinking: "t", finish_reason: "stop", type: "streaming" },
+      response: { content: `answer ${PROMPT}`, thinking: `think ${PROMPT}`, finish_reason: "stop", type: "streaming" },
     });
     const got = await db.getRequestDetailById("meta-ok");
     expect(got.tokens).toEqual({ prompt_tokens: 3, completion_tokens: 4 });
-    expect(got.response).toEqual({ finish_reason: "stop", type: "streaming" });
+    // Thinking is recorded as a length only, never as text.
+    expect(got.response).toEqual({ finish_reason: "stop", type: "streaming", thinkingChars: `think ${PROMPT}`.length });
     const raw = adapter.get(`SELECT data FROM requestDetails WHERE id = ?`, ["meta-ok"]).data;
     expect(raw).not.toContain(PROMPT);
   });
