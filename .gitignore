@@ -61,6 +61,9 @@ Thanks.md
 PUBLIC.en.md
 PR/*
 package-lock.json
+# Root app + CLI lockfiles are pinned to production's installed tree and tracked.
+!/package-lock.json
+!/cli/package-lock.json
 
 
 #Ignore vscode AI rules
