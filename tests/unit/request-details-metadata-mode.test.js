@@ -78,6 +78,49 @@ describe("requestDetails metadata-only mode", () => {
     expect(raw).not.toContain(PROMPT);
   });
 
+  it("removes request text echoed in the upstream error before storing it", async () => {
+    await save({
+      id: "meta-echo", provider: "openai", model: "gpt-x", status: "error",
+      request: { model: "gpt-x", stream: false, messages: [{ role: "user", content: `please summarise ${PROMPT} now` }] },
+      response: { status: 400, error: `invalid input: "please summarise ${PROMPT} now" rejected` },
+    });
+    const got = await db.getRequestDetailById("meta-echo");
+    expect(got.response.error).toContain("[REQUEST CONTENT REMOVED]");
+    expect(got.response.error).toContain("invalid input");
+    const raw = adapter.get(`SELECT data FROM requestDetails WHERE id = ?`, ["meta-echo"]).data;
+    expect(raw).not.toContain(PROMPT);
+  });
+
+  it("writes one row per client request across account fallback, with the attempt count", async () => {
+    const { runRequestScope } = await import("@/lib/requestScope.js");
+    const before = adapter.get(`SELECT COUNT(*) AS c FROM requestDetails`).c;
+    // One request: a 401 on accounts A and B, then success on C.
+    await runRequestScope(async () => {
+      for (const conn of ["acct-a", "acct-b"]) {
+        await save({ provider: "openai", model: "gpt-x", connectionId: conn, status: "error",
+          request: { model: "gpt-x", stream: false }, response: { status: 401, error: "bad key" } });
+      }
+      await save({ provider: "openai", model: "gpt-x", connectionId: "acct-c", status: "success",
+        request: { model: "gpt-x", stream: false }, response: { finish_reason: "stop" } });
+    });
+    // A second, separate request that fails once.
+    await runRequestScope(() => save({ provider: "openai", model: "gpt-x", connectionId: "acct-a", status: "error",
+      request: { model: "gpt-x", stream: false }, response: { status: 500, error: "boom" } }));
+
+    const rows = adapter.all(`SELECT data FROM requestDetails ORDER BY timestamp ASC`).slice(before).map((r) => JSON.parse(r.data));
+    expect(rows).toHaveLength(2);
+    const first = rows.find((r) => r.status === "success");
+    expect(first).toMatchObject({ connectionId: "acct-c", attempts: 3, attemptStatuses: [401, 401] });
+    const second = rows.find((r) => r.status === "error");
+    expect(second).toMatchObject({ attempts: 1, attemptStatuses: [500], response: { status: 500 } });
+  });
+
+  it("stripEchoes leaves short request strings and unrelated text alone", async () => {
+    const { __test__ } = await import("@/lib/db/repos/requestDetailsRepo.js");
+    const request = { messages: [{ role: "user", content: "hi" }, { role: "user", content: [{ type: "text", text: "a long enough prompt" }] }] };
+    expect(__test__.stripEchoes("hi there: a long enough prompt", request)).toBe("hi there: [REQUEST CONTENT REMOVED]");
+  });
+
   it("redactSecrets masks common credential shapes", async () => {
     const { __test__ } = await import("@/lib/db/repos/requestDetailsRepo.js");
     const out = __test__.redactSecrets("Bearer abc.def sk-abcdEFGH1234 eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig AIzaSyA1234567890abcdefghij ghp_abcdefghijklmnopqrstuvwx");
