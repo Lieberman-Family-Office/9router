@@ -1,4 +1,4 @@
-import { ERROR_RULES, BACKOFF_CONFIG, TRANSIENT_COOLDOWN_MS } from "../config/errorConfig.js";
+import { errorRules, BACKOFF_CONFIG, TRANSIENT_COOLDOWN_MS } from "../config/errorConfig.js";
 
 /**
  * Calculate exponential backoff cooldown for rate limits (429)
@@ -14,7 +14,7 @@ export function getQuotaCooldown(backoffLevel = 0) {
 
 /**
  * Check if error should trigger account fallback (switch to next account)
- * Config-driven: matches ERROR_RULES top-to-bottom (text rules first, then status)
+ * Config-driven: matches errorRules() top-to-bottom (text rules first, then status)
  * @param {number} status - HTTP status code
  * @param {string} errorText - Error message text
  * @param {number} backoffLevel - Current backoff level for exponential backoff
@@ -25,9 +25,10 @@ export function checkFallbackError(status, errorText, backoffLevel = 0) {
     ? (typeof errorText === "string" ? errorText : JSON.stringify(errorText)).toLowerCase()
     : "";
 
-  for (const rule of ERROR_RULES) {
-    // Text-based rule: match substring in error message
-    if (rule.text && lowerError && lowerError.includes(rule.text)) {
+  for (const rule of errorRules()) {
+    // Text-based rule: match substring in error message (optionally only for listed statuses)
+    const statusOk = !rule.statuses || rule.statuses.includes(status);
+    if (rule.text && statusOk && lowerError && lowerError.includes(rule.text)) {
       if (rule.backoff) {
         const newLevel = Math.min(backoffLevel + 1, BACKOFF_CONFIG.maxLevel);
         return { shouldFallback: true, cooldownMs: getQuotaCooldown(newLevel), newBackoffLevel: newLevel };
