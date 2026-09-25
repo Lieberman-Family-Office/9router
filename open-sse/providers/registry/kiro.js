@@ -42,6 +42,7 @@ export default {
   },
   models: [
     // Opus (added per kiro.dev/changelog/models and kiro.dev/docs/models)
+    { id: "claude-opus-5-5", name: "Claude Opus 5.5" },
     { id: "claude-opus-5", name: "Claude Opus 5" },
     { id: "claude-opus-5-thinking", name: "Claude Opus 5 (Thinking)" },
     { id: "claude-opus-5-agentic", name: "Claude Opus 5 (Agentic)" },
