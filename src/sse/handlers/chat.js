@@ -23,6 +23,7 @@ import { detectFormatByEndpoint } from "open-sse/translator/formats.js";
 import * as log from "../utils/logger.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
 import { getProjectIdForConnection } from "open-sse/services/projectId.js";
+import { runRequestScope } from "@/lib/requestScope.js";
 
 /**
  * Handle chat completion request
@@ -30,6 +31,10 @@ import { getProjectIdForConnection } from "open-sse/services/projectId.js";
  * Format detection and translation handled by translator
  */
 export async function handleChat(request, clientRawRequest = null) {
+  return runRequestScope(() => handleChatInScope(request, clientRawRequest));
+}
+
+async function handleChatInScope(request, clientRawRequest) {
   let body;
   try {
     body = await request.json();

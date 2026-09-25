@@ -1,5 +1,6 @@
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
+import { getRequestScope } from "../../requestScope.js";
 
 const DEFAULT_MAX_RECORDS = 200;
 const DEFAULT_BATCH_SIZE = 20;
@@ -23,13 +24,38 @@ function redactSecrets(text) {
   return String(text).replace(SECRET_RE, (m, bearer) => (bearer ? `${bearer}[REDACTED]` : "[REDACTED]"));
 }
 
+// ponytail: removes a request text only if the error quotes it verbatim and it is
+// >= ECHO_MIN chars; a paraphrased, partial, or short echo survives the 500-char cap.
+// Upgrade path: store only error type/code and drop message text entirely.
+const ECHO_MIN = 12;
+function requestTexts(request) {
+  const out = [];
+  const walk = (v) => {
+    if (typeof v === "string") { if (v.length >= ECHO_MIN) out.push(v); }
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+  };
+  walk(request?.messages);
+  walk(request?.system);
+  walk(request?.input);
+  return out.sort((a, b) => b.length - a.length);
+}
+
+function stripEchoes(text, request) {
+  let out = String(text);
+  for (const s of requestTexts(request)) out = out.split(s).join("[REQUEST CONTENT REMOVED]");
+  return out;
+}
+
 // Keep only non-body fields. Error text is upstream-controlled and may echo the
-// request (prompt fragments, keys), so it is redacted and length-capped.
+// request (prompt fragments, keys), so request text and secrets are removed and it is capped.
 function toMetadataRecord(record) {
   const r = record.response || {};
   const response = {};
   if (r.status !== undefined) response.status = r.status;
-  if (r.error !== undefined && r.error !== null) response.error = redactSecrets(r.error).slice(0, MAX_ERROR_TEXT);
+  if (r.error !== undefined && r.error !== null) {
+    response.error = redactSecrets(stripEchoes(r.error, record.request)).slice(0, MAX_ERROR_TEXT);
+  }
   if (r.finish_reason !== undefined) response.finish_reason = r.finish_reason;
   if (r.type !== undefined) response.type = r.type;
   return {
@@ -37,8 +63,23 @@ function toMetadataRecord(record) {
     timestamp: record.timestamp, status: record.status, latency: record.latency, tokens: record.tokens,
     request: { model: record.request?.model, stream: record.request?.stream },
     response,
+    ...(record.attempts ? { attempts: record.attempts, attemptStatuses: record.attemptStatuses } : {}),
     metadataOnly: true,
   };
+}
+
+// Metadata mode writes one row per client request: every upstream attempt reuses the
+// scope's id (the upsert keeps the latest), carrying the attempt count and the
+// statuses of earlier failed attempts. No scope (tests, non-chat callers): unchanged.
+function applyRequestScope(detail) {
+  const scope = getRequestScope();
+  if (!scope) return detail;
+  const status = detail.response?.status;
+  // Each failed attempt writes exactly one error detail; a success may write twice
+  // (streaming: in-progress, then complete) but is never counted as an error.
+  if (detail.status === "error") scope.errorStatuses.push(status);
+  const attempts = scope.errorStatuses.length + (detail.status === "error" ? 0 : 1);
+  return { ...detail, id: scope.id, attempts, attemptStatuses: [...scope.errorStatuses] };
 }
 
 async function getObservabilityConfig() {
@@ -99,7 +140,7 @@ function sanitizeHeaders(headers) {
   return sanitized;
 }
 
-export const __test__ = { sanitizeHeaders, redactSecrets, toMetadataRecord };
+export const __test__ = { sanitizeHeaders, redactSecrets, toMetadataRecord, stripEchoes };
 
 function generateDetailId(model) {
   const timestamp = new Date().toISOString();
@@ -148,7 +189,9 @@ async function flushToDatabase() {
             response: truncateField(item.response, config.maxJsonSize),
             pxpipe: item.pxpipe || undefined,
           };
-          const record = isMetadataOnly() ? toMetadataRecord({ ...full, request: item.request, response: item.response }) : full;
+          const record = isMetadataOnly()
+            ? toMetadataRecord({ ...full, request: item.request, response: item.response, attempts: item.attempts, attemptStatuses: item.attemptStatuses })
+            : full;
 
           db.run(
             `INSERT INTO requestDetails(id, timestamp, provider, model, connectionId, status, data) VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET timestamp = excluded.timestamp, provider = excluded.provider, model = excluded.model, connectionId = excluded.connectionId, status = excluded.status, data = excluded.data`,
@@ -176,7 +219,7 @@ export async function saveRequestDetail(detail) {
   const config = await getObservabilityConfig();
   if (!config.enabled && !isMetadataOnly()) {return;}
 
-  writeBuffer.push(detail);
+  writeBuffer.push(isMetadataOnly() ? applyRequestScope(detail) : detail);
 
   // Trigger immediate flush if batch threshold reached.
   // flushToDatabase() drains entire buffer in a loop, so all pushes during await are persisted.
