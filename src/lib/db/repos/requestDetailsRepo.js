@@ -12,49 +12,42 @@ let cachedConfig = null;
 let cachedConfigTs = 0;
 
 // REQUEST_DETAILS_MODE=metadata: persist requestDetails rows (status, latency, tokens,
-// upstream error status + redacted error text) WITHOUT request/response bodies, and
+// upstream error status + error type/code) WITHOUT request/response bodies, and
 // independently of ENABLE_REQUEST_LOGS=false (=true also turns on open-sse's file
 // logger, which writes full bodies and UNMASKED auth headers under logs/).
 const isMetadataOnly = () => process.env.REQUEST_DETAILS_MODE === "metadata";
 
-const SECRET_RE = /(bearer\s+)[^\s"',;]+|\b(sk|rk|pk)-[A-Za-z0-9_-]{4,}|\beyJ[A-Za-z0-9_-]{10,}(\.[A-Za-z0-9_-]+)*|\b(AIza[0-9A-Za-z_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|xox[abprs]-[A-Za-z0-9-]{10,})/gi;
-const MAX_ERROR_TEXT = 500;
+// Upstream error text is upstream-controlled and can quote the request in any form
+// (verbatim, partial, paraphrased, re-encoded), so no filter over it is complete.
+// Metadata mode therefore stores NO message text: only type/code identifiers, and
+// only when they look like identifiers (short, [A-Za-z0-9_.:-]). Anything else is dropped.
+const ERROR_ID_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
+const errorId = (v) => (typeof v === "string" && ERROR_ID_RE.test(v) ? v : typeof v === "number" && Number.isInteger(v) ? v : undefined);
 
-function redactSecrets(text) {
-  return String(text).replace(SECRET_RE, (m, bearer) => (bearer ? `${bearer}[REDACTED]` : "[REDACTED]"));
-}
-
-// ponytail: removes a request text only if the error quotes it verbatim and it is
-// >= ECHO_MIN chars; a paraphrased, partial, or short echo survives the 500-char cap.
-// Upgrade path: store only error type/code and drop message text entirely.
-const ECHO_MIN = 12;
-function requestTexts(request) {
-  const out = [];
-  const walk = (v) => {
-    if (typeof v === "string") { if (v.length >= ECHO_MIN) out.push(v); }
-    else if (Array.isArray(v)) v.forEach(walk);
-    else if (v && typeof v === "object") Object.values(v).forEach(walk);
-  };
-  walk(request?.messages);
-  walk(request?.system);
-  walk(request?.input);
-  return out.sort((a, b) => b.length - a.length);
-}
-
-function stripEchoes(text, request) {
-  let out = String(text);
-  for (const s of requestTexts(request)) out = out.split(s).join("[REQUEST CONTENT REMOVED]");
+function errorIdentifiers(raw) {
+  let obj = raw;
+  if (typeof raw === "string") {
+    try { obj = JSON.parse(raw); } catch { return {}; }
+  }
+  const e = obj && typeof obj === "object" ? (obj.error && typeof obj.error === "object" ? obj.error : obj) : null;
+  if (!e) return {};
+  const out = {};
+  const type = errorId(e.type);
+  const code = errorId(e.code) ?? errorId(e.status);
+  if (type !== undefined) out.type = type;
+  if (code !== undefined) out.code = code;
   return out;
 }
 
-// Keep only non-body fields. Error text is upstream-controlled and may echo the
-// request (prompt fragments, keys), so request text and secrets are removed and it is capped.
+// Keep only non-body fields; see errorIdentifiers for why error text is not kept.
 function toMetadataRecord(record) {
   const r = record.response || {};
   const response = {};
   if (r.status !== undefined) response.status = r.status;
   if (r.error !== undefined && r.error !== null) {
-    response.error = redactSecrets(stripEchoes(r.error, record.request)).slice(0, MAX_ERROR_TEXT);
+    const ids = errorIdentifiers(r.error);
+    if (ids.type !== undefined) response.errorType = ids.type;
+    if (ids.code !== undefined) response.errorCode = ids.code;
   }
   if (r.finish_reason !== undefined) response.finish_reason = r.finish_reason;
   if (r.type !== undefined) response.type = r.type;
@@ -140,7 +133,7 @@ function sanitizeHeaders(headers) {
   return sanitized;
 }
 
-export const __test__ = { sanitizeHeaders, redactSecrets, toMetadataRecord, stripEchoes };
+export const __test__ = { sanitizeHeaders, toMetadataRecord, errorIdentifiers };
 
 function generateDetailId(model) {
   const timestamp = new Date().toISOString();

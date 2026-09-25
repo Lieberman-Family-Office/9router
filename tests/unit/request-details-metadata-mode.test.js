@@ -41,7 +41,7 @@ async function save(detail) {
 }
 
 describe("requestDetails metadata-only mode", () => {
-  it("writes an error row despite ENABLE_REQUEST_LOGS=false, with status + redacted error text and no bodies", async () => {
+  it("writes an error row despite ENABLE_REQUEST_LOGS=false, with status and no error text or bodies", async () => {
     await save({
       id: "meta-err", provider: "openai", model: "gpt-x", status: "error",
       latency: { ttft: 0, total: 12 }, tokens: { prompt_tokens: 0, completion_tokens: 0 },
@@ -53,8 +53,7 @@ describe("requestDetails metadata-only mode", () => {
     const got = await db.getRequestDetailById("meta-err");
     expect(got.metadataOnly).toBe(true);
     expect(got.status).toBe("error");
-    expect(got.response.status).toBe(401);
-    expect(got.response.error).toContain("[REDACTED]");
+    expect(got.response).toEqual({ status: 401 });
     expect(got.request).toEqual({ model: "gpt-x", stream: false });
     expect(got.providerRequest).toBeUndefined();
     expect(got.providerResponse).toBeUndefined();
@@ -78,17 +77,19 @@ describe("requestDetails metadata-only mode", () => {
     expect(raw).not.toContain(PROMPT);
   });
 
-  it("removes request text echoed in the upstream error before storing it", async () => {
+  it("keeps only type/code from a JSON upstream error, never its message (the S18 shape)", async () => {
+    // Echo is partial and re-cased, which no text filter over the message would catch.
+    const echo = `invalid key Bearer ${SECRET} for request '${PROMPT.slice(3).toLowerCase()}'`;
     await save({
       id: "meta-echo", provider: "openai", model: "gpt-x", status: "error",
-      request: { model: "gpt-x", stream: false, messages: [{ role: "user", content: `please summarise ${PROMPT} now` }] },
-      response: { status: 400, error: `invalid input: "please summarise ${PROMPT} now" rejected` },
+      request: { model: "gpt-x", stream: false, messages: [{ role: "user", content: PROMPT }] },
+      response: { status: 401, error: JSON.stringify({ error: { type: "authentication_error", code: "invalid_api_key", message: echo } }) },
     });
     const got = await db.getRequestDetailById("meta-echo");
-    expect(got.response.error).toContain("[REQUEST CONTENT REMOVED]");
-    expect(got.response.error).toContain("invalid input");
+    expect(got.response).toEqual({ status: 401, errorType: "authentication_error", errorCode: "invalid_api_key" });
     const raw = adapter.get(`SELECT data FROM requestDetails WHERE id = ?`, ["meta-echo"]).data;
-    expect(raw).not.toContain(PROMPT);
+    expect(raw.toLowerCase()).not.toContain(PROMPT.slice(3).toLowerCase());
+    expect(raw).not.toContain(SECRET);
   });
 
   it("writes one row per client request across account fallback, with the attempt count", async () => {
@@ -115,15 +116,14 @@ describe("requestDetails metadata-only mode", () => {
     expect(second).toMatchObject({ attempts: 1, attemptStatuses: [500], response: { status: 500 } });
   });
 
-  it("stripEchoes leaves short request strings and unrelated text alone", async () => {
+  it("errorIdentifiers keeps only identifier-shaped type/code and drops everything else", async () => {
     const { __test__ } = await import("@/lib/db/repos/requestDetailsRepo.js");
-    const request = { messages: [{ role: "user", content: "hi" }, { role: "user", content: [{ type: "text", text: "a long enough prompt" }] }] };
-    expect(__test__.stripEchoes("hi there: a long enough prompt", request)).toBe("hi there: [REQUEST CONTENT REMOVED]");
-  });
-
-  it("redactSecrets masks common credential shapes", async () => {
-    const { __test__ } = await import("@/lib/db/repos/requestDetailsRepo.js");
-    const out = __test__.redactSecrets("Bearer abc.def sk-abcdEFGH1234 eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig AIzaSyA1234567890abcdefghij ghp_abcdefghijklmnopqrstuvwx");
-    expect(out).toBe("Bearer [REDACTED] [REDACTED] [REDACTED] [REDACTED] [REDACTED]");
+    const ids = __test__.errorIdentifiers;
+    expect(ids(`plain text mentioning ${PROMPT}`)).toEqual({});
+    expect(ids({ type: "rate_limit_error", code: 429 })).toEqual({ type: "rate_limit_error", code: 429 });
+    expect(ids(JSON.stringify({ type: "error", error: { type: "invalid_request_error" } }))).toEqual({ type: "invalid_request_error" });
+    // A free-text "type"/"code" (spaces, quotes, or too long) is not an identifier and is dropped.
+    expect(ids({ error: { type: `bad ${PROMPT}`, code: "x".repeat(65) } })).toEqual({});
+    expect(ids({ error: { type: true, code: 1.5 } })).toEqual({});
   });
 });
