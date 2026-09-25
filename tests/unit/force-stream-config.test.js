@@ -68,7 +68,10 @@ vi.mock("../../open-sse/rtk/index.js", () => ({
   formatRtkLog: vi.fn(() => ""),
 }));
 
-vi.mock("../../open-sse/rtk/headroom.js", () => ({
+// Keep the real module surface (formatHeadroomSizeLog / isHeadroomPhantomSavings were
+// added after this mock was written) and stub only the network call.
+vi.mock("../../open-sse/rtk/headroom.js", async (importOriginal) => ({
+  ...(await importOriginal()),
   compressWithHeadroom: vi.fn(async () => null),
   formatHeadroomLog: vi.fn(() => ""),
 }));
