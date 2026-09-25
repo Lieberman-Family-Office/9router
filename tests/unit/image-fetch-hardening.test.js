@@ -21,9 +21,15 @@ function mockFetchOnce(bytes, ok = true) {
   globalThis.fetch = vi.fn(async () => ({ ok, body }));
 }
 
+// resolvePinnedIps calls lookup(host, { all: true }), which returns an ARRAY of records.
+// A bare { address } object has no .length, so every "allowed" case used to fall through
+// to a real network request (example.com), which fails offline.
 beforeEach(() => {
   lookupMock.mockReset();
-  lookupMock.mockResolvedValue({ address: "93.184.216.34" }); // public by default
+  lookupMock.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]); // public by default
+  // Default: any request that gets past the guards succeeds with a real PNG. So every
+  // rejection test passes only because a guard refused — never because the network failed.
+  mockFetchOnce(PNG);
 });
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -34,12 +40,12 @@ describe("fetchImageAsBase64 hardening", () => {
   });
 
   it("SSRF: rejects private IP (10.x)", async () => {
-    lookupMock.mockResolvedValue({ address: "10.0.0.5" });
+    lookupMock.mockResolvedValue([{ address: "10.0.0.5", family: 4 }]);
     expect(await fetchImageAsBase64("http://internal.example/x.png")).toBeNull();
   });
 
   it("SSRF: rejects cloud metadata 169.254.169.254", async () => {
-    lookupMock.mockResolvedValue({ address: "169.254.169.254" });
+    lookupMock.mockResolvedValue([{ address: "169.254.169.254", family: 4 }]);
     expect(await fetchImageAsBase64("http://metadata/x.png")).toBeNull();
   });
 
@@ -48,7 +54,7 @@ describe("fetchImageAsBase64 hardening", () => {
   });
 
   it("SSRF: rejects IPv6 loopback", async () => {
-    lookupMock.mockResolvedValue({ address: "::1" });
+    lookupMock.mockResolvedValue([{ address: "::1", family: 6 }]);
     expect(await fetchImageAsBase64("http://x/y.png")).toBeNull();
   });
 

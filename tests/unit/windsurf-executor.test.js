@@ -160,12 +160,19 @@ describe("decodeCompletionChunk", () => {
   });
 });
 
+// Windsurf is deliberately hidden from the provider registry (registry/index.js:
+// "Temporarily hidden — no tool calling support"), so PROVIDERS.windsurf is absent and
+// the executor falls back to its own Codeium chat URL. The registry file keeps the same
+// URL for when it is re-enabled. No commit ever pointed chat at server.self-serve.windsurf.com
+// (that host is only auth1ApiServerUrl, for the Devin auth chain).
+const WS_CHAT_URL = "https://server.codeium.com/exa.language_server_pb.LanguageServerService/GetChatMessage";
+
 describe("WindsurfExecutor class", () => {
-  it("constructor wires config from PROVIDERS.windsurf", () => {
+  it("constructor falls back to the Codeium chat endpoint while windsurf is hidden", () => {
     const ex = new WindsurfExecutor();
     expect(ex.provider).toBe("windsurf");
-    expect(ex.config).toBeDefined();
-    expect(ex.config.baseUrl).toContain("server.self-serve.windsurf.com");
+    expect(PROVIDERS.windsurf).toBeUndefined();
+    expect(ex.config.baseUrl).toBe(WS_CHAT_URL);
     expect(typeof ex.execute).toBe("function");
   });
 
@@ -187,12 +194,11 @@ describe("WindsurfExecutor class", () => {
 
   it("buildUrl returns the GetChatMessage endpoint", () => {
     const ex = new WindsurfExecutor();
-    expect(ex.buildUrl()).toBe("https://server.self-serve.windsurf.com/exa.language_server_pb.LanguageServerService/GetChatMessage");
+    expect(ex.buildUrl()).toBe(WS_CHAT_URL);
   });
 
-  it("PROVIDERS.windsurf baseUrl is the chat endpoint (registry in sync)", () => {
-    expect(PROVIDERS.windsurf.baseUrl).toBe(
-      "https://server.self-serve.windsurf.com/exa.language_server_pb.LanguageServerService/GetChatMessage"
-    );
+  it("hidden registry entry keeps the same chat endpoint (in sync for re-enable)", async () => {
+    const { default: windsurfRegistry } = await import("open-sse/providers/registry/windsurf.js");
+    expect(windsurfRegistry.transport.baseUrl).toBe(WS_CHAT_URL);
   });
 });
