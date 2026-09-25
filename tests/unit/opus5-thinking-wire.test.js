@@ -77,6 +77,28 @@ describe("Opus 5 thinking is on and its text is visible", () => {
     expect(deltas.map((d) => d.content || "").join("")).toBe("Answer.");
   });
 
+  it("a trailing assistant turn is closed with a user turn (Opus 5 rejects prefill)", () => {
+    const msgs = [{ role: "user", content: "hi" }, { role: "assistant", content: "Partial answer" }];
+    const out = translateRequest("openai", "claude", `${MODEL}(xhigh)`,
+      { model: `${MODEL}(xhigh)`, max_tokens: 1000, messages: msgs }, false, {}, "claude");
+    expect(out.messages.at(-1).role).toBe("user");
+    expect(out.messages.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
+  });
+
+  it("an empty trailing assistant turn is dropped rather than padded", () => {
+    const msgs = [{ role: "user", content: "hi" }, { role: "assistant", content: "" }];
+    const out = translateRequest("openai", "claude", MODEL,
+      { model: MODEL, max_tokens: 1000, messages: msgs }, false, {}, "claude");
+    expect(out.messages.map((m) => m.role)).toEqual(["user"]);
+  });
+
+  it("older models that allow prefill keep the trailing assistant turn", () => {
+    const msgs = [{ role: "user", content: "hi" }, { role: "assistant", content: "Partial" }];
+    const out = translateRequest("openai", "claude", "claude-haiku-4-5",
+      { model: "claude-haiku-4-5", max_tokens: 1000, messages: msgs }, false, {}, "claude");
+    expect(out.messages.at(-1).role).toBe("assistant");
+  });
+
   it("non-Claude-5 adaptive models get no thinking added when none requested", () => {
     expect(wire("claude-opus-4-8").thinking).toBeUndefined();
   });
