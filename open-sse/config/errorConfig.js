@@ -47,26 +47,6 @@ const COOLDOWN = {
   short: 5 * 1000,
 };
 
-// USAGE_LIMIT_LOCK_12H=true turns on the two 12 h usage-limit locks. Off by default:
-// the production bundle patch that meant to add them never reached the request path,
-// so production has never enforced them. Read per call, like ENABLE_REQUEST_LOGS.
-export const usageLimitLock12hEnabled = () => process.env.USAGE_LIMIT_LOCK_12H === "true";
-
-const USAGE_LIMIT_RULES_12H = [
-  // Must precede "rate limit" (a substring of the first).
-  // Source: production's ~/.9router/apply-usage-limit-lock-patch.sh (cooldownMs:432e5).
-  { text: "user provided api key rate limit exceeded", cooldownMs: 12 * 60 * 60 * 1000 },
-  { text: "usage limit",              cooldownMs: 12 * 60 * 60 * 1000 },
-];
-
-// Off: reproduce what production does today. "user provided api key rate limit exceeded"
-// falls to the generic "rate limit" backoff, which needs no rule. A 400/422 "usage limit"
-// was unmatched there, so it got the transient 30 s lock and failed over; without this
-// rule the terminal-400 status rule would stop it instead.
-const USAGE_LIMIT_RULES_OFF = [
-  { text: "usage limit", statuses: [400, 422], cooldownMs: TRANSIENT_COOLDOWN_MS },
-];
-
 /**
  * Unified error classification rules.
  * Checked top-to-bottom: text rules first (by order), then status rules.
@@ -83,7 +63,12 @@ export const errorRules = () => [
   { text: "no credentials",           cooldownMs: COOLDOWN.long },
   { text: "request not allowed",      cooldownMs: COOLDOWN.short },
   { text: "improperly formed request", cooldownMs: COOLDOWN.long },
-  ...(usageLimitLock12hEnabled() ? USAGE_LIMIT_RULES_12H : USAGE_LIMIT_RULES_OFF),
+  // A 400/422 "usage limit" is account-level: short transient lock + fail over to the
+  // next account (without this rule the terminal-400 status rule would stop it).
+  // "user provided api key rate limit exceeded" needs no rule: it matches "rate limit".
+  // No fixed multi-hour lock: provider-reported resets are honoured (capped by
+  // MAX_RATE_LIMIT_COOLDOWN_MS) and a wrong long lock costs far more than a retry.
+  { text: "usage limit", statuses: [400, 422], cooldownMs: TRANSIENT_COOLDOWN_MS },
   { text: "rate limit",               backoff: true },
   { text: "too many requests",        backoff: true },
   { text: "quota exceeded",           backoff: true },
