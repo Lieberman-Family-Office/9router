@@ -157,11 +157,33 @@ export function fixMissingToolResponses(body) {
 // omit it with HTTP 400. Tools that already carry a truthy `type` (e.g., `computer_use`,
 // `bash`, `web_search_20250305`) are passed through untouched.
 //
+// OpenAI `type: "function"` / nested `function: {…}` must be rewritten: Anthropic rejects
+// that tag with HTTP 400 ("Input tag 'function' found using 'type' does not match…").
+// Measured 2026-09-26 on Niteshift → cc/claude-opus-5-5 with native passthrough of an
+// OpenAI-shaped body (combo hop / wrong UA).
+//
 // Spread order matters: `{ ...tool, type: "custom" }` (spread first, override last)
 // ensures that falsy `type` values (null, undefined, "") in the original tool don't
 // overwrite the default. `{ type: "custom", ...tool }` would let `type: null` survive.
 export function defaultClaudeToolType(tools) {
   if (!Array.isArray(tools)) return tools;
-  return tools.map(tool => tool?.type ? tool : { ...tool, type: "custom" });
+  return tools.map((tool) => {
+    if (!tool || typeof tool !== "object") return tool;
+    // OpenAI function tools → Anthropic custom tools
+    if (tool.type === "function" || (tool.function && (!tool.type || tool.type === "function"))) {
+      const data = tool.function && typeof tool.function === "object" ? tool.function : tool;
+      return {
+        type: "custom",
+        name: data.name,
+        description: data.description || "",
+        input_schema:
+          data.parameters ||
+          data.input_schema ||
+          { type: "object", properties: {} },
+      };
+    }
+    if (tool.type) return tool;
+    return { ...tool, type: "custom" };
+  });
 }
 

@@ -11,6 +11,17 @@ const NATIVE_PAIRS = {
   "codex": ["codex"],
 };
 
+// Native passthrough is only safe when the body is already in the provider's
+// wire format. Claude Code UA + OpenAI-shaped tools (e.g. combo→Mac hop, or a
+// client that speaks OpenAI against a Claude account) must still translate —
+// otherwise Anthropic rejects `tools[].type: "function"` with HTTP 400.
+const NATIVE_SOURCE_FORMATS = {
+  claude: ["claude"],
+  "gemini-cli": ["gemini", "gemini-cli"],
+  antigravity: ["antigravity"],
+  codex: ["openai-responses", "codex"],
+};
+
 /**
  * Detect which CLI tool is making the request.
  * Returns one of: "claude" | "gemini-cli" | "antigravity" | "codex" | null
@@ -53,8 +64,10 @@ export function detectClientTool(headers = {}, body = {}) {
  * Check if this CLI tool + provider pair should be passed through losslessly.
  * @param {string|null} clientTool - Result of detectClientTool()
  * @param {string} provider        - Provider ID (e.g. "claude", "gemini-cli")
+ * @param {string|null} [sourceFormat] - Detected body format; when provided,
+ *   must match the client tool's native wire format (see NATIVE_SOURCE_FORMATS)
  */
-export function isNativePassthrough(clientTool, provider) {
+export function isNativePassthrough(clientTool, provider, sourceFormat = null) {
   if (!clientTool) return false;
   const nativeProviders = NATIVE_PAIRS[clientTool];
   if (!nativeProviders) return false;
@@ -62,5 +75,9 @@ export function isNativePassthrough(clientTool, provider) {
   const normalizedProvider = provider.startsWith("anthropic-compatible")
     ? "anthropic"
     : provider;
-  return nativeProviders.includes(normalizedProvider);
+  if (!nativeProviders.includes(normalizedProvider)) return false;
+  if (sourceFormat == null) return true;
+  const allowed = NATIVE_SOURCE_FORMATS[clientTool];
+  if (!allowed) return false;
+  return allowed.includes(sourceFormat);
 }
