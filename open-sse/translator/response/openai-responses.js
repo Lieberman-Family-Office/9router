@@ -262,6 +262,14 @@ function isCustomTool(state, name) {
   return !!name && state.customToolNames?.has(name);
 }
 
+function isAsyncTool(state, name) {
+  return !!name && state.asyncToolNames?.has(name);
+}
+
+function asyncCallFlag(state, name) {
+  return isAsyncTool(state, name) ? { async: true } : {};
+}
+
 function extractCustomToolInput(argumentsText) {
   if (typeof argumentsText !== "string") return "";
   try {
@@ -295,7 +303,8 @@ function emitToolCall(state, emit, tc) {
         type: custom ? RESPONSES_ITEM.CUSTOM_TOOL_CALL : RESPONSES_ITEM.FUNCTION_CALL,
         ...(custom ? { input: "" } : { arguments: "" }),
         call_id: callId,
-        name: state.funcNames[tcIdx] || ""
+        name: state.funcNames[tcIdx] || "",
+        ...asyncCallFlag(state, state.funcNames[tcIdx])
       }
     });
   }
@@ -356,7 +365,8 @@ function closeToolCall(state, emit, idx) {
         type: custom ? RESPONSES_ITEM.CUSTOM_TOOL_CALL : RESPONSES_ITEM.FUNCTION_CALL,
         ...(custom ? { input: extractCustomToolInput(args) } : { arguments: args }),
         call_id: callId,
-        name: state.funcNames[idx] || ""
+        name: state.funcNames[idx] || "",
+        ...asyncCallFlag(state, state.funcNames[idx])
       }
     });
 

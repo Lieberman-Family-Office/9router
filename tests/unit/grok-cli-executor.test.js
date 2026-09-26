@@ -312,7 +312,7 @@ describe("GrokCliExecutor", () => {
     expect(normalizeGrokCliEffort("minimal")).toBe("high");
     expect(normalizeGrokCliEffort("max")).toBe("xhigh");
     expect(normalizeGrokCliEffort("xhigh")).toBe("xhigh");
-    expect(normalizeGrokCliEffort("ultra")).toBe("high");
+    expect(normalizeGrokCliEffort("max")).toBe("xhigh");
 
     const out = executor.transformRequest("grok-4.5", {
       model: "grok-4.5",

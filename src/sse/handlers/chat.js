@@ -20,6 +20,8 @@ import { augmentModelsWithCapacityAdapter, withCapacityAdapterStripping, getActi
 import { handleBypassRequest } from "open-sse/utils/bypassHandler.js";
 import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
 import { detectFormatByEndpoint } from "open-sse/translator/formats.js";
+import { AI_PROVIDERS } from "@/shared/constants/providers.js";
+import { resolveCodexChatGptModel } from "open-sse/providers/codexChatGptModels.js";
 import * as log from "../utils/logger.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
 import { getProjectIdForConnection } from "open-sse/services/projectId.js";
@@ -218,7 +220,9 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid model format");
   }
 
-  const { provider, model } = modelInfo;
+  let { provider, model } = modelInfo;
+  const requestedProvider = provider;
+  const fallbackProviderId = AI_PROVIDERS[requestedProvider]?.credentialFallback || null;
 
   // Routing shown in the unified "▶" line (client model → provider/model)
 
@@ -231,7 +235,28 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   let lastStatus = null;
 
   while (true) {
-    const credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
+    let credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
+
+    // No connections for the resolved provider (e.g. bare gpt-* → openai while
+    // only ChatGPT Codex OAuth is configured). Reuse credentialFallback and
+    // switch transport — credentials alone are not enough (openai vs codex URLs).
+    if (!credentials && fallbackProviderId && provider === requestedProvider && excludeConnectionIds.size === 0) {
+      const fallbackCredentials = await getProviderCredentials(fallbackProviderId, excludeConnectionIds, model);
+      if (fallbackCredentials && !fallbackCredentials.allRateLimited) {
+        provider = fallbackProviderId;
+        credentials = fallbackCredentials;
+        log.info("AUTH", `${requestedProvider} reusing ${fallbackProviderId} credentials`);
+      }
+    }
+
+    // ChatGPT Codex OAuth rejects OpenAI Platform model ids (gpt-5, gpt-5.4, …).
+    if (provider === "codex" && credentials && !credentials.allRateLimited) {
+      const resolved = resolveCodexChatGptModel(model);
+      if (resolved.remappedFrom) {
+        log.info("AUTH", `codex remapping ${resolved.remappedFrom} → ${resolved.model}`);
+        model = resolved.model;
+      }
+    }
 
     // All accounts unavailable
     if (!credentials || credentials.allRateLimited) {

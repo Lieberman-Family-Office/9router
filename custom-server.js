@@ -14,9 +14,13 @@ const PEER_TOKEN = crypto.randomBytes(24).toString("hex");
 process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
 
 let backgroundRefreshStarted = false;
+let responsesWsStarted = false;
 
 function startBackgroundTokenRefreshFromCustomServer() {
   if (backgroundRefreshStarted) return;
+  // Unit tests require() this module without wanting the scheduler open-handle.
+  if (process.env.NINEROUTER_SKIP_BACKGROUND_REFRESH === "1") return;
+  if (require.main !== module && process.env.NINEROUTER_ATTACHED_SERVER !== "1") return;
   backgroundRefreshStarted = true;
   // Prefer source path (repo / standalone that still has src). Fail-open if missing
   // — initializeApp also starts the same scheduler when the Next app boots.
@@ -44,6 +48,49 @@ function startBackgroundTokenRefreshFromCustomServer() {
         console.error("[BackgroundTokenRefresh] import failed:", e && e.message ? e.message : e);
       }
     });
+}
+
+/**
+ * Mid-turn steering: accept WebSocket upgrades on /v1/responses.
+ * Loads open-sse ESM when present (repo/dev); falls back to ~/.9router/lib/responses-ws
+ * for the published CLI install hot-patch.
+ * Set NINEROUTER_SKIP_RESPONSES_WS=1 to disable (e.g. unit tests that require this module).
+ */
+function startResponsesWsFromCustomServer(server) {
+  if (responsesWsStarted || !server) return;
+  if (process.env.NINEROUTER_SKIP_RESPONSES_WS === "1") return;
+  // Always attach on the live Next server. Unit tests that require() this module
+  // without wanting WS should set NINEROUTER_SKIP_RESPONSES_WS=1.
+  responsesWsStarted = true;
+  const candidates = [
+    path.join(__dirname, "open-sse", "handlers", "responsesWs", "index.js"),
+    path.join(__dirname, "handlers", "responsesWs", "index.js"),
+    path.join(process.env.HOME || "", ".9router", "lib", "responses-ws", "index.mjs"),
+  ];
+  const tryAttach = async () => {
+    let lastErr = null;
+    for (const modPath of candidates) {
+      if (!fs.existsSync(modPath)) continue;
+      try {
+        const m = await import(pathToFileURL(modPath).href);
+        const attach = m.attachResponsesWebSocket || m.installOnServer || m.default?.attachResponsesWebSocket;
+        if (typeof attach !== "function") continue;
+        const addr = server.address();
+        const localPort = addr && typeof addr === "object" ? addr.port : Number(process.env.PORT) || 20128;
+        attach(server, { localPort });
+        console.log(`[ResponsesWS] mid-turn steering enabled on /v1/responses (port ${localPort})`);
+        return;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    if (process.env.DEBUG_RESPONSES_WS || lastErr) {
+      console.error("[ResponsesWS] attach skipped:", lastErr && lastErr.message ? lastErr.message : "module not found");
+    }
+  };
+  tryAttach().catch((e) => {
+    console.error("[ResponsesWS] attach failed:", e && e.message ? e.message : e);
+  });
 }
 
 // Wrap Next standalone HTTP server: derive client IP from the TCP socket
@@ -75,9 +122,12 @@ http.createServer = (...args) => {
   const server = origCreate(...rest, wrapped);
   server.once("listening", () => {
     startBackgroundTokenRefreshFromCustomServer();
+    startResponsesWsFromCustomServer(server);
   });
   const origEmit = server.emit;
   // JBR 25 sends h2c upgrades that the HTTP/1.1 server would otherwise close.
+  // Responses WebSocket upgrades (`Upgrade: websocket`) fall through to origEmit
+  // and are handled by attachResponsesWebSocket listeners.
   server.emit = function (event, ...eventArgs) {
     const [req, socket, head] = eventArgs;
     if (event !== "upgrade" || String(req.headers.upgrade || "").toLowerCase() !== "h2c") {

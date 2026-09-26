@@ -151,9 +151,11 @@ export const PROVIDER_CAPABILITIES = {
     "deepseek-ai/deepseek-v4-flash": { reasoning: true, thinkingFormat: "openai", contextWindow: 1000000, maxOutput: 65536 },
   },
   "codex": {
-    "gpt-6-astra": { reasoning: true, thinkingFormat: "openai" },
-    // Reasoning only (enables its effort levels); context/vision deliberately unchanged.
-    "gpt-6-sol": { reasoning: true, thinkingFormat: "openai" },
+    // Vision+pdf required: provider overrides return early without catalog refine,
+    // so reasoning-only entries kept vision DEFAULT false and stripUnsupportedModalities
+    // dropped images (measured live 2026-09-26; astra/sol vision token 314159 after fix).
+    "gpt-6-astra": { vision: true, pdf: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 372000, maxOutput: 128000 },
+    "gpt-6-sol": { vision: true, pdf: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 372000, maxOutput: 128000 },
     "gpt-5.6-sol":               CODEX_GPT_56_SOL_CAPS,
     "gpt-5.6-sol-review":        CODEX_GPT_56_SOL_CAPS,
     "gpt-5.6-terra":             CODEX_GPT_56_DEFAULT_CAPS,
@@ -237,7 +239,9 @@ export const PATTERN_CAPABILITIES = [
   { pattern: "*gemma*",         caps: { vision: true, contextWindow: 128000 } },
   { pattern: "*nanobanana*",    caps: { vision: true, imageOutput: true } },
 
-  // ── OpenAI GPT-5.x (vision + thinking + web search) ──────────────
+  // ── OpenAI GPT-6.x / GPT-5.x (vision + thinking + web search) ────
+  // gpt-6 before gpt-5 so bare gpt-6 ids match even without a codex override.
+  { pattern: "*gpt-6*",         caps: { vision: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 400000, maxOutput: 128000 } },
   { pattern: "*gpt-5*image*",   caps: { imageOutput: true } },
   { pattern: "*gpt-5*codex*",   caps: { reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 400000, maxOutput: 128000 } },
   { pattern: "*gpt-5*",         caps: { vision: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 400000, maxOutput: 128000 } },

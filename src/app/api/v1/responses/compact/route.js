@@ -27,6 +27,20 @@ export async function OPTIONS() {
 export async function POST(request) {
   await ensureInitialized();
   const body = await request.json();
+  // OpenAI docs: Multi-agent is incompatible with standalone /responses/compact.
+  if (body?.multi_agent?.enabled === true) {
+    return Response.json(
+      {
+        error: {
+          message:
+            "multi_agent is not supported with /responses/compact; disable multi_agent or use server-side context_management compaction",
+          type: "invalid_request_error",
+          code: "multi_agent_compact_incompatible",
+        },
+      },
+      { status: 400 },
+    );
+  }
   body._compact = true;
   const newRequest = new Request(request.url, {
     method: "POST",

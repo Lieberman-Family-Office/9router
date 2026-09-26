@@ -16,23 +16,49 @@ const apply = (targetFormat, model, body, provider) => {
 
 describe("parseSuffix", () => {
   it("parses level suffix", () => {
-    expect(parseSuffix("gpt-5(high)")).toEqual({ cleanModel: "gpt-5", override: { mode: "level", level: "high" } });
+    expect(parseSuffix("gpt-5(high)")).toEqual({ cleanModel: "gpt-5", override: { mode: "level", level: "high" }, reasoningConfig: null, reasoningMode: null, orchestration: null, textConfig: null });
   });
-  it("parses ultra suffix", () => {
+  it("ignores unknown ultra suffix (not a wire effort)", () => {
     expect(parseSuffix("gpt-5.6-sol(ultra)")).toEqual({
       cleanModel: "gpt-5.6-sol",
-      override: { mode: "level", level: "ultra" },
+      override: null,
+      reasoningConfig: null,
+      reasoningMode: null,
+      orchestration: null, textConfig: null,
+    });
+  });
+  it("parses pro / standard reasoning mode and compounds", () => {
+    expect(parseSuffix("gpt-6-astra(pro)")).toEqual({
+      cleanModel: "gpt-6-astra",
+      override: null,
+      reasoningConfig: { mode: "pro" },
+      reasoningMode: "pro",
+      orchestration: null, textConfig: null,
+    });
+    expect(parseSuffix("gpt-6-astra(max,pro)")).toEqual({
+      cleanModel: "gpt-6-astra",
+      override: { mode: "level", level: "max" },
+      reasoningConfig: { mode: "pro" },
+      reasoningMode: "pro",
+      orchestration: null, textConfig: null,
+    });
+    expect(parseSuffix("gpt-6-sol(pro+xhigh)")).toEqual({
+      cleanModel: "gpt-6-sol",
+      override: { mode: "level", level: "xhigh" },
+      reasoningConfig: { mode: "pro" },
+      reasoningMode: "pro",
+      orchestration: null, textConfig: null,
     });
   });
   it("parses numeric budget suffix", () => {
-    expect(parseSuffix("model(8192)")).toEqual({ cleanModel: "model", override: { mode: "budget", budget: 8192 } });
+    expect(parseSuffix("model(8192)")).toEqual({ cleanModel: "model", override: { mode: "budget", budget: 8192 }, reasoningConfig: null, reasoningMode: null, orchestration: null, textConfig: null });
   });
   it("parses auto / none", () => {
     expect(parseSuffix("m(auto)").override).toEqual({ mode: "auto" });
     expect(parseSuffix("m(none)").override).toEqual({ mode: "none" });
   });
   it("no suffix → passthrough", () => {
-    expect(parseSuffix("claude-opus-4.7")).toEqual({ cleanModel: "claude-opus-4.7", override: null });
+    expect(parseSuffix("claude-opus-4.7")).toEqual({ cleanModel: "claude-opus-4.7", override: null, reasoningConfig: null, reasoningMode: null, orchestration: null, textConfig: null });
   });
 });
 
@@ -199,18 +225,21 @@ describe("applyThinking per provider format", () => {
   });
   it.each([
     ["gpt-5.6-sol", "max", "max"],
-    ["gpt-5.6-sol", "ultra", "ultra"],
     ["gpt-5.6-terra", "max", "max"],
-    ["gpt-5.6-terra", "ultra", "ultra"],
     ["gpt-5.6-luna", "max", "max"],
-    ["gpt-5.6-luna", "ultra", "max"],
+    ["gpt-5.6-luna", "xhigh", "xhigh"],
   ])("normalizes Codex %s effort %s to %s", (model, effort, expected) => {
     const out = apply("openai-responses", model, { reasoning: { effort } }, "codex");
     expect(out.reasoning_effort).toBe(expected);
   });
-  it("applies a supported Codex Ultra suffix", () => {
-    const out = apply("openai-responses", "gpt-5.6-sol(ultra)", {}, "codex");
-    expect(out.reasoning_effort).toBe("ultra");
+  it("applies pro reasoning mode from model suffix", () => {
+    const out = apply("openai-responses", "gpt-5.6-sol(pro)", {}, "codex");
+    expect(out.reasoning?.mode).toBe("pro");
+  });
+  it("applies max+pro compound suffix", () => {
+    const out = apply("openai-responses", "gpt-6-astra(max,pro)", {}, "codex");
+    expect(out.reasoning_effort).toBe("max");
+    expect(out.reasoning?.mode).toBe("pro");
   });
   it("keeps Codex-only GPT-5.6 levels out of Kiro translation", () => {
     const out = apply("openai", "gpt-5.6-sol", { reasoning_effort: "max" }, "kiro");

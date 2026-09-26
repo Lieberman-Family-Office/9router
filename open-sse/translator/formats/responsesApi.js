@@ -117,6 +117,18 @@ export function convertResponsesApiFormat(body) {
       // Skip reasoning items - they are for display only
       continue;
     }
+    else if (itemType === RESPONSES_ITEM.CONFIGURATION_UPDATE) {
+      // Mid-conversation effort/config updates are Responses-native. Chat Completions
+      // has no equivalent — keep a marker so round-trips can rebuild Responses input.
+      // Do NOT rewrite body.reasoning_effort here (cache-preserving GPT-6 rule).
+      result.messages.push({
+        role: ROLE.SYSTEM,
+        content: "",
+        configuration_update: {
+          reasoning: item.reasoning && typeof item.reasoning === "object" ? { ...item.reasoning } : undefined,
+        },
+      });
+    }
   }
 
   // Flush remaining

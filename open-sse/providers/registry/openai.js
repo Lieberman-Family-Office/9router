@@ -13,6 +13,9 @@ export default {
     },
   },
   category: "apikey",
+  // When no OpenAI API-key connections exist, reuse ChatGPT Codex OAuth
+  // (clients that send bare gpt-* / openai/* model ids — e.g. Codex via Niteshift).
+  credentialFallback: "codex",
   thinkingConfig: {
     options: [
       "auto",

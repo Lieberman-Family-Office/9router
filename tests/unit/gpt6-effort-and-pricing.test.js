@@ -1,5 +1,5 @@
-// GPT-6 on Codex: effort levels measured live 2026-09-25 ("max" accepted, "ultra"
-// rejected 400), and cost lookup for usage logged with an effort label.
+// GPT-6 on Codex: astra/sol share low|medium|high|xhigh|max (no ultra).
+// Cost lookup for usage logged with an effort label.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -15,17 +15,19 @@ function sentEffort(model, requested) {
 }
 
 describe("GPT-6 Codex effort levels", () => {
-  for (const model of ["gpt-6-astra", "gpt-6-sol"]) {
-    it(`${model} offers max but not ultra`, () => {
-      const levels = getThinkingLevels("codex", model);
-      expect(levels).toContain("max");
-      expect(levels).not.toContain("ultra");
-    });
+  it("gpt-6-astra and gpt-6-sol share identical effort levels (no ultra)", () => {
+    const want = ["low", "medium", "high", "xhigh", "max"];
+    expect(getThinkingLevels("codex", "gpt-6-astra")).toEqual(want);
+    expect(getThinkingLevels("codex", "gpt-6-sol")).toEqual(want);
+  });
 
-    it(`${model}: xhigh/max pass through, ultra becomes max (never sent: upstream rejects it)`, () => {
-      expect(sentEffort(model, "xhigh")).toBe("xhigh");
-      expect(sentEffort(model, "max")).toBe("max");
-      expect(sentEffort(model, "ultra")).toBe("max");
+  for (const model of ["gpt-6-astra", "gpt-6-sol"]) {
+    it(`${model}: low/medium/high/xhigh/max pass through; ultra is dropped (not remapped)`, () => {
+      for (const level of ["low", "medium", "high", "xhigh", "max"]) {
+        expect(sentEffort(model, level)).toBe(level);
+      }
+      // ultra is not a wire effort — ignored, falls back to default low
+      expect(sentEffort(model, "ultra")).toBe("low");
     });
   }
 });
@@ -48,7 +50,7 @@ describe("pricing for effort-labelled usage", () => {
   });
 
   it("a user price for the base model also prices its effort-labelled variants", async () => {
-    for (const m of ["gpt-6-astra", "gpt-6-astra(max)", "gpt-6-astra(ultra)", "gpt-6-astra(xhigh)"]) {
+    for (const m of ["gpt-6-astra", "gpt-6-astra(max)", "gpt-6-astra(xhigh)"]) {
       expect(await pricingRepo.getPricingForModel("codex", m)).toMatchObject({ input: 10, output: 50 });
     }
   });

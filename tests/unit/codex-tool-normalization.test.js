@@ -137,4 +137,114 @@ describe("CodexExecutor tool normalization", () => {
       },
     ]);
   });
+
+  it("preserves async:true on function tools through normalizeCodexTools", () => {
+    const tools = normalizeTools([
+      {
+        type: "function",
+        name: "get_weather",
+        description: "Read a demo weather snapshot for a city.",
+        async: true,
+        strict: true,
+        parameters: {
+          type: "object",
+          properties: { city: { type: "string" } },
+          required: ["city"],
+          additionalProperties: false,
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "lookup_price",
+          description: "Look up a product price",
+          async: true,
+          parameters: {
+            type: "object",
+            properties: {
+              sku: { type: "string" },
+              task_handle: { type: "string" },
+            },
+            required: ["sku", "task_handle"],
+            additionalProperties: false,
+          },
+        },
+      },
+      {
+        type: "function",
+        name: "wait_for_tasks",
+        description: "Wait for selected tasks",
+        parameters: {
+          type: "object",
+          properties: { task_handles: { type: "array", items: { type: "string" } } },
+          required: ["task_handles"],
+          additionalProperties: false,
+        },
+      },
+    ]);
+
+    expect(tools).toEqual([
+      {
+        type: "function",
+        name: "get_weather",
+        description: "Read a demo weather snapshot for a city.",
+        async: true,
+        strict: true,
+        parameters: {
+          type: "object",
+          properties: { city: { type: "string" } },
+          required: ["city"],
+          additionalProperties: false,
+        },
+      },
+      {
+        type: "function",
+        name: "lookup_price",
+        description: "Look up a product price",
+        async: true,
+        parameters: {
+          type: "object",
+          properties: {
+            sku: { type: "string" },
+            task_handle: { type: "string" },
+          },
+          required: ["sku", "task_handle"],
+          additionalProperties: false,
+        },
+      },
+      {
+        type: "function",
+        name: "wait_for_tasks",
+        description: "Wait for selected tasks",
+        parameters: {
+          type: "object",
+          properties: { task_handles: { type: "array", items: { type: "string" } } },
+          required: ["task_handles"],
+          additionalProperties: false,
+        },
+      },
+    ]);
+  });
+
+  it("preserves async:true on custom tools through Codex passthrough", () => {
+    const tools = normalizeTools([
+      {
+        type: "custom",
+        name: "slow_exec",
+        description: "Run freeform code in the background",
+        async: true,
+        format: { type: "grammar", syntax: "lark", definition: "start: /.+/" },
+      },
+    ]);
+
+    expect(tools).toEqual([
+      {
+        type: "custom",
+        name: "slow_exec",
+        description: "Run freeform code in the background",
+        async: true,
+        format: { type: "grammar", syntax: "lark", definition: "start: /.+/" },
+      },
+    ]);
+  });
 });

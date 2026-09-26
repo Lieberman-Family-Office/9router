@@ -6,6 +6,24 @@ import { getCapabilitiesForModel } from "../../providers/capabilities.js";
 import { getThinkingLevels } from "../../providers/thinkingLevels.js";
 import { PROVIDERS } from "../../providers/index.js";
 import { LEVEL_TO_BUDGET, budgetToLevel, effortToBudget, effortToThinkingLevel } from "./thinking.js";
+import {
+  parseReasoningConfigToken,
+  mergeReasoningConfig,
+  applyReasoningConfigToBody,
+  pickReasoningConfig,
+} from "./reasoningConfig.js";
+import {
+  parseOrchestrationToken,
+  mergeMultiAgent,
+  mergeContextManagement,
+  applyMultiAgentIncompatibilities,
+} from "./orchestrationConfig.js";
+import {
+  parseTextConfigToken,
+  mergeTextConfig,
+  applyTextConfigToBody,
+  pickTextConfig,
+} from "./textConfig.js";
 
 // Map a target wire-format to its native thinking format (when capability has none).
 const FORMAT_TO_NATIVE = {
@@ -28,20 +46,85 @@ export function stripThinkingSuffix(model) {
   return m ? m[1].trim() : model;
 }
 
-// Parse model-name suffix "model(value)" → { cleanModel, override }.
-// value: level name (high) | number (8192) | auto | none. null override when absent.
+function parseThinkingToken(raw) {
+  if (raw === "none" || raw === "off") return { mode: "none" };
+  if (raw === "auto") return { mode: "auto" };
+  if (/^\d+$/.test(raw)) return { mode: "budget", budget: Number(raw) };
+  if (LEVEL_TO_BUDGET[raw] !== undefined) return { mode: "level", level: raw };
+  return null;
+}
+
+// Parse model-name suffix "model(value)" → { cleanModel, override, reasoningConfig, orchestration, textConfig }.
+// value tokens (comma/plus): effort | budget | thinking auto/none |
+// reasoning.mode/context/summary tokens | text.verbosity (verbosity_low|…) |
+// multi-agent (ma, ma:N) | compact:N.
+// No "ultra" — wire effort enum is none|minimal|low|medium|high|xhigh|max.
 export function parseSuffix(model) {
-  if (typeof model !== "string") return { cleanModel: model, override: null };
+  const empty = {
+    cleanModel: model,
+    override: null,
+    reasoningConfig: null,
+    reasoningMode: null,
+    orchestration: null,
+    textConfig: null,
+  };
+  if (typeof model !== "string") return empty;
   const m = model.match(/^(.*)\(([^()]+)\)\s*$/);
-  if (!m) return { cleanModel: model, override: null };
+  if (!m) return { ...empty, cleanModel: model };
   const cleanModel = m[1].trim();
-  const raw = m[2].trim().toLowerCase();
-  if (raw === "none" || raw === "off") return { cleanModel, override: { mode: "none" } };
-  if (raw === "auto") return { cleanModel, override: { mode: "auto" } };
-  if (raw === "ultra") return { cleanModel, override: { mode: "level", level: raw } };
-  if (/^\d+$/.test(raw)) return { cleanModel, override: { mode: "budget", budget: Number(raw) } };
-  if (LEVEL_TO_BUDGET[raw] !== undefined) return { cleanModel, override: { mode: "level", level: raw } };
-  return { cleanModel, override: null };
+  const parts = m[2].split(/[,+]/).map((p) => p.trim().toLowerCase()).filter(Boolean);
+  const reasoningConfig = {};
+  const orchestration = {};
+  const textConfig = {};
+  let thinkingRaw = null;
+  for (const part of parts) {
+    const rc = parseReasoningConfigToken(part);
+    if (rc) {
+      Object.assign(reasoningConfig, rc);
+      continue;
+    }
+    const tc = parseTextConfigToken(part);
+    if (tc) {
+      Object.assign(textConfig, tc);
+      continue;
+    }
+    const orch = parseOrchestrationToken(part);
+    if (orch) {
+      if (orch.multiAgent) {
+        orchestration.multiAgent = {
+          ...(orchestration.multiAgent || {}),
+          ...orch.multiAgent,
+          enabled: true,
+        };
+      }
+      if (orch.contextManagement) orchestration.contextManagement = orch.contextManagement;
+      continue;
+    }
+    if (thinkingRaw === null) thinkingRaw = part;
+  }
+  const override = thinkingRaw === null ? null : parseThinkingToken(thinkingRaw);
+  const hasReasoning = Object.keys(reasoningConfig).length > 0;
+  const hasOrch = Object.keys(orchestration).length > 0;
+  const hasText = Object.keys(textConfig).length > 0;
+  // Unknown sole token (e.g. legacy "ultra"): strip suffix, no override.
+  if (thinkingRaw !== null && override === null && !hasReasoning && !hasOrch && !hasText) {
+    return {
+      cleanModel,
+      override: null,
+      reasoningConfig: null,
+      reasoningMode: null,
+      orchestration: null,
+      textConfig: null,
+    };
+  }
+  return {
+    cleanModel,
+    override,
+    reasoningConfig: hasReasoning ? reasoningConfig : null,
+    reasoningMode: reasoningConfig.mode || null,
+    orchestration: hasOrch ? orchestration : null,
+    textConfig: hasText ? textConfig : null,
+  };
 }
 
 // Extract unified thinking intent from a request body (post-translation, mixed shapes).
@@ -137,15 +220,13 @@ function toLevel(cfg) {
 }
 
 function normalizeOpenAILevel(level, supportedLevels) {
-  if (level !== "max" && level !== "ultra") return level;
-  if (supportedLevels?.includes(level)) return level;
-  if (level === "ultra" && supportedLevels?.includes("max")) return "max";
+  if (level !== "max") return level;
+  if (supportedLevels?.includes("max")) return "max";
   return "xhigh";
 }
 
 // Anthropic effort enum is low|medium|high|xhigh|max; map anything else onto it.
 function toClaudeEffort(level, supportedLevels) {
-  if (level === "ultra") return "max";
   if (level === "minimal") return "low";
   if (level === "auto") return null; // omit → API default ("auto" is not a valid effort)
   if (level === "xhigh" && !supportedLevels?.includes("xhigh")) return "high";
@@ -355,13 +436,34 @@ function applyFormat(fmt, body, cfg, caps, supportedLevels) {
 export function applyThinking(targetFormat, model, body, provider = null, intent = undefined) {
   if (!body || typeof body !== "object") return body;
 
-  const { cleanModel, override } = parseSuffix(model);
+  const {
+    cleanModel,
+    override,
+    reasoningConfig: suffixReasoning,
+    orchestration: suffixOrch,
+    textConfig: suffixText,
+  } = parseSuffix(model);
+  // Preserve Responses reasoning fields across stripAll (mode/context/summary; effort reapplied).
+  // Preserve mode/context/summary only — effort is re-derived by applyFormat / reasoning_effort.
+  const preservedFull = pickReasoningConfig(body.reasoning);
+  const preservedReasoning = { ...preservedFull };
+  delete preservedReasoning.effort;
+  const preservedText = pickTextConfig(body);
+  const priorMultiAgent = body.multi_agent;
+  const priorContextManagement = body.context_management;
   const cfg = override || intent || extractThinking(body);
   const caps = getCapabilitiesForModel(provider, cleanModel);
 
   // Model cannot reason → strip any stray thinking fields.
   if (!caps.reasoning) {
     stripAll(body);
+    const ma0 = mergeMultiAgent(priorMultiAgent, suffixOrch?.multiAgent);
+    if (ma0) body.multi_agent = ma0;
+    const cm0 = mergeContextManagement(priorContextManagement, suffixOrch?.contextManagement);
+    if (cm0) body.context_management = cm0;
+    applyMultiAgentIncompatibilities(body);
+    const textMerged0 = mergeTextConfig(preservedText, suffixText);
+    applyTextConfigToBody(body, textMerged0);
     return body;
   }
   const clientDisplay = body.thinking?.display;
@@ -385,6 +487,22 @@ export function applyThinking(targetFormat, model, body, provider = null, intent
   if (provider === "claude" && HIGH_EFFORT_OUTPUT_FLOOR_EFFORTS.has(body.output_config?.effort)) {
     body.max_tokens = Math.max(body.max_tokens || 0, HIGH_EFFORT_OUTPUT_FLOOR);
   }
+  // Responses reasoning object: suffix wins per field. Omit unset fields (model defaults).
+  // Do NOT force summary — docs: summaries are opt-in. Mid-turn effort uses configuration_update.
+  const merged = mergeReasoningConfig(preservedReasoning, suffixReasoning);
+  applyReasoningConfigToBody(body, merged);
+
+  // text.verbosity (OpenAI deployment checklist) — suffix wins; omit unless opted in.
+  const textMerged = mergeTextConfig(preservedText, suffixText);
+  applyTextConfigToBody(body, textMerged);
+
+  // Multi-agent + server-side compaction (OpenAI Responses docs).
+  const ma = mergeMultiAgent(priorMultiAgent, suffixOrch?.multiAgent);
+  if (ma) body.multi_agent = ma;
+  else delete body.multi_agent;
+  const cm = mergeContextManagement(priorContextManagement, suffixOrch?.contextManagement);
+  if (cm) body.context_management = cm;
+  applyMultiAgentIncompatibilities(body);
   return body;
 }
 
