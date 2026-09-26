@@ -1,0 +1,32 @@
+{
+	auto_https off
+	admin 127.0.0.1:2019
+}
+:8080 {
+	@v1 path /v1 /v1/*
+	handle @v1 {
+		@bad not header Authorization "Bearer {$NINEROUTER_BEARER}"
+		respond @bad 401
+		reverse_proxy http://127.0.0.1:8090 {
+			header_up Host jasonmac-9router.taila4d534.ts.net
+			flush_interval -1
+			transport http {
+				dial_timeout 15s
+				read_timeout 0
+				write_timeout 0
+			}
+		}
+	}
+	# Dashboard UI + Next assets + cookie auth. No API bearer — 9router owns login.
+	# Catch-all after /v1: do not override Host so cookies bind to 9r.liebermanfamilyoffice.com.
+	handle {
+		reverse_proxy http://jasonmac-9router.taila4d534.ts.net:20128 {
+			flush_interval -1
+			transport http {
+				dial_timeout 15s
+				read_timeout 0
+				write_timeout 0
+			}
+		}
+	}
+}

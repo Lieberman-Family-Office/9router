@@ -1,0 +1,17 @@
+{
+	admin off
+	auto_https off
+}
+:8080 {
+	@v1 path /v1 /v1/*
+	handle @v1 {
+		@bad not header Authorization "Bearer test-bearer"
+		respond @bad 401
+		reverse_proxy http://127.0.0.1:9000
+	}
+	# Everything else (dashboard, login, Next assets, cookie auth) → 9router.
+	# /v1 stays bearer-gated above. Do not override Host (cookies bind to public host).
+	handle {
+		reverse_proxy http://127.0.0.1:9000
+	}
+}
