@@ -52,6 +52,7 @@ const RESPONSES_API_ALLOWLIST = new Set([
   "text",
   // OpenAI Responses Multi-agent + server-side compaction (docs).
   "multi_agent", "context_management",
+  // configuration_update lives inside input[] items (not a top-level field).
 ]);
 
 // Convert role=system → role=developer in body.input (keeps content in cacheable prefix)
@@ -106,11 +107,18 @@ function normalizeCodexTools(body) {
     const parameters = (tool.parameters && typeof tool.parameters === "object" && !Array.isArray(tool.parameters))
       ? tool.parameters
       : (fn?.parameters && typeof fn.parameters === "object" && !Array.isArray(fn.parameters) ? fn.parameters : { type: "object", properties: {} });
+    // Preserve Responses tool flags OpenAI documents for async tool calling / structured tools.
+    const asyncFlag = typeof tool.async === "boolean" ? tool.async : (typeof fn?.async === "boolean" ? fn.async : undefined);
+    const strictFlag = typeof tool.strict === "boolean" ? tool.strict : (typeof fn?.strict === "boolean" ? fn.strict : undefined);
+    const deferLoading = typeof tool.defer_loading === "boolean" ? tool.defer_loading : (typeof fn?.defer_loading === "boolean" ? fn.defer_loading : undefined);
     for (const k of Object.keys(tool)) delete tool[k];
     tool.type = "function";
     tool.name = name.slice(0, 128);
     if (description) tool.description = description;
     tool.parameters = parameters;
+    if (asyncFlag !== undefined) tool.async = asyncFlag;
+    if (strictFlag !== undefined) tool.strict = strictFlag;
+    if (deferLoading !== undefined) tool.defer_loading = deferLoading;
     validNames.add(name);
     return true;
   });

@@ -34,6 +34,7 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
   let pendingReasoningEncrypted = "";
   const additionalTools = [];
   const customToolNames = new Set();
+  const asyncToolNames = new Set();
 
   const inputItems = normalizeResponsesInput(body.input);
   if (!inputItems) return body;
@@ -192,41 +193,43 @@ export function openaiResponsesToOpenAIRequest(model, body, stream, credentials)
         if (!name || typeof name !== "string" || name.trim() === "") return null;
         if (tool.type === "custom") {
           customToolNames.add(name);
+          if (tool.async === true) asyncToolNames.add(name);
           const formatHint = [tool.format?.syntax, tool.format?.definition].filter(Boolean).join("\n");
-          return {
-            type: OPENAI_BLOCK.FUNCTION,
-            function: {
-              name,
-              description: [String(tool.description || ""), formatHint].filter(Boolean).join("\n\n"),
-              parameters: {
-                type: "object",
-                properties: {
-                  input: {
-                    type: "string",
-                    description: "Raw freeform input for this custom tool"
-                  }
-                },
-                required: ["input"],
-                additionalProperties: false
-              }
+          const fn = {
+            name,
+            description: [String(tool.description || ""), formatHint].filter(Boolean).join("\n\n"),
+            parameters: {
+              type: "object",
+              properties: {
+                input: {
+                  type: "string",
+                  description: "Raw freeform input for this custom tool"
+                }
+              },
+              required: ["input"],
+              additionalProperties: false
             }
           };
+          if (typeof tool.async === "boolean") fn.async = tool.async;
+          if (typeof tool.strict === "boolean") fn.strict = tool.strict;
+          return { type: OPENAI_BLOCK.FUNCTION, function: fn };
         }
         // Responses API function tool: { type: "function", name, description, parameters }
         // Only convert when a non-empty name is present; skip hosted tools without one.
-        return {
-          type: OPENAI_BLOCK.FUNCTION,
-          function: {
-            name,
-            description: String(tool.description || ""),
-            parameters: normalizeToolParameters(tool.parameters),
-            strict: tool.strict
-          }
+        if (tool.async === true) asyncToolNames.add(name);
+        const fn = {
+          name,
+          description: String(tool.description || ""),
+          parameters: normalizeToolParameters(tool.parameters),
         };
+        if (typeof tool.strict === "boolean") fn.strict = tool.strict;
+        if (typeof tool.async === "boolean") fn.async = tool.async;
+        return { type: OPENAI_BLOCK.FUNCTION, function: fn };
       })
       .filter(Boolean);
   }
   if (customToolNames.size > 0) result._customToolNames = [...customToolNames];
+  if (asyncToolNames.size > 0) result._asyncToolNames = [...asyncToolNames];
 
   // Cleanup Responses API specific fields
   // Map Responses-only max_output_tokens to Chat max_tokens (avoid leaking unknown field upstream)
@@ -416,13 +419,18 @@ export function openaiToOpenAIResponsesRequest(model, body, stream, credentials)
   if (body.tools && Array.isArray(body.tools)) {
     result.tools = body.tools.map(tool => {
       if (tool.type === OPENAI_BLOCK.FUNCTION) {
-        return {
+        const fn = tool.function || {};
+        const out = {
           type: OPENAI_BLOCK.FUNCTION,
-          name: tool.function.name,
-          description: String(tool.function.description || ""),
-          parameters: normalizeToolParameters(tool.function.parameters),
-          strict: tool.function.strict
+          name: fn.name,
+          description: String(fn.description || ""),
+          parameters: normalizeToolParameters(fn.parameters),
         };
+        if (typeof fn.strict === "boolean") out.strict = fn.strict;
+        // Async tool calling is Responses-native; preserve when present on Chat function tools.
+        if (typeof fn.async === "boolean") out.async = fn.async;
+        else if (typeof tool.async === "boolean") out.async = tool.async;
+        return out;
       }
       return tool;
     });
