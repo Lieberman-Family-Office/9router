@@ -1,4 +1,4 @@
-// GPT-6 on Codex: effort levels measured live 2026-09-25 ("max" accepted, "ultra"
+// GPT-6 on Codex: effort levels measured live 2026-09-26 ("max" accepted, "ultra"
 // rejected 400), and cost lookup for usage logged with an effort label.
 import fs from "node:fs";
 import os from "node:os";
@@ -22,10 +22,11 @@ describe("GPT-6 Codex effort levels", () => {
       expect(levels).not.toContain("ultra");
     });
 
-    it(`${model}: xhigh/max pass through, ultra becomes max (never sent: upstream rejects it)`, () => {
+    it(`${model}: xhigh/max pass through; ultra remaps per Codex CLI (never sent upstream)`, () => {
       expect(sentEffort(model, "xhigh")).toBe("xhigh");
       expect(sentEffort(model, "max")).toBe("max");
-      expect(sentEffort(model, "ultra")).toBe("max");
+      const wantUltra = model.includes("astra") ? "xhigh" : "max";
+      expect(sentEffort(model, "ultra")).toBe(wantUltra);
     });
   }
 });

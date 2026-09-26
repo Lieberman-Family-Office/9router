@@ -83,29 +83,30 @@ describe("native Codex passthrough thinking suffixes", () => {
     });
   });
 
-  it("forwards Ultra for Sol", async () => {
-    const body = await runNativeCodexRequest("gpt-5.6-sol(ultra)");
+  it("forwards max effort for Sol", async () => {
+    const body = await runNativeCodexRequest("gpt-5.6-sol(max)");
 
     expect(body.model).toBe("gpt-5.6-sol");
-    expect(body.reasoning).toEqual({ effort: "ultra" });
+    expect(body.reasoning).toEqual({ effort: "max" });
   });
 
-  it("converts unsupported Luna Ultra to Max without dropping reasoning metadata", async () => {
-    const body = await runNativeCodexRequest("gpt-5.6-luna(ultra)", {
-      effort: "low",
+  it("forwards pro reasoning mode from model suffix onto pre-executor body", async () => {
+    const body = await runNativeCodexRequest("gpt-6-astra(pro)", {
+      effort: "high",
       summary: "detailed",
     });
 
-    expect(body.model).toBe("gpt-5.6-luna");
-    expect(body.reasoning).toEqual({ effort: "max", summary: "detailed" });
+    expect(body.model).toBe("gpt-6-astra");
+    // applyThinking still sets mode=pro; CodexExecutor.transformRequest strips it upstream.
+    expect(body.reasoning).toEqual({ effort: "high", summary: "detailed", mode: "pro" });
   });
 
-  it("forwards Ultra through a Terra review alias", async () => {
-    const body = await runNativeCodexRequest("gpt-5.6-terra-review(ultra)", {
+  it("forwards max,pro compound through a Terra review alias", async () => {
+    const body = await runNativeCodexRequest("gpt-5.6-terra-review(max,pro)", {
       effort: "low",
     });
 
     expect(body.model).toBe("gpt-5.6-terra");
-    expect(body.reasoning).toEqual({ effort: "ultra" });
+    expect(body.reasoning).toEqual({ effort: "max", mode: "pro" });
   });
 });

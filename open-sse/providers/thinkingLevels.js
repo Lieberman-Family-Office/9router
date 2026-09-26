@@ -35,9 +35,11 @@ const CODEX_GPT_5_6_LEVELS = ["none", "minimal", "low", "medium", "high", "xhigh
 
 // Model-name pattern overrides (glob, first match wins) — more precise than format default.
 const PATTERN_THINKING = [
-  // GPT-6: measured 2026-09-25 against chatgpt.com/backend-api/codex — "max" accepted
-  // (echoed back), "ultra" rejected with 400 ("Supported values are: none … xhigh, max").
-  // So no "ultra" here; a requested "ultra" normalizes to "max" in the codex executor.
+  // GPT-6: measured live 2026-09-26 against chatgpt.com/backend-api/codex —
+  // "max" accepted; "ultra" rejected 400
+  // ("Supported values are: 'none', 'minimal', 'low', 'medium', 'high', 'xhigh', and 'max'.").
+  // Client "ultra" remaps via resolveCodexClientUltraEffort (Codex CLI models.json):
+  // gpt-6-astra → xhigh, gpt-6-sol → max.
   { provider: "codex", pattern: "*gpt-6-astra*", levels: CODEX_GPT_5_6_LEVELS },
   { provider: "codex", pattern: "*gpt-6-sol*", levels: CODEX_GPT_5_6_LEVELS },
   { provider: "codex", pattern: "*gpt-5.6-sol*", levels: [...CODEX_GPT_5_6_LEVELS, "ultra"] },
@@ -59,4 +61,17 @@ export function getThinkingLevels(provider, model) {
   let levels = hit?.levels || FORMAT_LEVELS[caps.thinkingFormat] || L.base;
   if (caps.thinkingCanDisable === false) levels = levels.filter((l) => l !== "none");
   return levels;
+}
+
+/**
+ * Map client "ultra" to a wire effort Codex accepts for this model.
+ * Matches Codex CLI app-server models.json effort remapping (not Multi-Agent V2).
+ * Wire never gets "ultra" for gpt-6-astra / gpt-6-sol (ChatGPT rejects it).
+ */
+export function resolveCodexClientUltraEffort(model) {
+  const m = String(model || "").toLowerCase();
+  if (m.includes("gpt-6-astra")) return "xhigh";
+  if (m.includes("gpt-6-sol")) return "max";
+  // Codex CLI mare null → "max" for other models that lack a wire ultra.
+  return "max";
 }

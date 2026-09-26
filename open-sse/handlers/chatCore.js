@@ -177,13 +177,26 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
     if (provider === "codex") {
       const suffixThinking = {};
       applyThinking(sourceFormat, upstreamModel, suffixThinking, provider);
-      if (suffixThinking.reasoning_effort) {
+      const reasoningPatch = {};
+      if (suffixThinking.reasoning_effort) reasoningPatch.effort = suffixThinking.reasoning_effort;
+      const sr = suffixThinking.reasoning;
+      if (sr && typeof sr === "object") {
+        if (sr.mode) reasoningPatch.mode = sr.mode;
+        if (sr.context) reasoningPatch.context = sr.context;
+        if (sr.summary) reasoningPatch.summary = sr.summary;
+        if (sr.effort && !reasoningPatch.effort) reasoningPatch.effort = sr.effort;
+      }
+      if (Object.keys(reasoningPatch).length > 0) {
         const reasoning = translatedBody.reasoning;
         translatedBody.reasoning = {
           ...(reasoning && typeof reasoning === "object" && !Array.isArray(reasoning) ? reasoning : {}),
-          effort: suffixThinking.reasoning_effort,
+          ...reasoningPatch,
         };
         delete translatedBody.reasoning_effort;
+      }
+      if (suffixThinking.multi_agent) translatedBody.multi_agent = suffixThinking.multi_agent;
+      if (suffixThinking.context_management) {
+        translatedBody.context_management = suffixThinking.context_management;
       }
     }
     // Normalize newer Cowork/CC beta shapes (adaptive thinking, mid-conversation system) the API rejects

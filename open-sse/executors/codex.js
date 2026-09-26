@@ -8,7 +8,14 @@ import {
 import { normalizeResponsesInput } from "../translator/formats/responsesApi.js";
 import { fetchImageAsBase64 } from "../translator/concerns/image.js";
 import { getModelUpstreamId, splitCodexEffortSuffix } from "../config/providerModels.js";
-import { getThinkingLevels } from "../providers/thinkingLevels.js";
+import { getThinkingLevels, resolveCodexClientUltraEffort } from "../providers/thinkingLevels.js";
+import {
+  normalizeMultiAgent,
+  normalizeContextManagement,
+  applyMultiAgentIncompatibilities,
+  resolveOpenAIBetaHeader,
+  MULTI_AGENT_BETA,
+} from "../translator/concerns/orchestrationConfig.js";
 import { DEFAULT_RETRY_CONFIG, HTTP_STATUS, resolveRetryEntry } from "../config/runtimeConfig.js";
 import { dbg } from "../utils/debugLog.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
@@ -42,7 +49,9 @@ const CODEX_PASSTHROUGH_TOOL_TYPES = new Set(["custom"]);
 const RESPONSES_API_ALLOWLIST = new Set([
   "model", "input", "instructions", "tools", "tool_choice", "stream", "store",
   "reasoning", "service_tier", "include", "prompt_cache_key", "client_metadata",
-  "text"
+  "text",
+  // OpenAI Responses Multi-agent + server-side compaction (docs).
+  "multi_agent", "context_management",
 ]);
 
 // Convert role=system → role=developer in body.input (keeps content in cacheable prefix)
@@ -127,9 +136,13 @@ function resolveCacheSessionId(body, credentials) {
 
 function normalizeReasoningEffort(model, value) {
   const supportedLevels = getThinkingLevels("codex", model);
+  if (value === "ultra") {
+    // Client "ultra" is not a wire effort for gpt-6-astra/sol (ChatGPT 400).
+    // Remap per Codex CLI models.json: astra→xhigh, sol→max.
+    value = resolveCodexClientUltraEffort(model);
+  }
   if (supportedLevels?.includes(value)) return value;
-  if (value === "ultra" && supportedLevels?.includes("max")) return "max";
-  if (value === "max" || value === "ultra") return "xhigh";
+  if (value === "max" && !supportedLevels?.includes("max")) return "xhigh";
   return value;
 }
 
@@ -204,6 +217,15 @@ export class CodexExecutor extends BaseExecutor {
     headers["session_id"] = this._currentSessionId || credentials?.connectionId || "default";
     // Identify client type to Codex backend (matches official codex CLI)
     if (!headers["originator"]) headers["originator"] = "codex_cli_rs";
+    // Multi-agent beta: OpenAI-Beta: responses_multi_agent=v1 (HTTP + WebSocket).
+    if (this._multiAgentEnabled || this._clientBetas?.includes?.(MULTI_AGENT_BETA)) {
+      const beta = resolveOpenAIBetaHeader(
+        headers["OpenAI-Beta"],
+        { multi_agent: { enabled: !!this._multiAgentEnabled } },
+        this._clientBetas,
+      );
+      if (beta) headers["OpenAI-Beta"] = beta;
+    }
     // Account/workspace binding header — required when multiple Codex accounts
     // are configured. OAuth import stores ChatGPT account ID as chatgptAccountId;
     // older/custom rows may use workspaceId/accountId. Prefer explicit workspaceId
@@ -393,6 +415,24 @@ export class CodexExecutor extends BaseExecutor {
   transformRequest(model, body, stream, credentials) {
     this._isCompact = !!body._compact;
     delete body._compact;
+    // Normalize Multi-agent / compaction before allowlist (otherwise they are stripped).
+    const ma = normalizeMultiAgent(body.multi_agent);
+    if (ma) body.multi_agent = ma;
+    else delete body.multi_agent;
+    this._multiAgentEnabled = !!ma?.enabled;
+    if (this._isCompact && this._multiAgentEnabled) {
+      const err = new Error(
+        "multi_agent is not supported with /responses/compact; use server-side context_management or disable multi_agent",
+      );
+      err.status = 400;
+      err.code = "multi_agent_compact_incompatible";
+      throw err;
+    }
+    const cm = normalizeContextManagement(body.context_management);
+    if (cm) body.context_management = cm;
+    else delete body.context_management;
+    this._clientBetas = Array.isArray(body.betas) ? body.betas.slice() : null;
+    delete body.betas;
     // Resolve conversation-stable session_id (priority: body → assistant-text → workspace → machine)
     this._currentSessionId = resolveCacheSessionId(body, credentials);
     // Convert string input to array format (Codex API requires input as array)
@@ -435,19 +475,34 @@ export class CodexExecutor extends BaseExecutor {
     const { model: upstreamModel, effort: modelEffort } = splitCodexEffortSuffix(body.model);
     body.model = upstreamModel;
 
-    // Priority: explicit reasoning.effort > reasoning_effort param > model suffix > default (medium)
-    if (!body.reasoning) {
-      const effort = normalizeReasoningEffort(body.model, body.reasoning_effort || modelEffort || 'low');
-      body.reasoning = { effort, summary: "auto" };
-    } else {
-      body.reasoning.effort = normalizeReasoningEffort(body.model, body.reasoning.effort);
-      if (!body.reasoning.summary) body.reasoning.summary = "auto";
+    // Priority: explicit reasoning.effort > reasoning_effort param > hyphen suffix > default (low).
+    // Preserve Responses reasoning fields per OpenAI docs: mode, context, summary (opt-in only).
+    // Do NOT default summary to "auto" — summaries require explicit opt-in.
+    // Mid-conversation effort changes belong in configuration_update input items.
+    const prior = (body.reasoning && typeof body.reasoning === "object" && !Array.isArray(body.reasoning))
+      ? { ...body.reasoning }
+      : {};
+    const effort = normalizeReasoningEffort(
+      body.model,
+      prior.effort || body.reasoning_effort || modelEffort || "low",
+    );
+    body.reasoning = { effort };
+    // ChatGPT Codex OAuth rejects mode=pro (`reasoning.mode` unsupported for these models).
+    // Platform Responses may accept pro; this executor is Codex-only — drop pro, keep standard.
+    if (prior.mode === "standard") body.reasoning.mode = prior.mode;
+    if (prior.context === "auto" || prior.context === "current_turn" || prior.context === "all_turns") {
+      body.reasoning.context = prior.context;
+    }
+    if (prior.summary === "auto" || prior.summary === "concise" || prior.summary === "detailed") {
+      body.reasoning.summary = prior.summary;
     }
     delete body.reasoning_effort;
 
-    // Include reasoning encrypted content (required by Codex backend for reasoning models)
-    if (body.reasoning && body.reasoning.effort && body.reasoning.effort !== 'none') {
-      body.include = ["reasoning.encrypted_content"];
+    // store=false / ZDR returns encrypted_content by default; include is legacy-compat.
+    if (body.reasoning && body.reasoning.effort && body.reasoning.effort !== "none") {
+      const include = Array.isArray(body.include) ? body.include.slice() : [];
+      if (!include.includes("reasoning.encrypted_content")) include.push("reasoning.encrypted_content");
+      body.include = include;
     }
 
     // Remove unsupported parameters for Codex API
@@ -471,6 +526,8 @@ export class CodexExecutor extends BaseExecutor {
 
     if (body.service_tier === "fast") body.service_tier = "priority";
     if (body.service_tier && body.service_tier !== "priority") delete body.service_tier;
+
+    applyMultiAgentIncompatibilities(body);
 
     // Final allowlist filter — strip any unknown field that could trigger upstream "routing_unsupported"
     for (const k of Object.keys(body)) {

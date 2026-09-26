@@ -19,7 +19,7 @@ describe("Opus 5 effort reaches Anthropic unchanged or mapped onto its enum", ()
     expect(getThinkingLevels("claude", MODEL)).toEqual(["none", "low", "medium", "high", "xhigh", "max"]);
   });
 
-  const cases = { low: "low", medium: "medium", high: "high", xhigh: "xhigh", max: "max", ultra: "max", minimal: "low" };
+  const cases = { low: "low", medium: "medium", high: "high", xhigh: "xhigh", max: "max", minimal: "low" };
   for (const [asked, sent] of Object.entries(cases)) {
     it(`${asked} -> ${sent} (suffix and reasoning_effort)`, () => {
       expect(wire(`${MODEL}(${asked})`).output_config).toEqual({ effort: sent });

@@ -367,11 +367,16 @@ export function openaiToOpenAIResponsesRequest(model, body, stream, credentials)
       // Assistant messages with only tool_calls have content: null — skip the
       // message block in that case; the tool_calls are pushed separately below.
       if (content.length > 0) {
-        result.input.push({
+        const messageItem = {
           type: RESPONSES_ITEM.MESSAGE,
           role: msg.role,
           content
-        });
+        };
+        // GPT-5.4/5.5+ assistant phase: commentary | final_answer — round-trip verbatim.
+        if (msg.role === ROLE.ASSISTANT && (msg.phase === "commentary" || msg.phase === "final_answer")) {
+          messageItem.phase = msg.phase;
+        }
+        result.input.push(messageItem);
       }
     }
 

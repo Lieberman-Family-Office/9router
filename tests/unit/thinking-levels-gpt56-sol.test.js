@@ -3,11 +3,11 @@ import { getThinkingLevels } from "../../open-sse/providers/thinkingLevels.js";
 
 describe("getThinkingLevels", () => {
   it.each([
-    ["gpt-5.6-sol", ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]],
-    ["gpt-5.6-terra", ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]],
+    ["gpt-5.6-sol", ["none", "minimal", "low", "medium", "high", "xhigh", "max"]],
+    ["gpt-5.6-terra", ["none", "minimal", "low", "medium", "high", "xhigh", "max"]],
     ["gpt-5.6-luna", ["none", "minimal", "low", "medium", "high", "xhigh", "max"]],
-    ["gpt-5.6-sol-review", ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]],
-    ["gpt-5.6-terra-review", ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]],
+    ["gpt-5.6-sol-review", ["none", "minimal", "low", "medium", "high", "xhigh", "max"]],
+    ["gpt-5.6-terra-review", ["none", "minimal", "low", "medium", "high", "xhigh", "max"]],
     ["gpt-5.6-luna-review", ["none", "minimal", "low", "medium", "high", "xhigh", "max"]],
   ])("returns Codex levels for %s", (model, expected) => {
     expect(getThinkingLevels("codex", model)).toEqual(expected);
