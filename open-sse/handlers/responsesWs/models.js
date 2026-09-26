@@ -17,7 +17,7 @@ export function normalizeModelId(model) {
   m = m.replace(/^(?:cx|codex|openai|oai)\//i, "");
   // effort / review suffixes commonly appended by 9router
   m = m.replace(/-review$/i, "");
-  m = m.replace(/-(?:none|minimal|low|medium|high|xhigh|max|ultra)$/i, "");
+  m = m.replace(/-(?:none|minimal|low|medium|high|xhigh|max)$/i, "");
   return m;
 }
 

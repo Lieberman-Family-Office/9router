@@ -8,7 +8,7 @@ import {
 import { normalizeResponsesInput } from "../translator/formats/responsesApi.js";
 import { fetchImageAsBase64 } from "../translator/concerns/image.js";
 import { getModelUpstreamId, splitCodexEffortSuffix } from "../config/providerModels.js";
-import { getThinkingLevels, resolveCodexClientUltraEffort } from "../providers/thinkingLevels.js";
+import { getThinkingLevels } from "../providers/thinkingLevels.js";
 import {
   normalizeMultiAgent,
   normalizeContextManagement,
@@ -144,14 +144,14 @@ function resolveCacheSessionId(body, credentials) {
 
 function normalizeReasoningEffort(model, value) {
   const supportedLevels = getThinkingLevels("codex", model);
-  if (value === "ultra") {
-    // Client "ultra" is not a wire effort for gpt-6-astra/sol (ChatGPT 400).
-    // Remap per Codex CLI models.json: astra→xhigh, sol→max.
-    value = resolveCodexClientUltraEffort(model);
+  // "ultra" is not a wire effort — drop it (do not remap).
+  if (value === "ultra" || value == null || value === "") {
+    value = "low";
   }
   if (supportedLevels?.includes(value)) return value;
   if (value === "max" && !supportedLevels?.includes("max")) return "xhigh";
-  return value;
+  // Unsupported effort values are dropped rather than forwarded (avoids upstream 400).
+  return supportedLevels?.includes("low") ? "low" : (supportedLevels?.[0] || "low");
 }
 
 function findNestedMessage(value, depth = 0) {
