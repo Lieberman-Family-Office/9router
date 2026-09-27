@@ -165,13 +165,13 @@ async function handleChatInScope(request, clientRawRequest) {
     });
   }
 
-  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey);
+  return handleSingleModelChat(body, modelStr, clientRawRequest, request, apiKey, contextMarker ? `${modelStr.slice(modelStr.indexOf("/") + 1)}[${contextMarker}]` : null);
 }
 
 /**
  * Handle single model chat request
  */
-async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null) {
+async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null) {
   const modelInfo = await getModelInfo(modelStr);
 
   // If provider is null, this might be a combo name - check and handle
@@ -242,13 +242,14 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   let lastHeaders = null;
 
   while (true) {
-    let credentials = await getProviderCredentials(provider, excludeConnectionIds, model);
+    const credOpts = { requestedModel: requestedModel || model };
+    let credentials = await getProviderCredentials(provider, excludeConnectionIds, model, credOpts);
 
     // No connections for the resolved provider (e.g. bare gpt-* → openai while
     // only ChatGPT Codex OAuth is configured). Reuse credentialFallback and
     // switch transport — credentials alone are not enough (openai vs codex URLs).
     if (!credentials && fallbackProviderId && provider === requestedProvider && excludeConnectionIds.size === 0) {
-      const fallbackCredentials = await getProviderCredentials(fallbackProviderId, excludeConnectionIds, model);
+      const fallbackCredentials = await getProviderCredentials(fallbackProviderId, excludeConnectionIds, model, credOpts);
       if (fallbackCredentials && !fallbackCredentials.allRateLimited) {
         provider = fallbackProviderId;
         credentials = fallbackCredentials;
