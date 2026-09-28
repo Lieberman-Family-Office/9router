@@ -68,6 +68,35 @@ describe("Codex fast tier and capacity handling", () => {
     expect(peek.matched).toBeNull();
     await expect(new Response(peek.replacementBody).text()).resolves.toBe(text);
   });
+
+  it("releases the stream at the first reasoning delta instead of filling the peek buffer", async () => {
+    const executor = new CodexExecutor();
+    const encoder = new TextEncoder();
+    const first = [
+      "event: response.reasoning_summary_text.delta",
+      'data: {"type":"response.reasoning_summary_text.delta","delta":"think"}',
+      "",
+      "",
+    ].join("\n");
+    const response = new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(first));
+      },
+      pull() {
+        return new Promise(() => {});
+      },
+    }), { status: 200, headers: { "Content-Type": "text/event-stream" } });
+
+    const peek = await Promise.race([
+      executor._peekSseTransientError(response),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("peek hung")), 200)),
+    ]);
+    expect(peek.matched).toBeNull();
+    const reader = peek.replacementBody.getReader();
+    const { value } = await reader.read();
+    expect(new TextDecoder().decode(value)).toBe(first);
+    await reader.cancel();
+  });
 });
 
 describe("Codex reasoning normalization", () => {

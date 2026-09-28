@@ -26,8 +26,14 @@ const CODEX_SSE_ACCOUNT_FALLBACK_PATTERNS = ["selected model is at capacity", "m
 const CODEX_SSE_USER_OUTPUT_PATTERNS = [
   "event: response.output_text.delta",
   "event: response.function_call_arguments.delta",
+  // Reasoning models emit these before answer text. Stop peeking here so
+  // thinking tokens are forwarded instead of filling the 256KB peek buffer.
+  "event: response.reasoning_summary_text.delta",
+  "event: response.reasoning_text.delta",
   '"type":"response.output_text.delta"',
   '"type":"response.function_call_arguments.delta"',
+  '"type":"response.reasoning_summary_text.delta"',
+  '"type":"response.reasoning_text.delta"',
 ];
 const CODEX_SSE_PEEK_BYTES = 256 * 1024;
 const CODEX_MODEL_CAPACITY_MESSAGE = "Selected model is at capacity. Please try a different model.";
