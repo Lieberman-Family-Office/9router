@@ -1270,6 +1270,12 @@ export default function ProviderLimits() {
                     {quota.message}
                   </p>
                 )}
+                {quota?.raw?.stale && !error && !isLoading && (
+                  <p className="mt-2 px-1 text-[10px] leading-relaxed text-text-muted">
+                    Last good reading as of {new Date(quota.raw.fetchedAt).toLocaleTimeString()}
+                    {quota.raw.staleReason ? ` — ${quota.raw.staleReason}` : ""}
+                  </p>
+                )}
                 {hiddenQuotaRows.length > 0 && (
                   <div className="mt-2 flex min-w-0 items-center gap-1 border-t border-black/5 pt-2 text-[10px] text-text-muted dark:border-white/5">
                     <span className="material-symbols-outlined shrink-0 text-[14px]">
