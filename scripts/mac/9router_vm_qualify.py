@@ -109,8 +109,9 @@ def check_concurrent(dep, model: str) -> str | None:
 
 
 def child_pid() -> int | None:
+    # Next rewrites the child's argv to "next-server (vX.Y.Z)"; the path never shows.
     out = subprocess.run(
-        ["pgrep", "-f", "node_modules/9router/app/"], capture_output=True, text=True
+        ["pgrep", "-f", "^next-server "], capture_output=True, text=True
     )
     pids = [int(p) for p in out.stdout.split()]
     return pids[0] if pids else None
