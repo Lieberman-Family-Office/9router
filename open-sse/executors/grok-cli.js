@@ -296,12 +296,19 @@ function normalizeGrokCliTools(body) {
         : fn?.parameters && typeof fn.parameters === "object" && !Array.isArray(fn.parameters)
           ? fn.parameters
           : { type: "object", properties: {} };
+    // Same Responses tool flags normalizeCodexTools preserves (async tool calling / structured tools).
+    const flags = {};
+    for (const k of ["async", "strict", "defer_loading"]) {
+      const v = typeof tool[k] === "boolean" ? tool[k] : fn?.[k];
+      if (typeof v === "boolean") flags[k] = v;
+    }
 
     for (const k of Object.keys(tool)) delete tool[k];
     tool.type = "function";
     tool.name = name.slice(0, 128);
     if (description) tool.description = description;
     tool.parameters = parameters;
+    Object.assign(tool, flags);
     validNames.add(tool.name);
     return true;
   });
