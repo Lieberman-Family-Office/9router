@@ -29,10 +29,23 @@ const lastGood = new Map();
 const USAGE_CACHE_TTL_MS = 300000;
 const usageCache = new Map(); // token -> { promise } | { result, expiresAt }
 
+function cacheFresh(accessToken, result) {
+  const fresh = { ...result, fetchedAt: Date.now() };
+  lastGood.set(accessToken, fresh);
+  usageCache.set(accessToken, { result: fresh, expiresAt: Date.now() + USAGE_CACHE_TTL_MS });
+  return fresh;
+}
+
 export async function getClaudeUsage(accessToken, proxyOptions = null, options = {}) {
-  // Bounded callers own their request; do not join an unrelated unbounded dashboard poll.
-  if (options.signal) return fetchClaudeUsageRaw(accessToken, proxyOptions, options.signal);
   const force = options?.force === true;
+  // Bounded callers own their request; do not join an unrelated unbounded dashboard poll.
+  // They do share settled fresh readings, else every routed chat request re-polls Anthropic (429s).
+  if (options.signal) {
+    const hit = !force && accessToken ? usageCache.get(accessToken) : null;
+    if (hit?.result?.quotas && !hit.result.stale && hit.expiresAt > Date.now()) return hit.result;
+    const result = await fetchClaudeUsageRaw(accessToken, proxyOptions, options.signal);
+    return accessToken && result?.quotas ? cacheFresh(accessToken, result) : result;
+  }
 
   // Serve in-flight or fresh cached result (skip on manual force)
   if (!force && accessToken) {
@@ -44,12 +57,7 @@ export async function getClaudeUsage(accessToken, proxyOptions = null, options =
   const promise = (async () => {
     const result = await fetchClaudeUsageRaw(accessToken, proxyOptions);
     if (!accessToken) return result;
-    if (result?.quotas) {
-      const fresh = { ...result, fetchedAt: Date.now() };
-      lastGood.set(accessToken, fresh);
-      usageCache.set(accessToken, { result: fresh, expiresAt: Date.now() + USAGE_CACHE_TTL_MS });
-      return fresh;
-    }
+    if (result?.quotas) return cacheFresh(accessToken, result);
     // Soft failure (429/error): serve the last good read, flagged stale, instead of the error.
     const prev = lastGood.get(accessToken);
     const out = prev ? { ...prev, stale: true, staleReason: result?.message || null } : result;
