@@ -6,7 +6,9 @@ Layout:
   /opt/homebrew/lib/node_modules/9router -> <that dir>      the only live pointer
   ~/.9router/deploys.log                                    one JSON line per action
 
-Rules this enforces: a version directory is never overwritten; every deploy is
+Rules this enforces: on the host, a tarball deploys only if its exact bytes
+passed 9router_vm_qualify.py (~/.9router/qualified/<sha256>.json, result "pass");
+a version directory is never overwritten; every deploy is
 verified (version, /v1/models, one streamed completion to its end); a failed
 verify switches the pointer back and restarts. start.sh, the watchdog and the
 hotpatches keep using the /opt/homebrew path and follow the symlink.
@@ -28,6 +30,7 @@ Exit: 0 ok · 1 refused/usage · 2 verify failed, rolled back · 3 rollback fail
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sqlite3
@@ -43,6 +46,7 @@ from pathlib import Path
 HOME = Path.home() / ".9router"
 RELEASES = HOME / "releases"
 LOG = HOME / "deploys.log"
+QUALIFIED = HOME / "qualified"
 DB = HOME / "db" / "data.sqlite"
 LINK = Path("/opt/homebrew/lib/node_modules/9router")
 BASE = "http://127.0.0.1:20128"
@@ -227,12 +231,51 @@ def rollback_to(prev: Path, why: str, frm: str) -> int:
     return 2 if reason is None else 3
 
 
+def in_vm() -> bool:
+    out = subprocess.run(
+        ["sysctl", "-n", "kern.hv_vmm_present"], capture_output=True, text=True
+    )
+    return out.stdout.strip() == "1"
+
+
+def unqualified(tgz: Path) -> str | None:
+    """None when these exact bytes passed 9router_vm_qualify.py; else why not.
+
+    Inside the qualification VM the deploy IS the thing under test, so no record
+    is required there. ponytail: the record is a local file this user can write;
+    it prevents accidents, not a determined bypass.
+    """
+    if in_vm():
+        return None
+    digest = hashlib.sha256(tgz.read_bytes()).hexdigest()
+    rec = QUALIFIED / f"{digest}.json"
+    if not rec.exists():
+        return (
+            f"{tgz.name} has no VM qualification; run 9router_vm_qualify.py run {tgz}"
+        )
+    record = json.loads(rec.read_text())
+    result = record.get("result")
+    if result != "pass":
+        return f"{tgz.name} VM qualification result is {result!r}, not 'pass' ({rec})"
+    me = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    if record.get("deploy_sha256") != me:
+        return (
+            f"{tgz.name} was qualified with a different 9router_deploy.py; "
+            f"re-run 9router_vm_qualify.py run {tgz}"
+        )
+    return None
+
+
 def cmd_deploy(args) -> int:
     prev = live()
     if prev is None:
         print(f"refused: {LINK} is not a symlink; run `adopt` first")
         return 1
     tgz = Path(args.tgz).resolve()
+    why = unqualified(tgz)
+    if why:
+        print(f"refused: {why}")
+        return 1
     version = tgz_version(tgz)
     dest = release_dir(version)
     root = RELEASES / version
