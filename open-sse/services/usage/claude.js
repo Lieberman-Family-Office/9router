@@ -16,8 +16,13 @@ const CLAUDE_CONFIG = {
 
 // OAuth usage endpoint rate-limits (429); cool down per-token to stop hammering it.
 // Only the quota endpoint is affected — chat with the same token still works.
+// Repeated 429s back off exponentially (3m, 6m, 12m, ... capped at 30m); Retry-After wins if longer.
 const OAUTH_429_COOLDOWN_MS = 180000;
+const OAUTH_429_MAX_COOLDOWN_MS = 1800000;
 const oauthCooldown = new Map();
+const oauth429Strikes = new Map();
+// ponytail: last good reading per token, never evicted; tokens rotate slowly. Add LRU if accounts grow large.
+const lastGood = new Map();
 
 // Dedup + short TTL cache per access token. Many tabs / many accounts / auto-refresh
 // all funnel through here; without this each call hits Anthropic and triggers 429.
@@ -36,21 +41,21 @@ export async function getClaudeUsage(accessToken, proxyOptions = null, options =
     if (hit && hit.expiresAt > Date.now()) return hit.result;
   }
 
-  const stale = (!force && accessToken && usageCache.get(accessToken)?.result) || null;
-
   const promise = (async () => {
     const result = await fetchClaudeUsageRaw(accessToken, proxyOptions);
-    // Only cache real quota data, not soft-failure {message: ...} payloads
-    if (accessToken && result?.quotas) {
-      usageCache.set(accessToken, {
-        result,
-        expiresAt: Date.now() + USAGE_CACHE_TTL_MS,
-      });
-      return result;
+    if (!accessToken) return result;
+    if (result?.quotas) {
+      const fresh = { ...result, fetchedAt: Date.now() };
+      lastGood.set(accessToken, fresh);
+      usageCache.set(accessToken, { result: fresh, expiresAt: Date.now() + USAGE_CACHE_TTL_MS });
+      return fresh;
     }
-    // Soft failure (429/error): prefer the last good read over a transient error
-    if (stale) return stale;
-    return result;
+    // Soft failure (429/error): serve the last good read, flagged stale, instead of the error.
+    const prev = lastGood.get(accessToken);
+    const out = prev ? { ...prev, stale: true, staleReason: result?.message || null } : result;
+    // Hold it until the cooldown ends (0 = refetch next call); never leave a settled promise cached.
+    usageCache.set(accessToken, { result: out, expiresAt: oauthCooldown.get(accessToken) || 0 });
+    return out;
   })();
 
   if (accessToken) usageCache.set(accessToken, { promise });
@@ -59,11 +64,10 @@ export async function getClaudeUsage(accessToken, proxyOptions = null, options =
 
 async function fetchClaudeUsageRaw(accessToken, proxyOptions = null, signal = undefined) {
   try {
-    // Skip OAuth usage call while this token is cooling down from a recent 429
+    // Skip OAuth usage call while this token is cooling down from a recent 429.
+    // Do NOT fall back to legacy: OAuth tokens lack org scope, so it always reports "admin permissions".
     const cooldownUntil = oauthCooldown.get(accessToken);
-    if (cooldownUntil && Date.now() < cooldownUntil) {
-      return await getClaudeUsageLegacy(accessToken, proxyOptions, signal);
-    }
+    if (cooldownUntil && Date.now() < cooldownUntil) return rateLimitedResult(cooldownUntil);
 
     // Primary: OAuth usage endpoint (Claude Code consumer OAuth tokens)
     const oauthResponse = await proxyAwareFetch(CLAUDE_CONFIG.oauthUsageUrl, {
@@ -113,6 +117,7 @@ async function fetchClaudeUsageRaw(accessToken, proxyOptions = null, signal = un
         }
       }
 
+      oauth429Strikes.delete(accessToken);
       return {
         plan: "Claude Code",
         extraUsage: data.extra_usage ?? null,
@@ -120,9 +125,16 @@ async function fetchClaudeUsageRaw(accessToken, proxyOptions = null, signal = un
       };
     }
 
-    // Cool down OAuth usage polling after a 429 (quota endpoint only)
+    // Cool down OAuth usage polling after a 429 (quota endpoint only), with exponential backoff.
     if (oauthResponse.status === 429) {
-      oauthCooldown.set(accessToken, Date.now() + OAUTH_429_COOLDOWN_MS);
+      const strikes = (oauth429Strikes.get(accessToken) || 0) + 1;
+      oauth429Strikes.set(accessToken, strikes);
+      const backoff = Math.min(OAUTH_429_COOLDOWN_MS * 2 ** (strikes - 1), OAUTH_429_MAX_COOLDOWN_MS);
+      const retryAfterMs = Number(oauthResponse.headers?.get?.("retry-after")) * 1000;
+      const until = Date.now() + Math.max(backoff, Number.isFinite(retryAfterMs) ? retryAfterMs : 0);
+      oauthCooldown.set(accessToken, until);
+      console.warn(`[Claude Usage] OAuth endpoint 429 (strike ${strikes}); cooling down ${Math.round((until - Date.now()) / 1000)}s`);
+      return rateLimitedResult(until);
     }
 
     // Fallback: legacy settings + org usage endpoint
@@ -131,6 +143,16 @@ async function fetchClaudeUsageRaw(accessToken, proxyOptions = null, signal = un
   } catch (error) {
     return { message: `Claude connected. Unable to fetch usage: ${error.message}` };
   }
+}
+
+function rateLimitedResult(until) {
+  // Minutes, not seconds: the usage route treats any message containing "401" as auth-expired.
+  const mins = Math.max(1, Math.ceil((until - Date.now()) / 60000));
+  return {
+    rateLimited: true,
+    retryAt: new Date(until).toISOString(),
+    message: `Rate limited by Anthropic usage API; retrying in ~${mins} min.`,
+  };
 }
 
 /**
