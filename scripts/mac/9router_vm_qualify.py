@@ -15,7 +15,8 @@ Guest: 9router_vm_qualify.py guest <tgz>   (never run on the host; refuses there
   Checks, all must pass:
     deploy        9router_deploy.py deploy (npm install, launchd restart, version,
                   /v1/models, one stream to its end; auto-rollback on failure)
-    stream:<m>    one streamed completion per model in QUALIFY_MODELS
+    stream:<m>    one streamed completion per model in QUALIFY_MODELS (incl. a
+                  (compact_200k) suffixed id: it must route and stream)
     concurrent    4 parallel streams, while /api/version is polled: every stream
                   ends and the API never stalls past STALL_S (the wedge check)
     child-crash   SIGKILL the next-server child; cli.js must respawn it and serve
@@ -43,7 +44,11 @@ from pathlib import Path
 BASE_VM = os.environ.get("NINEROUTER_QUALIFY_BASE", "9r-base")
 QUALIFIED = Path.home() / ".9router" / "qualified"
 QUALIFY_MODELS = os.environ.get(
-    "NINEROUTER_QUALIFY_MODELS", "cx/gpt-5.4-mini,cc/claude-haiku-4-5-20251001"
+    "NINEROUTER_QUALIFY_MODELS",
+    # ponytail: (compact_200k) proves a suffixed id routes and streams, NOT that
+    # context_management reached upstream (an ignored suffix also streams). Upgrade:
+    # assert the outbound body via the DBG chunk logger if compaction ever regresses.
+    "cx/gpt-5.4-mini,cc/claude-haiku-4-5-20251001,cx/gpt-5.4-mini(compact_200k)",
 ).split(",")
 STALL_S = 5.0
 HERE = Path(__file__).resolve().parent
