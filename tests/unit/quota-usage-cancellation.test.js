@@ -21,7 +21,8 @@ describe("offline usage request cancellation", () => {
     fetch.mockResolvedValueOnce({ ok: false, status: 503 });
     fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ organization_id: "offline-org" }) });
     fetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
-    await getClaudeUsage("offline-defaults", proxy, { signal: controller.signal });
+    // Distinct token per case: a fresh reading is now cached for bounded callers too.
+    await getClaudeUsage(`offline-defaults-${JSON.stringify(proxy)}`, proxy, { signal: controller.signal });
     expect(fetch).toHaveBeenCalledTimes(3);
     for (const [, options, actualProxy] of fetch.mock.calls) {
       expect(options.signal).toBe(controller.signal);

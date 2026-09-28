@@ -33,6 +33,22 @@ describe("Claude usage on OAuth 429", () => {
     expect(res.staleReason).toMatch(/Rate limited/);
   });
 
+  it("bounded callers share a fresh reading but never a stale one", async () => {
+    const signal = new AbortController().signal;
+    fetch.mockResolvedValueOnce(ok);
+    const a = await getClaudeUsage("t-bounded", null, { signal });
+    const b = await getClaudeUsage("t-bounded", null, { signal });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(b).toBe(a);
+    // Dashboard poll that 429s leaves a stale entry; routing must get the rate-limit, not old quotas.
+    fetch.mockResolvedValueOnce(r429());
+    expect((await getClaudeUsage("t-bounded", null, { force: true })).stale).toBe(true);
+    const c = await getClaudeUsage("t-bounded", null, { signal });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(c.rateLimited).toBe(true);
+    expect(c.quotas).toBeUndefined();
+  });
+
   it("backs off exponentially and honours a longer Retry-After", async () => {
     vi.useFakeTimers({ now: 0 });
     fetch.mockResolvedValueOnce(r429()).mockResolvedValueOnce(r429()).mockResolvedValueOnce(r429("7200"));
