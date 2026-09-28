@@ -358,6 +358,21 @@ describe("GrokCliExecutor", () => {
     expect(custom.tool_choice).toEqual({ type: "function", name: "apply_patch" });
   });
 
+  it("preserves async/strict/defer_loading through tool flattening", () => {
+    const out = executor.transformRequest("grok-build", {
+      model: "grok-build",
+      input: "hi",
+      tools: [
+        { type: "function", name: "a", parameters: {}, async: true, strict: false },
+        { type: "function", function: { name: "b", parameters: {}, defer_loading: true } },
+        { type: "function", name: "c", parameters: {}, async: "yes" },
+      ],
+    }, true, { connectionId: "tools-flags" });
+    expect(out.tools[0]).toMatchObject({ name: "a", async: true, strict: false });
+    expect(out.tools[1]).toMatchObject({ name: "b", defer_loading: true });
+    expect(out.tools[2]).not.toHaveProperty("async");
+  });
+
   it("increments x-grok-turn-idx from user-message count and stays monotonic", () => {
     const creds = {
       connectionId: "turn-conn",

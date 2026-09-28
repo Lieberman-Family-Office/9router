@@ -220,6 +220,15 @@ function buildCliPackage() {
     console.error("   so the packaged CLI would demand an API key for its own dashboard and /v1.");
     process.exit(1);
   }
+  // Step 3a2: Ship mid-turn steering beside custom-server.js; its loader checks handlers/responsesWs.
+  // Without this the published CLI only attaches it from a hot-patched ~/.9router/lib copy.
+  const responsesWsSrc = path.join(appDir, "open-sse", "handlers", "responsesWs");
+  if (!fs.existsSync(path.join(responsesWsSrc, "index.js"))) {
+    console.error("❌ open-sse/handlers/responsesWs/index.js not found — mid-turn steering would not ship.");
+    process.exit(1);
+  }
+  copyRecursive(responsesWsSrc, path.join(cliAppDir, "handlers", "responsesWs"));
+  console.log("✅ Copied handlers/responsesWs\n");
 
   // Step 3b: Ensure sql.js (pure JS fallback) bundled in app/cli/app/node_modules.
   // Strip better-sqlite3 (native) — it lives in ~/.9router/runtime to avoid
