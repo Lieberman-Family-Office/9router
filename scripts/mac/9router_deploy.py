@@ -52,6 +52,9 @@ LINK = Path("/opt/homebrew/lib/node_modules/9router")
 BASE = "http://127.0.0.1:20128"
 LABEL = "com.lfenergy.9router"
 PROBE_MODEL = os.environ.get("NINEROUTER_PROBE_MODEL", "cx/gpt-5.4-mini")
+PROBE_ATTEMPTS = 3
+PROBE_BACKOFF_S = 5.0
+TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 
 
 def now() -> str:
@@ -119,7 +122,24 @@ def http(path: str, body: dict | None = None, timeout: float = 10):
 
 
 def stream_probe(timeout: float = 90) -> str | None:
-    """One streamed completion must terminate before the deadline.
+    """One streamed completion of PROBE_MODEL must terminate before the deadline.
+
+    A timeout, 429 or 5xx is retried (PROBE_ATTEMPTS total, linear backoff): one
+    overloaded upstream response must not roll back a good release. Anything
+    else fails at once. A wedged release still fails: every attempt times out.
+    """
+    for n in range(1, PROBE_ATTEMPTS + 1):
+        reason, transient = stream_once(timeout)
+        if reason is None:
+            return None
+        if not transient or n == PROBE_ATTEMPTS:
+            return reason if n == 1 else f"{reason} (attempt {n}/{PROBE_ATTEMPTS})"
+        time.sleep(PROBE_BACKOFF_S * n)
+    return None  # unreachable: the loop always returns
+
+
+def stream_once(timeout: float) -> tuple[str | None, bool]:
+    """(None, False) on a terminal chunk, else (reason, transient).
 
     Terminal = `data: [DONE]` or a chunk carrying a non-null finish_reason
     (this fork ends Codex streams with the latter and no [DONE]).
@@ -135,12 +155,18 @@ def stream_probe(timeout: float = 90) -> str | None:
         with http("/v1/chat/completions", body, timeout=30) as resp:
             for raw in resp:
                 if is_terminal(raw):
-                    return None
+                    return None, False
                 if time.monotonic() > deadline:
-                    return f"stream: not terminated within {timeout}s"
-    except (urllib.error.URLError, OSError, RuntimeError) as exc:
-        return f"stream: {exc}"
-    return "stream: closed before a terminal chunk"
+                    return f"stream: not terminated within {timeout}s", True
+    except urllib.error.HTTPError as exc:
+        return f"stream: {exc}", exc.code in TRANSIENT_HTTP
+    except urllib.error.URLError as exc:
+        return f"stream: {exc}", isinstance(exc.reason, TimeoutError)
+    except TimeoutError as exc:
+        return f"stream: {exc}", True
+    except (OSError, RuntimeError) as exc:
+        return f"stream: {exc}", False
+    return "stream: closed before a terminal chunk", False
 
 
 def is_terminal(raw: bytes) -> bool:
