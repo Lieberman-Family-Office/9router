@@ -69,6 +69,35 @@ describe("Codex fast tier and capacity handling", () => {
     await expect(new Response(peek.replacementBody).text()).resolves.toBe(text);
   });
 
+  it("forwards the first SSE event without waiting for a reasoning delta", async () => {
+    const executor = new CodexExecutor();
+    const encoder = new TextEncoder();
+    const first = [
+      "event: response.created",
+      'data: {"type":"response.created"}',
+      "",
+      "",
+    ].join("\n");
+    const response = new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(first));
+      },
+      pull() {
+        return new Promise(() => {});
+      },
+    }), { status: 200, headers: { "Content-Type": "text/event-stream" } });
+
+    const peek = await Promise.race([
+      executor._peekSseTransientError(response),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("peek hung")), 200)),
+    ]);
+    expect(peek.matched).toBeNull();
+    const reader = peek.replacementBody.getReader();
+    const { value } = await reader.read();
+    expect(new TextDecoder().decode(value)).toBe(first);
+    await reader.cancel();
+  });
+
   it("releases the stream at the first reasoning delta instead of filling the peek buffer", async () => {
     const executor = new CodexExecutor();
     const encoder = new TextEncoder();

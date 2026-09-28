@@ -35,7 +35,10 @@ const CODEX_SSE_USER_OUTPUT_PATTERNS = [
   '"type":"response.reasoning_summary_text.delta"',
   '"type":"response.reasoning_text.delta"',
 ];
-const CODEX_SSE_PEEK_BYTES = 256 * 1024;
+// Only the first SSE event is inspected before the body is returned to the client.
+// Overload and capacity errors are that first event when they happen. Later
+// events, including reasoning deltas, are forwarded as they arrive.
+const CODEX_SSE_LEADING_EVENT_BYTES = 8 * 1024;
 const CODEX_MODEL_CAPACITY_MESSAGE = "Selected model is at capacity. Please try a different model.";
 
 // Server-generated item id prefixes that Codex /responses cannot resolve when store=false
@@ -339,8 +342,9 @@ export class CodexExecutor extends BaseExecutor {
     }
   }
 
-  // Peek first N bytes of SSE body to detect upstream transient errors.
-  // Returns { matched: string|null, message: string|null, accountFallback: boolean, replacementBody: ReadableStream|null }.
+  // Inspect only the leading SSE event, then hand the body back so later
+  // bytes (reasoning deltas included) stream through. Returns
+  // { matched, message, accountFallback, replacementBody }.
   // Caller must use replacementBody when no error matched (original body has been read).
   async _peekSseTransientError(response) {
     if (!response || !response.ok || !response.body) return { matched: null, message: null, accountFallback: false, replacementBody: null };
@@ -350,8 +354,14 @@ export class CodexExecutor extends BaseExecutor {
     let text = "";
     let matched = null;
     let accountFallback = false;
+    const leadingEventDone = () => (
+      text.includes("\n\n")
+      || text.includes("\r\n\r\n")
+      || text.length >= CODEX_SSE_LEADING_EVENT_BYTES
+      || CODEX_SSE_USER_OUTPUT_PATTERNS.some(p => text.toLowerCase().includes(p))
+    );
     try {
-      while (text.length < CODEX_SSE_PEEK_BYTES) {
+      while (!leadingEventDone()) {
         const { done, value } = await reader.read();
         if (done) break;
         chunks.push(value);
@@ -361,7 +371,6 @@ export class CodexExecutor extends BaseExecutor {
         if (accountHit) { matched = accountHit; accountFallback = true; break; }
         const retryHit = CODEX_SSE_RETRY_PATTERNS.find(p => lowerText.includes(p));
         if (retryHit) { matched = retryHit; break; }
-        if (CODEX_SSE_USER_OUTPUT_PATTERNS.some(p => lowerText.includes(p))) break;
       }
     } catch (e) {
       dbg("CODEX", `peek read error: ${e.message}`);
