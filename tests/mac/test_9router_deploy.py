@@ -63,6 +63,55 @@ def test_stream_terminal_detection(dep):
     assert not dep.is_terminal(b"data: {not json\n")
 
 
+def scripted_probe(dep, monkeypatch, outcomes):
+    calls = iter(outcomes)
+    monkeypatch.setattr(dep, "stream_once", lambda timeout: next(calls))
+    monkeypatch.setattr(dep.time, "sleep", lambda s: None)
+    return calls
+
+
+def test_probe_retries_transient_then_passes(dep, monkeypatch):
+    left = scripted_probe(dep, monkeypatch, [("stream: 503", True), (None, False)])
+    assert dep.stream_probe() is None
+    assert next(left, "drained") == "drained"
+
+
+def test_probe_wedged_release_still_fails(dep, monkeypatch):
+    timeout = ("stream: not terminated within 90s", True)
+    left = scripted_probe(dep, monkeypatch, [timeout] * dep.PROBE_ATTEMPTS)
+    assert dep.stream_probe() == f"{timeout[0]} (attempt 3/3)"
+    assert next(left, "drained") == "drained"
+
+
+def test_probe_non_transient_fails_without_retry(dep, monkeypatch):
+    left = scripted_probe(dep, monkeypatch, [("stream: 401", False), (None, False)])
+    assert dep.stream_probe() == "stream: 401"
+    assert next(left) == (None, False)  # second attempt never consumed
+
+
+@pytest.mark.parametrize(
+    "exc, transient",
+    [
+        (TimeoutError("timed out"), True),  # the 2026-09-28 .8 rollback
+        ("http:503", True),
+        ("http:429", True),
+        ("http:401", False),
+        (ConnectionRefusedError(), False),
+    ],
+)
+def test_stream_once_classifies_failures(dep, monkeypatch, exc, transient):
+    if isinstance(exc, str):
+        code = int(exc.split(":")[1])
+        exc = dep.urllib.error.HTTPError("u", code, "m", None, None)
+
+    def boom(*a, **k):
+        raise exc
+
+    monkeypatch.setattr(dep, "http", boom)
+    reason, got = dep.stream_once(1)
+    assert reason.startswith("stream:") and got is transient
+
+
 def test_adopt_moves_real_dir_behind_symlink(dep):
     dep.LINK.mkdir()
     (dep.LINK / "package.json").write_text(json.dumps({"version": "v7"}))
