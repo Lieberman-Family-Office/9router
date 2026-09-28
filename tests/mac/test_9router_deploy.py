@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
 import json
@@ -23,6 +24,8 @@ def dep(tmp_path, monkeypatch):
     monkeypatch.setattr(mod, "RELEASES", tmp_path / "releases")
     monkeypatch.setattr(mod, "LOG", tmp_path / "deploys.log")
     monkeypatch.setattr(mod, "LINK", tmp_path / "node_modules" / "9router")
+    monkeypatch.setattr(mod, "QUALIFIED", tmp_path / "qualified")
+    monkeypatch.setattr(mod, "in_vm", lambda: False)
     monkeypatch.setattr(mod, "restart", lambda: None)
     monkeypatch.setattr(mod, "snapshot_db", lambda dest: dest.write_text("db"))
     (tmp_path / "node_modules").mkdir()
@@ -36,14 +39,25 @@ def make_release(dep, version):
     return d
 
 
-def make_tgz(tmp_path, version):
+def make_tgz(tmp_path, version, dep=None, result="pass"):
+    """Build a tarball; with `dep`, also write a VM qualification record for it."""
     tgz = tmp_path / f"9router-{version}.tgz"
     data = json.dumps({"version": version}).encode()
     with tarfile.open(tgz, "w:gz") as tf:
         info = tarfile.TarInfo("package/package.json")
         info.size = len(data)
         tf.addfile(info, io.BytesIO(data))
+    if dep is not None:
+        dep.QUALIFIED.mkdir(exist_ok=True)
+        digest = hashlib.sha256(tgz.read_bytes()).hexdigest()
+        me = hashlib.sha256(SCRIPT.read_bytes()).hexdigest()
+        rec = {"result": result, "deploy_sha256": me}
+        (dep.QUALIFIED / f"{digest}.json").write_text(json.dumps(rec))
     return tgz
+
+
+def deploy_args(tgz):
+    return type("A", (), {"tgz": str(tgz)})
 
 
 def fake_npm(dep, monkeypatch):
@@ -123,7 +137,7 @@ def test_deploy_ok_switches_pointer(dep, tmp_path, monkeypatch):
     dep.LINK.symlink_to(make_release(dep, "v7"))
     fake_npm(dep, monkeypatch)
     monkeypatch.setattr(dep, "verify", lambda v, **k: None)
-    rc = dep.cmd_deploy(type("A", (), {"tgz": str(make_tgz(tmp_path, "v8"))}))
+    rc = dep.cmd_deploy(deploy_args(make_tgz(tmp_path, "v8", dep)))
     assert rc == 0
     assert dep.live() == dep.release_dir("v8").resolve()
     assert (dep.RELEASES / "v8" / "pre-deploy-data.sqlite").exists()
@@ -131,9 +145,38 @@ def test_deploy_ok_switches_pointer(dep, tmp_path, monkeypatch):
 
 def test_deploy_refuses_existing_version(dep, tmp_path):
     dep.LINK.symlink_to(make_release(dep, "v7"))
-    rc = dep.cmd_deploy(type("A", (), {"tgz": str(make_tgz(tmp_path, "v7"))}))
+    rc = dep.cmd_deploy(deploy_args(make_tgz(tmp_path, "v7", dep)))
     assert rc == 1
     assert dep.live() == dep.release_dir("v7").resolve()
+
+
+@pytest.mark.parametrize("record", [None, "fail", "other-bytes", "other-deploy"])
+def test_deploy_refuses_without_vm_pass(dep, tmp_path, monkeypatch, record):
+    dep.LINK.symlink_to(make_release(dep, "v7"))
+    fake_npm(dep, monkeypatch)
+    monkeypatch.setattr(dep, "verify", lambda v, **k: None)
+    if record == "fail":
+        tgz = make_tgz(tmp_path, "v8", dep, result="fail")
+    elif record == "other-bytes":
+        tgz = make_tgz(tmp_path, "v8", dep)  # qualify these bytes...
+        tgz.write_bytes(tgz.read_bytes() + b"\0")  # ...then change them
+    elif record == "other-deploy":
+        tgz = make_tgz(tmp_path, "v8", dep)
+        rec = next(dep.QUALIFIED.glob("*.json"))
+        rec.write_text(json.dumps({"result": "pass", "deploy_sha256": "0" * 64}))
+    else:
+        tgz = make_tgz(tmp_path, "v8")
+    assert dep.cmd_deploy(deploy_args(tgz)) == 1
+    assert dep.live() == dep.release_dir("v7").resolve()
+    assert not (dep.RELEASES / "v8").exists()
+
+
+def test_deploy_inside_vm_needs_no_record(dep, tmp_path, monkeypatch):
+    dep.LINK.symlink_to(make_release(dep, "v7"))
+    fake_npm(dep, monkeypatch)
+    monkeypatch.setattr(dep, "verify", lambda v, **k: None)
+    monkeypatch.setattr(dep, "in_vm", lambda: True)
+    assert dep.cmd_deploy(deploy_args(make_tgz(tmp_path, "v8"))) == 0
 
 
 def test_failed_verify_rolls_back(dep, tmp_path, monkeypatch):
@@ -142,7 +185,7 @@ def test_failed_verify_rolls_back(dep, tmp_path, monkeypatch):
     monkeypatch.setattr(
         dep, "verify", lambda v, **k: None if v == "v7" else "stream: hung"
     )
-    rc = dep.cmd_deploy(type("A", (), {"tgz": str(make_tgz(tmp_path, "v8"))}))
+    rc = dep.cmd_deploy(deploy_args(make_tgz(tmp_path, "v8", dep)))
     assert rc == 2
     assert dep.live() == dep.release_dir("v7").resolve()
     entries = [json.loads(x) for x in dep.LOG.read_text().splitlines()]
