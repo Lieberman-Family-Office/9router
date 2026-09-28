@@ -35,10 +35,9 @@ const CODEX_SSE_USER_OUTPUT_PATTERNS = [
   '"type":"response.reasoning_summary_text.delta"',
   '"type":"response.reasoning_text.delta"',
 ];
-// Only the first SSE event is inspected before the body is returned to the client.
-// Overload and capacity errors are that first event when they happen. Later
-// events, including reasoning deltas, are forwarded as they arrive.
-const CODEX_SSE_LEADING_EVENT_BYTES = 8 * 1024;
+// Safety cap only. The peek stops at the first reasoning or answer delta, which
+// arrives far below this. Do not return on response.created: that event is not output.
+const CODEX_SSE_PEEK_BYTES = 256 * 1024;
 const CODEX_MODEL_CAPACITY_MESSAGE = "Selected model is at capacity. Please try a different model.";
 
 // Server-generated item id prefixes that Codex /responses cannot resolve when store=false
@@ -342,9 +341,9 @@ export class CodexExecutor extends BaseExecutor {
     }
   }
 
-  // Inspect only the leading SSE event, then hand the body back so later
-  // bytes (reasoning deltas included) stream through. Returns
-  // { matched, message, accountFallback, replacementBody }.
+  // Read until the first reasoning or answer delta, then continue on the same reader.
+  // A second getReader() after releaseLock stalls the remainder of an undici body.
+  // Returns { matched, message, accountFallback, replacementBody }.
   // Caller must use replacementBody when no error matched (original body has been read).
   async _peekSseTransientError(response) {
     if (!response || !response.ok || !response.body) return { matched: null, message: null, accountFallback: false, replacementBody: null };
@@ -354,14 +353,8 @@ export class CodexExecutor extends BaseExecutor {
     let text = "";
     let matched = null;
     let accountFallback = false;
-    const leadingEventDone = () => (
-      text.includes("\n\n")
-      || text.includes("\r\n\r\n")
-      || text.length >= CODEX_SSE_LEADING_EVENT_BYTES
-      || CODEX_SSE_USER_OUTPUT_PATTERNS.some(p => text.toLowerCase().includes(p))
-    );
     try {
-      while (!leadingEventDone()) {
+      while (text.length < CODEX_SSE_PEEK_BYTES) {
         const { done, value } = await reader.read();
         if (done) break;
         chunks.push(value);
@@ -371,6 +364,7 @@ export class CodexExecutor extends BaseExecutor {
         if (accountHit) { matched = accountHit; accountFallback = true; break; }
         const retryHit = CODEX_SSE_RETRY_PATTERNS.find(p => lowerText.includes(p));
         if (retryHit) { matched = retryHit; break; }
+        if (CODEX_SSE_USER_OUTPUT_PATTERNS.some(p => lowerText.includes(p))) break;
       }
     } catch (e) {
       dbg("CODEX", `peek read error: ${e.message}`);
@@ -378,29 +372,24 @@ export class CodexExecutor extends BaseExecutor {
 
     if (matched) {
       try { await reader.cancel(); } catch { /* noop */ }
-      try { reader.releaseLock(); } catch { /* noop */ }
       return { matched, message: extractSseErrorMessage(text, matched), accountFallback, replacementBody: null };
     }
 
-    reader.releaseLock();
-
-    // Re-assemble stream: prefix chunks + remaining upstream body
-    const upstream = response.body;
-    let upstreamReader = null;
+    let queued = chunks.slice();
     const replacementBody = new ReadableStream({
-      start(controller) {
-        for (const c of chunks) controller.enqueue(c);
-        upstreamReader = upstream.getReader();
-      },
       async pull(controller) {
         try {
-          const { done, value } = await upstreamReader.read();
+          if (queued.length) {
+            controller.enqueue(queued.shift());
+            return;
+          }
+          const { done, value } = await reader.read();
           if (done) { controller.close(); return; }
           controller.enqueue(value);
         } catch (e) { controller.error(e); }
       },
       cancel(reason) {
-        try { upstreamReader?.cancel(reason); } catch { /* noop */ }
+        try { reader.cancel(reason); } catch { /* noop */ }
       },
     });
     return { matched: null, message: null, accountFallback: false, replacementBody };

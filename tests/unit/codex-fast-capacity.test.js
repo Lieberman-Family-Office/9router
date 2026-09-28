@@ -69,7 +69,7 @@ describe("Codex fast tier and capacity handling", () => {
     await expect(new Response(peek.replacementBody).text()).resolves.toBe(text);
   });
 
-  it("forwards the first SSE event without waiting for a reasoning delta", async () => {
+  it("does not return on response.created while the reasoning delta is still pending", async () => {
     const executor = new CodexExecutor();
     const encoder = new TextEncoder();
     const first = [
@@ -78,24 +78,28 @@ describe("Codex fast tier and capacity handling", () => {
       "",
       "",
     ].join("\n");
+    let release;
     const response = new Response(new ReadableStream({
       start(controller) {
         controller.enqueue(encoder.encode(first));
       },
-      pull() {
-        return new Promise(() => {});
+      pull(controller) {
+        return new Promise((resolve) => {
+          release = () => { controller.close(); resolve(); };
+        });
       },
     }), { status: 200, headers: { "Content-Type": "text/event-stream" } });
 
-    const peek = await Promise.race([
-      executor._peekSseTransientError(response),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("peek hung")), 200)),
+    const pending = executor._peekSseTransientError(response);
+    const raced = await Promise.race([
+      pending.then(() => "returned"),
+      new Promise((resolve) => setTimeout(() => resolve("hung"), 200)),
     ]);
+    expect(raced).toBe("hung");
+    release();
+    const peek = await pending;
     expect(peek.matched).toBeNull();
-    const reader = peek.replacementBody.getReader();
-    const { value } = await reader.read();
-    expect(new TextDecoder().decode(value)).toBe(first);
-    await reader.cancel();
+    await peek.replacementBody.cancel();
   });
 
   it("releases the stream at the first reasoning delta instead of filling the peek buffer", async () => {
