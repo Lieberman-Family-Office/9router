@@ -65,6 +65,7 @@ function createSpinner(text) {
 const pkg = require("./package.json");
 const { ensureSqliteRuntime, buildEnvWithRuntime } = require("./hooks/sqliteRuntime");
 const { ensureTrayRuntime } = require("./hooks/trayRuntime");
+const { isNoTrayEnv, resolveTrayLaunch } = require("./src/cli/utils/trayFallback");
 const args = process.argv.slice(2);
 
 // Subcommands (`9router xai video …`) run against an already-running gateway
@@ -86,7 +87,10 @@ if (args[0] === "xai" && args[1] === "video") {
 try { ensureSqliteRuntime({ silent: true }); } catch {}
 
 // Self-heal tray runtime (systray for macOS/Linux only). Windows skipped.
-try { ensureTrayRuntime({ silent: true }); } catch {}
+// Launchd sets NINEROUTER_NO_TRAY so the tray binary never starts.
+if (!isNoTrayEnv()) {
+  try { ensureTrayRuntime({ silent: true }); } catch {}
+}
 
 // Configuration constants
 const APP_NAME = pkg.name; // Use from package.json
@@ -165,11 +169,17 @@ Commands:
   }
 }
 
-// Auto-relaunch after update: detached process has no TTY → fallback to tray
-if (skipUpdate && !trayMode && !process.stdin.isTTY) {
-  trayMode = true;
-  process.env.TRAY_MODE = "1";
-}
+// Auto-relaunch after update: detached process has no TTY → fallback to tray.
+// NINEROUTER_NO_TRAY refuses that fallback. The tray stalls the event loop
+// under launchd (macOS systray -86) while the listen socket stays open.
+const launch = resolveTrayLaunch({
+  skipUpdate,
+  trayRequested: trayMode,
+  isTTY: Boolean(process.stdin.isTTY),
+});
+trayMode = launch.trayMode;
+if (trayMode) process.env.TRAY_MODE = "1";
+else delete process.env.TRAY_MODE;
 
 // Always use Node.js runtime with absolute path
 const RUNTIME = process.execPath;
@@ -737,6 +747,21 @@ function startServer(updatePromise) {
     }
   };
 
+  // Launchd: supervise the server, do not open the tray or the TUI menu.
+  if (launch.headless) {
+    process.removeAllListeners("SIGHUP");
+    process.on("SIGHUP", () => {});
+
+    console.log(`\n🚀 ${pkg.name} v${pkg.version}`);
+    console.log(`Server: http://${displayHost}:${port}`);
+
+    waitServerReady(port).then(() => {
+      console.log("\n9router running headless (NINEROUTER_NO_TRAY).\n");
+    });
+
+    return;
+  }
+
   // Tray-only mode: no TUI, just tray icon
   if (trayMode) {
     // Ignore SIGHUP so macOS terminal close doesn't kill the background tray process
@@ -759,8 +784,8 @@ function startServer(updatePromise) {
   waitServerReady(port).then(async () => {
     // Resolve parallel update check (already running); don't block server start on it.
     const latestVersion = await latestVersionPromise;
-    // Start tray icon alongside TUI
-    initTrayIcon();
+    // Start tray icon alongside TUI unless NINEROUTER_NO_TRAY is set.
+    if (launch.initTray) initTrayIcon();
 
     try {
       while (true) {
