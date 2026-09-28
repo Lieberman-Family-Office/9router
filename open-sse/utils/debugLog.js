@@ -1,6 +1,6 @@
-// Debug logging utility — active in dev mode (NODE_ENV !== "production"),
-// or in production when NINEROUTER_DBG_CHUNKS=1 (stream stall / chunk diagnostics).
-// Outputs are tagged with [DBG:tag] for easy grep/filter
+// Debug logging utility. Off in production unless NINEROUTER_DBG_CHUNKS is
+// exactly "1". Launchd sets that variable to "0", so chunk lines stay off.
+// Outputs are tagged with [DBG:tag].
 const isDev = process.env.NODE_ENV !== "production" || process.env.NINEROUTER_DBG_CHUNKS === "1";
 
 function ts() {
