@@ -25,6 +25,16 @@ describe("Codex fast tier and capacity handling", () => {
     expect(body.reasoning.effort).toBe("xhigh");
   });
 
+  it.each([undefined, "default", "flex", "auto"])("forces priority tier when client sends %s", (tier) => {
+    const body = new CodexExecutor().transformRequest("gpt-6.1-sol", {
+      model: "gpt-6.1-sol",
+      input: "hi",
+      ...(tier ? { service_tier: tier } : {}),
+    }, true, {});
+
+    expect(body.service_tier).toBe("priority");
+  });
+
   it("uses ChatGPT workspace header fallback", () => {
     const executor = new CodexExecutor();
     const headers = executor.buildHeaders({

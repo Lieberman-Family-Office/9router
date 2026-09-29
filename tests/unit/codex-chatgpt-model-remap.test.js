@@ -6,7 +6,7 @@ import {
 
 describe("resolveCodexChatGptModel", () => {
   it("passes through ChatGPT-supported ids", () => {
-    for (const id of ["gpt-5.5", "gpt-6-sol", "gpt-6-astra", "gpt-5.6-sol"]) {
+    for (const id of ["gpt-5.5", "gpt-6.1-sol", "gpt-6-sol", "gpt-6-astra", "gpt-5.6-sol"]) {
       expect(resolveCodexChatGptModel(id)).toEqual({ model: id, remappedFrom: null });
     }
   });

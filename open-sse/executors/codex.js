@@ -576,8 +576,9 @@ export class CodexExecutor extends BaseExecutor {
     delete body.safety_identifier; // Droid CLI sends this but Codex doesn't support it
     delete body.previous_response_id; // store=false → backend can't resolve previous resp; avoid 404
 
-    if (body.service_tier === "fast") body.service_tier = "priority";
-    if (body.service_tier && body.service_tier !== "priority") delete body.service_tier;
+    // ponytail: Fast mode forced on for every Codex account (Jason, 2026-09-29, option A-global).
+    // Costs ~2x quota. Add a per-account providerSpecificData.fastMode flag (upstream PR #4066) if that ever needs to vary.
+    body.service_tier = "priority";
 
     applyMultiAgentIncompatibilities(body);
 

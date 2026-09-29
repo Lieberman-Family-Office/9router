@@ -4,7 +4,7 @@
  * GPT-5.6 and earlier do not support it.
  */
 
-const GPT6_BASE = /(?:^|[\/.])gpt-6(?:-|$)/i;
+const GPT6_BASE = /(?:^|[\/.])gpt-6(?:[-.]|$)/i;
 
 /**
  * Strip common 9router prefixes/suffixes (cx/, provider aliases, effort suffixes).
