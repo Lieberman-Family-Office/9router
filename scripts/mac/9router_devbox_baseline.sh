@@ -64,7 +64,7 @@ launchctl bootstrap "gui/$(id -u)" "$plist"
 cat <<EOF
 baseline $ver installed and running on 127.0.0.1:20128.
 Next (operator, once):
-  1. from the host: ssh -N -L 20129:127.0.0.1:20128 $(hostname)   (or: devbox port-forward)
+  1. from the host: ssh -N -L 20129:127.0.0.1:20128 <devbox ssh alias, e.g. 9router-test-vm.devbox.namespace>
   2. open http://127.0.0.1:20129 ; password: grep INITIAL_PASSWORD ~/.9router/env.sh
   3. log in the Codex and Claude providers; create one API key
 EOF
