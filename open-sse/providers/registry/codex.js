@@ -2,7 +2,8 @@ import { withCodexReviewModels } from "../models/helpers.js";
 
 // Codex CLI version seen by OpenAI's backend — single source for the Version /
 // User-Agent identity headers. Bump when the installed codex CLI is upgraded.
-const CODEX_CLI_VERSION = "0.155.0";
+// 0.159.0: chatgpt.com/backend-api/codex/models only lists gpt-6.1-sol from this version (measured 2026-09-29).
+const CODEX_CLI_VERSION = "0.159.0";
 const GPT_6_LITE_THINKING_LEVELS = ["low", "medium", "high", "xhigh", "max"];
 
 export default {
@@ -52,6 +53,9 @@ export default {
     },
   },
   models: [
+    { id: "gpt-6.1-sol", name: "GPT 6.1 Sol", responsesLite: true, thinkingLevels: GPT_6_LITE_THINKING_LEVELS },
+    { id: "gpt-6.1-sol[1m]", name: "GPT 6.1 Sol (extended context)", upstreamModelId: "gpt-6.1-sol", responsesLite: true, thinkingLevels: GPT_6_LITE_THINKING_LEVELS },
+    { id: "gpt-6.1-sol-review", name: "GPT 6.1 Sol Review", upstreamModelId: "gpt-6.1-sol", quotaFamily: "review" },
     { id: "gpt-6-sol", name: "GPT 6 Sol", responsesLite: true, thinkingLevels: GPT_6_LITE_THINKING_LEVELS },
     { id: "gpt-6-sol[1m]", name: "GPT 6 Sol (extended context)", upstreamModelId: "gpt-6-sol", responsesLite: true, thinkingLevels: GPT_6_LITE_THINKING_LEVELS },
     { id: "gpt-6-sol-review", name: "GPT 6 Sol Review", upstreamModelId: "gpt-6-sol", quotaFamily: "review" },

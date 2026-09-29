@@ -180,6 +180,8 @@ export const PROVIDER_CAPABILITIES = {
     // dropped images (measured live 2026-09-26; astra/sol vision token 314159 after fix).
     "gpt-6-astra": { vision: true, pdf: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 372000, maxOutput: 128000 },
     "gpt-6-sol": { vision: true, pdf: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 372000, maxOutput: 128000 },
+    "gpt-6.1-sol": { vision: true, pdf: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 372000, maxOutput: 128000 },
+    "gpt-6.1-sol[1m]":           CODEX_EXTENDED_CAPS,
     // ponytail: luna mirrors sol caps (unmeasured); measure vision/context live before relying on it.
     "gpt-6-luna": { vision: true, pdf: true, reasoning: true, search: true, thinkingFormat: "openai", contextWindow: 372000, maxOutput: 128000 },
     "gpt-6-astra[1m]":           CODEX_EXTENDED_CAPS,
