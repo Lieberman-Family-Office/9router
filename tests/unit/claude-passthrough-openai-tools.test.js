@@ -167,8 +167,10 @@ describe("Claude UA + OpenAI tools: translate instead of passthrough", () => {
     expect(executeMock).toHaveBeenCalled();
     const upstream = executeMock.mock.calls.at(-1)[0].body;
     expect(upstream.tools).toHaveLength(1);
-    expect(upstream.tools[0].type).toBe("custom");
+    // Upstream #3905 scopes the explicit "custom" default to MiniMax (DeepSeek 400s on it);
+    // Anthropic accepts typeless tools. The invariant is: no OpenAI "function" tag upstream.
     expect(upstream.tools[0].name).toBe("lookup");
+    expect(upstream.tools[0].input_schema).toEqual({ type: "object", properties: {} });
     expect(upstream.tools[0]).not.toHaveProperty("function");
     expect(upstream.tools[0].type).not.toBe("function");
   });

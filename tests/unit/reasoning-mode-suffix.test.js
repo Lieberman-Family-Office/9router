@@ -52,7 +52,8 @@ describe("Responses reasoning config (OpenAI docs)", () => {
   });
 
   it("preserves body reasoning.context when suffix only sets pro (mode stripped on Codex)", () => {
-    const out = wire("gpt-6-sol(pro)", {
+    // gpt-6-astra: gpt-6-sol/luna are Responses Lite upstream, which forces context=all_turns.
+    const out = wire("gpt-6-astra(pro)", {
       reasoning: { effort: "medium", context: "current_turn" },
     });
     expect(out.reasoning).toMatchObject({

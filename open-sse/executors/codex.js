@@ -7,7 +7,7 @@ import {
 } from "../services/oauthCredentialManager.js";
 import { normalizeResponsesInput } from "../translator/formats/responsesApi.js";
 import { fetchImageAsBase64 } from "../translator/concerns/image.js";
-import { getModelUpstreamId, splitCodexEffortSuffix } from "../config/providerModels.js";
+import { getModelUpstreamId, getProviderModels, splitCodexEffortSuffix } from "../config/providerModels.js";
 import { getThinkingLevels } from "../providers/thinkingLevels.js";
 import {
   normalizeMultiAgent,
@@ -19,6 +19,7 @@ import {
 import { DEFAULT_RETRY_CONFIG, HTTP_STATUS, resolveRetryEntry } from "../config/runtimeConfig.js";
 import { dbg } from "../utils/debugLog.js";
 import { resolveSessionId } from "../utils/sessionManager.js";
+import { stripCodexUnsupportedPatterns } from "../utils/codexToolSchema.js";
 
 // SSE error patterns inside 200-OK bodies. Some retry same account first; capacity rotates accounts.
 const CODEX_SSE_RETRY_PATTERNS = ["server_is_overloaded", "service_unavailable_error"];
@@ -31,6 +32,10 @@ const CODEX_SSE_USER_OUTPUT_PATTERNS = [
 ];
 const CODEX_SSE_PEEK_BYTES = 256 * 1024;
 const CODEX_MODEL_CAPACITY_MESSAGE = "Selected model is at capacity. Please try a different model.";
+function isCodexResponsesLiteModel(model) {
+  const baseId = String(model || "").replace(/\([^()]+\)\s*$/, "");
+  return getProviderModels("cx").some((entry) => entry.id === baseId && entry.responsesLite === true);
+}
 
 // Server-generated item id prefixes that Codex /responses cannot resolve when store=false
 const SERVER_ID_PATTERN = /^(rs|fc|resp|msg)_/;
@@ -49,7 +54,7 @@ const CODEX_PASSTHROUGH_TOOL_TYPES = new Set(["custom"]);
 const RESPONSES_API_ALLOWLIST = new Set([
   "model", "input", "instructions", "tools", "tool_choice", "stream", "store",
   "reasoning", "service_tier", "include", "prompt_cache_key", "client_metadata",
-  "text",
+  "text", "parallel_tool_calls",
   // OpenAI Responses Multi-agent + server-side compaction (docs).
   "multi_agent", "context_management",
   // configuration_update lives inside input[] items (not a top-level field).
@@ -66,13 +71,14 @@ function convertSystemToDeveloperRole(body) {
 }
 
 // Strip server-generated item IDs (rs_/fc_/resp_/msg_) from input — avoids 404 with store=false
-function stripStoredItemReferences(body) {
+function stripStoredItemReferences(body, preserveLitePrefix = false) {
   if (!Array.isArray(body.input)) return;
   body.input = body.input.filter((item) => {
     if (typeof item === "string" && SERVER_ID_PATTERN.test(item)) return false;
     if (item && typeof item === "object" && !Array.isArray(item)) {
       if (item.type === "item_reference") return false;
-      if (typeof item.id === "string" && SERVER_ID_PATTERN.test(item.id)) delete item.id;
+      if (typeof item.id === "string" && SERVER_ID_PATTERN.test(item.id)
+        && !(preserveLitePrefix && item.role === "developer" && item.id.startsWith("msg_"))) delete item.id;
     }
     return true;
   });
@@ -82,6 +88,9 @@ function stripStoredItemReferences(body) {
 function normalizeCodexTools(body) {
   if (!Array.isArray(body.tools)) return;
   const validNames = new Set();
+  // Codex's schema validator has no Unicode property escapes; a `pattern`
+  // carrying `\p{...}` 400s the whole request on every account (#3922).
+  const patternStats = { removed: 0 };
   body.tools = body.tools.filter((tool) => {
     if (!tool || typeof tool !== "object" || Array.isArray(tool)) return false;
     const type = typeof tool.type === "string" ? tool.type : "";
@@ -90,6 +99,9 @@ function normalizeCodexTools(body) {
         for (const st of tool.tools) {
           const n = typeof st?.name === "string" ? st.name.trim().slice(0, 128) : "";
           if (n) validNames.add(n);
+          if (st?.parameters && typeof st.parameters === "object") {
+            st.parameters = stripCodexUnsupportedPatterns(st.parameters, patternStats);
+          }
         }
       }
       return true;
@@ -115,13 +127,16 @@ function normalizeCodexTools(body) {
     tool.type = "function";
     tool.name = name.slice(0, 128);
     if (description) tool.description = description;
-    tool.parameters = parameters;
+    tool.parameters = stripCodexUnsupportedPatterns(parameters, patternStats);
     if (asyncFlag !== undefined) tool.async = asyncFlag;
     if (strictFlag !== undefined) tool.strict = strictFlag;
     if (deferLoading !== undefined) tool.defer_loading = deferLoading;
     validNames.add(name);
     return true;
   });
+  if (patternStats.removed > 0) {
+    dbg("CODEX", `stripped ${patternStats.removed} unsupported tool schema pattern(s)`);
+  }
   // Drop tool_choice if it references an unknown function name
   if (body.tool_choice && typeof body.tool_choice === "object" && !Array.isArray(body.tool_choice)) {
     if (body.tool_choice.type === "function") {
@@ -149,6 +164,7 @@ function normalizeReasoningEffort(model, value) {
     value = "low";
   }
   if (supportedLevels?.includes(value)) return value;
+  if (isCodexResponsesLiteModel(model) && (value === "none" || value === "minimal")) return "low";
   if (value === "max" && !supportedLevels?.includes("max")) return "xhigh";
   // Unsupported effort values are dropped rather than forwarded (avoids upstream 400).
   return supportedLevels?.includes("low") ? "low" : (supportedLevels?.[0] || "low");
@@ -220,8 +236,11 @@ export class CodexExecutor extends BaseExecutor {
    * Override headers to add codex-specific identity headers.
    * transformRequest runs BEFORE buildHeaders, sets this._currentSessionId.
    */
-  buildHeaders(credentials, stream = true) {
+  buildHeaders(credentials, stream = true, _url = null, model = null) {
     const headers = super.buildHeaders(credentials, stream);
+    if (isCodexResponsesLiteModel(model && splitCodexEffortSuffix(getModelUpstreamId("cx", model)).model)) {
+      headers["x-openai-internal-codex-responses-lite"] = "true";
+    }
     headers["session_id"] = this._currentSessionId || credentials?.connectionId || "default";
     // Identify client type to Codex backend (matches official codex CLI)
     if (!headers["originator"]) headers["originator"] = "codex_cli_rs";
@@ -446,6 +465,8 @@ export class CodexExecutor extends BaseExecutor {
     // Convert string input to array format (Codex API requires input as array)
     const normalized = normalizeResponsesInput(body.input);
     if (normalized) body.input = normalized;
+    const upstreamModel = getModelUpstreamId("cx", body.model || model);
+    const responsesLite = isCodexResponsesLiteModel(splitCodexEffortSuffix(upstreamModel).model);
 
     // Ensure input is present and non-empty (Codex API rejects empty input)
     if (!body.input || (Array.isArray(body.input) && body.input.length === 0)) {
@@ -455,7 +476,7 @@ export class CodexExecutor extends BaseExecutor {
     // Keep system prompts in body.input as role=developer so they stay in the cacheable prefix
     convertSystemToDeveloperRole(body);
     // Strip server-generated item IDs (rs_/fc_/resp_/msg_) — Codex /responses can't resolve when store=false
-    stripStoredItemReferences(body);
+    stripStoredItemReferences(body, responsesLite);
     // Flatten function tools + drop unsupported types
     normalizeCodexTools(body);
 
@@ -463,7 +484,7 @@ export class CodexExecutor extends BaseExecutor {
     body.stream = true;
 
     // If no instructions provided, inject default Codex instructions
-    if (!body.instructions || body.instructions.trim() === "") {
+    if (!responsesLite && (!body.instructions || body.instructions.trim() === "")) {
       body.instructions = CODEX_DEFAULT_INSTRUCTIONS;
     }
 
@@ -476,14 +497,36 @@ export class CodexExecutor extends BaseExecutor {
     }
 
     // Map virtual Codex review models to the upstream Codex model before suffix parsing.
-    body.model = getModelUpstreamId("cx", body.model || model);
+    body.model = upstreamModel;
+
+    if (responsesLite) {
+      // Codex 0.155 carries tools and instructions as input prefix items.
+      const input = Array.isArray(body.input) ? body.input : [body.input];
+      const hasLitePrefix = input.some((item) => item?.type === "additional_tools");
+      if (!hasLitePrefix) {
+        const instructions = typeof body.instructions === "string" && body.instructions.trim()
+          ? body.instructions : CODEX_DEFAULT_INSTRUCTIONS;
+        const prefix = [{ type: "additional_tools", role: "developer", tools: Array.isArray(body.tools) ? body.tools : [] }];
+        if (instructions) {
+          prefix.push({ type: "message", role: "developer", content: [{ type: "input_text", text: instructions }] });
+        }
+        input.unshift(...prefix);
+      }
+      body.input = input;
+      body.instructions = "";
+      body.tools = null;
+      body.tool_choice ||= "auto";
+      body.parallel_tool_calls = false;
+    } else {
+      delete body.parallel_tool_calls;
+    }
 
     // Extract thinking level from model name suffix
     // e.g., gpt-5.3-codex-high → high, gpt-5.3-codex → medium (default)
-    const { model: upstreamModel, effort: modelEffort } = splitCodexEffortSuffix(body.model);
-    body.model = upstreamModel;
+    const { model: baseModel, effort: modelEffort } = splitCodexEffortSuffix(body.model);
+    body.model = baseModel;
 
-    // Priority: explicit reasoning.effort > reasoning_effort param > hyphen suffix > default (low).
+    // Priority: explicit reasoning.effort > reasoning_effort param > hyphen suffix > default (low; medium for Lite).
     // Preserve Responses reasoning fields per OpenAI docs: mode, context, summary (opt-in only).
     // Do NOT default summary to "auto" — summaries require explicit opt-in.
     // Mid-conversation effort changes belong in configuration_update input items.
@@ -492,7 +535,7 @@ export class CodexExecutor extends BaseExecutor {
       : {};
     const effort = normalizeReasoningEffort(
       body.model,
-      prior.effort || body.reasoning_effort || modelEffort || "low",
+      prior.effort || body.reasoning_effort || modelEffort || (responsesLite ? "medium" : "low"),
     );
     body.reasoning = { effort };
     // ChatGPT Codex OAuth rejects mode=pro (`reasoning.mode` unsupported for these models).
@@ -504,6 +547,7 @@ export class CodexExecutor extends BaseExecutor {
     if (prior.summary === "auto" || prior.summary === "concise" || prior.summary === "detailed") {
       body.reasoning.summary = prior.summary;
     }
+    if (responsesLite) body.reasoning.context = "all_turns";
     delete body.reasoning_effort;
 
     // store=false / ZDR returns encrypted_content by default; include is legacy-compat.

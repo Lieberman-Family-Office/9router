@@ -7,8 +7,13 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { cloakClaudeTools, decloakStreamChunk } from "../../open-sse/utils/claudeCloaking.js";
+import { applyCloaking, cloakClaudeTools, decloakStreamChunk } from "../../open-sse/utils/claudeCloaking.js";
 import { CLAUDE_TOOL_SUFFIX } from "../../open-sse/config/appConstants.js";
+
+it("advertises a Claude Code version accepted by Fable 5.1", () => {
+  const body = applyCloaking({ messages: [] }, "sk-ant-oat-test", "session-id");
+  expect(body.system[0].text).toMatch(/^x-anthropic-billing-header: cc_version=2.1.280\./);
+});
 
 describe("cloakClaudeTools", () => {
   const baseBody = {
@@ -112,7 +117,8 @@ describe("decloakStreamChunk", () => {
 
   it("tolerates null chunks and missing maps (stream flush path)", () => {
     expect(decloakStreamChunk(null, toolNameMap)).toBeNull();
-    expect(decloakStreamChunk(toolUseStart("run_code" + CLAUDE_TOOL_SUFFIX), null).content_block.name).toBe("run_code" + CLAUDE_TOOL_SUFFIX);
-    expect(decloakStreamChunk(toolUseStart("run_code" + CLAUDE_TOOL_SUFFIX), new Map()).content_block.name).toBe("run_code" + CLAUDE_TOOL_SUFFIX);
+    expect(decloakStreamChunk(toolUseStart("run_code" + CLAUDE_TOOL_SUFFIX), null).content_block.name).toBe("run_code");
+    expect(decloakStreamChunk(toolUseStart("run_code" + CLAUDE_TOOL_SUFFIX), new Map()).content_block.name).toBe("run_code");
+    expect(decloakStreamChunk(toolUseStart("uncloaked_tool"), null).content_block.name).toBe("uncloaked_tool");
   });
 });
