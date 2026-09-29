@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""Qualify ONE 9router release tarball in a throwaway macOS VM before production.
+"""Qualify ONE 9router release tarball on the Namespace macOS devbox before production.
 
 Host:  9router_vm_qualify.py run <tgz>
-  1. clone the stopped base VM (APFS clone, seconds) and boot it
-  2. copy the tgz + this script + 9router_deploy.py into the guest
-  3. run `guest` there; always delete the clone afterwards
-  4. write ~/.9router/qualified/<sha256>.json — 9router_deploy.py deploy refuses
+  1. scp the tgz + this script + 9router_deploy.py to a per-run dir on the devbox
+  2. run `guest` there over ssh; always delete the per-run dir afterwards
+  3. write ~/.9router/qualified/<sha256>.json — 9router_deploy.py deploy refuses
      any tarball without a "pass" record for its exact bytes
 
 Guest: 9router_vm_qualify.py guest <tgz>   (never run on the host; refuses there)
-  The base VM mirrors production: Homebrew node, the live release adopted behind
-  /opt/homebrew/lib/node_modules/9router, the same start.sh + hotpatches under the
-  same launchd label, and its OWN provider logins (production tokens never enter).
+  The devbox is provisioned once by 9router_devbox_baseline.sh and mirrors
+  production: Homebrew node, a baseline release behind
+  /opt/homebrew/lib/node_modules/9router, the same start.sh under the same launchd
+  label, and its OWN provider logins (production tokens never enter).
+  Before and after every run the guest resets to the baseline release
+  (~/.9router/baseline) and deletes every other release dir. The DB is NOT
+  restored: provider refresh tokens rotate, so a restored DB would log them out.
   Checks, all must pass:
     deploy        9router_deploy.py deploy (npm install, launchd restart, version,
                   /v1/models, one stream to its end; auto-rollback on failure)
@@ -22,7 +25,10 @@ Guest: 9router_vm_qualify.py guest <tgz>   (never run on the host; refuses there
     child-crash   SIGKILL the next-server child; cli.js must respawn it and serve
     kickstart     launchctl kickstart -k; the release must come back and stream
 
-Exit: 0 pass · 1 usage/refused · 2 a check failed · 3 VM infrastructure failed.
+Exit: 0 pass · 1 usage/refused · 2 a check failed · 3 devbox infrastructure failed.
+
+ponytail: one devbox, no lock — two concurrent runs would collide on port 20128.
+Upgrade: `devbox acquire 9router-qualify` per run once qualification runs in parallel.
 """
 
 from __future__ import annotations
@@ -32,6 +38,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -41,7 +48,7 @@ import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 
-BASE_VM = os.environ.get("NINEROUTER_QUALIFY_BASE", "9r-base")
+HOST = os.environ.get("NINEROUTER_QUALIFY_HOST", "9router-test-vm.devbox.namespace")
 QUALIFIED = Path.home() / ".9router" / "qualified"
 QUALIFY_MODELS = os.environ.get(
     "NINEROUTER_QUALIFY_MODELS",
@@ -141,25 +148,51 @@ def check_kickstart(dep, version: str) -> str | None:
     return dep.verify(version)
 
 
+def reset_to_baseline(dep, baseline: str) -> str | None:
+    """Point the link at the baseline release, restart, drop every other release."""
+    target = dep.release_dir(baseline)
+    if not target.is_dir():
+        return f"baseline release {baseline} missing at {target}"
+    if dep.live() != target:
+        dep.switch(target)
+        dep.restart()
+    for d in dep.RELEASES.iterdir():
+        if d.name != baseline:
+            shutil.rmtree(d)
+    return None
+
+
 def cmd_guest(args) -> int:
     if not in_vm():
-        print("refused: `guest` runs only inside the qualification VM")
+        print("refused: `guest` runs only on the qualification devbox")
         return 1
     dep = load_deploy()
     tgz = Path(args.tgz)
     version = dep.tgz_version(tgz)
+    baseline = (dep.HOME / "baseline").read_text().strip()
+    if version == baseline:
+        print(f"refused: {version} is the devbox baseline; qualify a newer version")
+        return 1
+    err = reset_to_baseline(dep, baseline)
+    if err:
+        print(f"devbox: {err}")
+        return 3
     results: dict[str, str] = {}
-
-    rc = subprocess.run(
-        [sys.executable, str(HERE / "9router_deploy.py"), "deploy", str(tgz)]
-    ).returncode
-    results["deploy"] = "ok" if rc == 0 else f"FAIL rc={rc}"
-    if rc == 0:
-        for m in QUALIFY_MODELS:
-            results[f"stream:{m}"] = stream(dep, m) or "ok"
-        results["concurrent"] = check_concurrent(dep, QUALIFY_MODELS[0]) or "ok"
-        results["child-crash"] = check_child_crash(dep, version) or "ok"
-        results["kickstart"] = check_kickstart(dep, version) or "ok"
+    try:
+        rc = subprocess.run(
+            [sys.executable, str(HERE / "9router_deploy.py"), "deploy", str(tgz)]
+        ).returncode
+        results["deploy"] = "ok" if rc == 0 else f"FAIL rc={rc}"
+        if rc == 0:
+            for m in QUALIFY_MODELS:
+                results[f"stream:{m}"] = stream(dep, m) or "ok"
+            results["concurrent"] = check_concurrent(dep, QUALIFY_MODELS[0]) or "ok"
+            results["child-crash"] = check_child_crash(dep, version) or "ok"
+            results["kickstart"] = check_kickstart(dep, version) or "ok"
+    finally:
+        err = reset_to_baseline(dep, baseline)
+        if err:
+            results["reset"] = err
     ok = all(v == "ok" for v in results.values())
     print(
         json.dumps(
@@ -172,44 +205,42 @@ def cmd_guest(args) -> int:
 # ----------------------------------------------------------------- host side
 
 
-def lima(*argv: str, **kw) -> subprocess.CompletedProcess:
-    return subprocess.run(["limactl", "--tty=false", *argv], **kw)
+def ssh(*argv: str, **kw) -> subprocess.CompletedProcess:
+    return subprocess.run(["ssh", "-o", "BatchMode=yes", HOST, *argv], **kw)
 
 
 def cmd_run(args) -> int:
     if in_vm():
-        print("refused: `run` is the host side; inside the VM use `guest`")
+        print("refused: `run` is the host side; on the devbox use `guest`")
         return 1
     tgz = Path(args.tgz).resolve()
     digest = sha256(tgz)
-    inst = f"9r-q-{digest[:12]}"
+    work = f"/tmp/9r-q-{digest[:12]}"  # fixed name: a crashed run's dir is reused
     started = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    lima("delete", "--force", inst, capture_output=True)  # leftover from a crash
-    # No guest->host port forwards: the clone's router binds 20128 like production.
-    no_fwd = '.portForwards = [{"guestPortRange": [1, 65535], "ignore": true}]'
-    if lima("clone", BASE_VM, inst, "--set", no_fwd, "--start").returncode:
-        print(f"VM: could not clone/start {BASE_VM} -> {inst}")
+    if ssh("mkdir", "-p", work).returncode:
+        print(f"devbox: {HOST} unreachable")
         return 3
     try:
-        cp = lima(
-            "copy",
-            str(tgz),
-            str(HERE / "9router_deploy.py"),
-            str(Path(__file__).resolve()),
-            f"{inst}:/tmp/",
+        cp = subprocess.run(
+            [
+                "scp",
+                "-q",
+                "-o",
+                "BatchMode=yes",
+                str(tgz),
+                str(HERE / "9router_deploy.py"),
+                str(Path(__file__).resolve()),
+                f"{HOST}:{work}/",
+            ]
         )
         if cp.returncode:
-            print("VM: copy into guest failed")
+            print("devbox: copy failed")
             return 3
-        out = lima(
-            "shell",
-            "--workdir",
-            "/",
-            inst,
+        out = ssh(
             "/opt/homebrew/bin/python3",
-            "/tmp/9router_vm_qualify.py",
+            f"{work}/9router_vm_qualify.py",
             "guest",
-            f"/tmp/{tgz.name}",
+            f"{work}/{tgz.name}",
             capture_output=True,
             text=True,
         )
@@ -219,16 +250,15 @@ def cmd_run(args) -> int:
         try:
             record = json.loads(lines[-1])
         except (IndexError, ValueError):
-            print(f"VM: guest produced no result (rc={out.returncode})")
-            return 3
+            print(f"devbox: guest produced no result (rc={out.returncode})")
+            return 1 if out.returncode == 1 else 3  # 1 = guest refused
     finally:
-        lima("stop", "--force", inst, capture_output=True)
-        lima("delete", "--force", inst, capture_output=True)
+        ssh("rm", "-rf", work, capture_output=True)
     record.update(
         tgz=tgz.name,
         sha256=digest,
         deploy_sha256=sha256(HERE / "9router_deploy.py"),
-        base_vm=BASE_VM,
+        host=HOST,
         started=started,
     )
     QUALIFIED.mkdir(parents=True, exist_ok=True)
