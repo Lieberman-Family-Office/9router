@@ -38,6 +38,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -229,6 +230,7 @@ def cmd_run(args) -> int:
                 "BatchMode=yes",
                 str(tgz),
                 str(HERE / "9router_deploy.py"),
+                str(HERE / "9router_devbox_restore.sh"),
                 str(Path(__file__).resolve()),
                 f"{HOST}:{work}/",
             ]
@@ -236,7 +238,16 @@ def cmd_run(args) -> int:
         if cp.returncode:
             print("devbox: copy failed")
             return 3
+        if ssh("bash", f"{work}/9router_devbox_restore.sh").returncode:
+            print("devbox: persistent runtime restoration failed")
+            return 3
         out = ssh(
+            "env",
+            shlex.quote("NINEROUTER_QUALIFY_MODELS=" + ",".join(QUALIFY_MODELS)),
+            shlex.quote(
+                "NINEROUTER_PROBE_MODEL="
+                + os.environ.get("NINEROUTER_PROBE_MODEL", QUALIFY_MODELS[0])
+            ),
             "/opt/homebrew/bin/python3",
             f"{work}/9router_vm_qualify.py",
             "guest",

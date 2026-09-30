@@ -1,6 +1,7 @@
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getRequestScope } from "../../requestScope.js";
+import { serviceTier } from "open-sse/providers/shared.js";
 
 const DEFAULT_MAX_RECORDS = 200;
 const DEFAULT_BATCH_SIZE = 20;
@@ -59,6 +60,10 @@ function toMetadataRecord(record) {
     request: { model: record.request?.model, stream: record.request?.stream },
     response,
     ...(record.attempts ? { attempts: record.attempts, attemptStatuses: record.attemptStatuses } : {}),
+    serviceTier: {
+      requested: serviceTier(record.serviceTier?.requested),
+      returned: serviceTier(record.serviceTier?.returned)
+    },
     metadataOnly: true,
   };
 }
@@ -183,6 +188,10 @@ async function flushToDatabase() {
             providerResponse: truncateField(item.providerResponse, config.maxJsonSize),
             response: truncateField(item.response, config.maxJsonSize),
             pxpipe: item.pxpipe || undefined,
+            serviceTier: {
+              requested: serviceTier(item.serviceTier?.requested),
+              returned: serviceTier(item.serviceTier?.returned)
+            },
           };
           const record = isMetadataOnly()
             ? toMetadataRecord({ ...full, request: item.request, response: item.response, attempts: item.attempts, attemptStatuses: item.attemptStatuses })

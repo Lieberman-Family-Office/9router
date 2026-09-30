@@ -135,7 +135,7 @@ export function buildOnStreamComplete({ provider, model, connectionId, apiKey, r
       request: extractRequestConfig(body, stream),
       providerRequest: finalBody || translatedBody || null,
       providerResponse: safeContent,
-      response: { content: safeContent, thinking: safeThinking, type: "streaming" },
+      response: { content: safeContent, thinking: safeThinking, type: "streaming", service_tier: contentObj?.service_tier },
       pxpipe,
       status: "success"
     }, { id: streamDetailId })).catch(err => {

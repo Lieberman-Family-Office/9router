@@ -66,11 +66,13 @@ describe("requestDetails metadata-only mode", () => {
   it("writes a success row without response content", async () => {
     await save({
       id: "meta-ok", provider: "openai", model: "gpt-x", status: "success",
+      serviceTier: { requested: "ultrafast", returned: "default" },
       latency: { ttft: 5, total: 9 }, tokens: { prompt_tokens: 3, completion_tokens: 4 },
       request: { model: "gpt-x", stream: true, messages: [{ role: "user", content: PROMPT }] },
       response: { content: `answer ${PROMPT}`, thinking: `think ${PROMPT}`, finish_reason: "stop", type: "streaming" },
     });
     const got = await db.getRequestDetailById("meta-ok");
+    expect(got.serviceTier).toEqual({ requested: "ultrafast", returned: "default" });
     expect(got.tokens).toEqual({ prompt_tokens: 3, completion_tokens: 4 });
     // Thinking is recorded as a length only, never as text.
     expect(got.response).toEqual({ finish_reason: "stop", type: "streaming", thinkingChars: `think ${PROMPT}`.length });
