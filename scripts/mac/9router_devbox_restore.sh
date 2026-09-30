@@ -24,7 +24,7 @@ else
   ln -s "$d" "$HOME/.9router"
 fi
 if [ -L "$link" ]; then
-  case "$(readlink "$link")" in "$d/releases/"*) ;; *) echo "refused: unexpected release link"; exit 1 ;; esac
+  case "$(cd "$link" && pwd -P)" in "$(cd "$d/releases" && pwd -P)/"*) ;; *) echo "refused: unexpected release link"; exit 1 ;; esac
 elif [ -e "$link" ]; then
   echo "refused: existing router installation"; exit 1
 else

@@ -38,6 +38,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -241,6 +242,12 @@ def cmd_run(args) -> int:
             print("devbox: persistent runtime restoration failed")
             return 3
         out = ssh(
+            "env",
+            shlex.quote("NINEROUTER_QUALIFY_MODELS=" + ",".join(QUALIFY_MODELS)),
+            shlex.quote(
+                "NINEROUTER_PROBE_MODEL="
+                + os.environ.get("NINEROUTER_PROBE_MODEL", QUALIFY_MODELS[0])
+            ),
             "/opt/homebrew/bin/python3",
             f"{work}/9router_vm_qualify.py",
             "guest",

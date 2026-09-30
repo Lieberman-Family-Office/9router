@@ -57,13 +57,20 @@ class RestoreTest(unittest.TestCase):
             self.assertTrue((state / "bootstrap-home/runtime").is_dir())
             link = brew / "lib/node_modules/9router"
             link.unlink()
+            link.symlink_to(home / ".9router/releases/v4/lib/node_modules/9router")
+            result = run()
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(link.resolve(), release.resolve())
             foreign = root / "foreign"
             foreign.mkdir()
-            link.symlink_to(foreign)
-            result = run()
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("unexpected release link", result.stdout)
-            self.assertEqual(link.resolve(), foreign.resolve())
+            (state / "releases/escape").symlink_to(foreign)
+            for target in (foreign, state / "releases/escape"):
+                link.unlink()
+                link.symlink_to(target)
+                result = run()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("unexpected release link", result.stdout)
+                self.assertEqual(link.resolve(), foreign.resolve())
 
 
 if __name__ == "__main__":

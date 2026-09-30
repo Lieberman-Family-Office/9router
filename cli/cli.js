@@ -737,6 +737,8 @@ function startServer(updatePromise) {
     }
   };
 
+  attachServerEvents();
+
   // Tray-only mode: no TUI, just tray icon
   if (trayMode) {
     // Ignore SIGHUP so macOS terminal close doesn't kill the background tray process
@@ -896,6 +898,4 @@ function startServer(updatePromise) {
       attachServerEvents();
     }, delay);
   }
-
-  attachServerEvents();
 }
