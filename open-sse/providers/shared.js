@@ -20,6 +20,17 @@ export function mapStainlessArch() {
   }
 }
 
+// ponytail: one dedicated paid route; add provider configuration if more routes need tier enforcement.
+export const OPENAI_ULTRAFAST_ROUTE = {
+  prefix: "openai-ultrafast", model: "gpt-6-astra",
+  endpoint: "https://api.openai.com/v1/responses", tier: "ultrafast"
+};
+
+// Persist only known tier identifiers, never upstream-controlled free text.
+export function serviceTier(value) {
+  return ["auto", "default", "flex", "priority", "fast", "ultrafast", "scale"].includes(value) ? value : null;
+}
+
 // Anthropic API version (single source — reused across claude-format providers/executors)
 export const ANTHROPIC_API_VERSION = "2023-06-01";
 export const CLAUDE_CLI_VERSION = "2.1.280";

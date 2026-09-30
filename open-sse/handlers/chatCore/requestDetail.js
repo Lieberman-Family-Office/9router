@@ -1,6 +1,7 @@
 import { saveRequestUsage, appendRequestLog, saveRequestDetail } from "@/lib/usageDb.js";
 import { COLORS } from "../../utils/stream.js";
 import { canonicalizeUsage } from "../../utils/usageTracking.js";
+import { serviceTier } from "../../providers/shared.js";
 
 const OPTIONAL_PARAMS = [
   "temperature", "top_p", "top_k",
@@ -78,6 +79,10 @@ export function buildRequestDetail(base, overrides = {}) {
     response: base.response || {},
     pxpipe: base.pxpipe || undefined,
     status: base.status || "success",
+    serviceTier: {
+      requested: serviceTier(base.providerRequest?.service_tier),
+      returned: serviceTier(base.providerResponse?.service_tier ?? base.response?.service_tier)
+    },
     ...overrides
   };
 }

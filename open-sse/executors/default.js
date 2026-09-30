@@ -1,6 +1,6 @@
 import { BaseExecutor } from "./base.js";
 import { PROVIDERS, PROVIDER_OAUTH } from "../config/providers.js";
-import { ANTHROPIC_API_VERSION, OPENAI_COMPAT_BASE, ANTHROPIC_COMPAT_BASE, selectAnthropicBeta, mergeAnthropicBeta } from "../providers/shared.js";
+import { ANTHROPIC_API_VERSION, OPENAI_COMPAT_BASE, ANTHROPIC_COMPAT_BASE, OPENAI_ULTRAFAST_ROUTE, selectAnthropicBeta, mergeAnthropicBeta } from "../providers/shared.js";
 import { resolveOpenAICompatibleApiType } from "../services/provider.js";
 import { OAUTH_ENDPOINTS, buildKimiHeaders } from "../config/appConstants.js";
 import { buildClineHeaders } from "../shared/clineAuth.js";
@@ -68,7 +68,7 @@ export class DefaultExecutor extends BaseExecutor {
     super(provider, PROVIDERS[provider] || PROVIDERS.openai);
   }
 
-  transformRequest(model, body) {
+  transformRequest(model, body, stream, credentials) {
     const transformed = this.applyJsonSchemaFallback(body);
 
     if (transformed && typeof transformed === "object") {
@@ -77,6 +77,12 @@ export class DefaultExecutor extends BaseExecutor {
         delete transformed.client_metadata;
       }
       stripUnsupportedParams(this.provider, model, transformed);
+      if (this.provider?.startsWith("openai-compatible-")
+        && credentials?.providerSpecificData?.prefix === OPENAI_ULTRAFAST_ROUTE.prefix
+        && model === OPENAI_ULTRAFAST_ROUTE.model
+        && this.buildUrl(model, stream, 0, credentials) === OPENAI_ULTRAFAST_ROUTE.endpoint) {
+        transformed.service_tier = OPENAI_ULTRAFAST_ROUTE.tier;
+      }
     }
 
     return injectReasoningContent({ provider: this.provider, model, body: transformed });

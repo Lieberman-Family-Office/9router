@@ -229,12 +229,16 @@ def cmd_run(args) -> int:
                 "BatchMode=yes",
                 str(tgz),
                 str(HERE / "9router_deploy.py"),
+                str(HERE / "9router_devbox_restore.sh"),
                 str(Path(__file__).resolve()),
                 f"{HOST}:{work}/",
             ]
         )
         if cp.returncode:
             print("devbox: copy failed")
+            return 3
+        if ssh("bash", f"{work}/9router_devbox_restore.sh").returncode:
+            print("devbox: persistent runtime restoration failed")
             return 3
         out = ssh(
             "/opt/homebrew/bin/python3",
