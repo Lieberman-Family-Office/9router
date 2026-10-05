@@ -1,4 +1,5 @@
 import { BaseExecutor } from "./base.js";
+import { refreshProviderCredentials } from "../services/oauthCredentialManager.js";
 import { PROVIDERS } from "../config/providers.js";
 import { OAUTH_ENDPOINTS, GEMINI_CLI_API_CLIENT, geminiCLIUserAgent } from "../config/appConstants.js";
 
@@ -54,6 +55,7 @@ export class GeminiCLIExecutor extends BaseExecutor {
   }
 
   async refreshCredentials(credentials, log) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") return refreshProviderCredentials("gemini-cli", credentials, null);
     if (!credentials.refreshToken) return null;
 
     try {

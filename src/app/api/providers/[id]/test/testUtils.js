@@ -230,6 +230,9 @@ async function refreshOAuthToken(connection) {
   if (!refreshToken) return null;
 
   try {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      return await refreshProviderCredentials(provider, connection, console);
+    }
     if (provider === "gemini-cli" || provider === "antigravity") {
       const config = provider === "gemini-cli" ? GEMINI_CONFIG : ANTIGRAVITY_CONFIG;
       const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -917,7 +920,8 @@ export async function testSingleConnection(id) {
     }
   }
 
-  await updateProviderConnection(id, updateData);
+  await updateProviderConnection(id, updateData,
+    process.env.NINEROUTER_MANAGED_WORKER === "1" ? result.newTokens?.refreshGeneration : undefined);
 
   return { valid: result.valid, error: result.error, refreshed: !!result.refreshed, latencyMs, testedAt: new Date().toISOString() };
 }

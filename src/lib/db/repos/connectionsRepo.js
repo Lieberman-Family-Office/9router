@@ -260,19 +260,43 @@ export async function createProviderConnection(data) {
 }
 
 // Critical: OAuth refresh token race — atomic merge inside transaction
-export async function updateProviderConnection(id, data) {
+export async function updateProviderConnection(id, data, credentialGeneration) {
   const db = await getAdapter();
+  const managed = process.env.NINEROUTER_MANAGED_WORKER === "1";
+  const credentialPatch = ["accessToken", "refreshToken", "idToken", "copilotToken", "refreshGeneration"]
+    .some(key => Object.hasOwn(data, key)) ||
+    ["copilotToken", "copilotTokenExpiresAt"].some(key => Object.hasOwn(data.providerSpecificData || {}, key));
+  if (managed && credentialPatch && credentialGeneration === undefined) {
+    throw new Error("Managed credential writes require generation CAS");
+  }
+  if (credentialGeneration !== undefined && (!Number.isSafeInteger(credentialGeneration) || credentialGeneration < 1)) {
+    throw new Error("Invalid credential generation");
+  }
   let result;
+  if (managed) db.exec("BEGIN IMMEDIATE");
+  try {
   db.transaction(() => {
     const row = db.get(`SELECT * FROM providerConnections WHERE id = ?`, [id]);
     if (!row) { result = null; return; }
     const existing = rowToConn(row);
+    if (credentialGeneration !== undefined) {
+      const currentGeneration = existing.refreshGeneration ?? 0;
+      if (!Number.isSafeInteger(currentGeneration) || currentGeneration < 0) throw new Error("Invalid stored credential generation");
+      if (credentialGeneration <= currentGeneration) { result = existing; return; }
+      data = { ...data, refreshGeneration: credentialGeneration };
+      if (data.providerSpecificData) data.providerSpecificData = { ...existing.providerSpecificData, ...data.providerSpecificData };
+    }
     const normalized = resetHealthStateOnActivation(existing, data);
     const merged = { ...existing, ...normalized, updatedAt: new Date().toISOString() };
     upsert(db, merged);
     if (data.priority !== undefined) reorderInTx(db, existing.provider);
     result = merged;
   });
+  if (managed) db.exec("COMMIT");
+  } catch (error) {
+    if (managed) db.exec("ROLLBACK");
+    throw error;
+  }
   return result;
 }
 

@@ -13,6 +13,14 @@ function defaultDir() {
 
 export function getDataDir() {
   const configured = process.env.DATA_DIR;
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+    if (!configured || !path.isAbsolute(configured)) throw new Error("Managed DATA_DIR required");
+    const stat = fs.lstatSync(configured);
+    if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.getuid() || (stat.mode & 0o777) !== 0o700) {
+      throw new Error("Unsafe managed DATA_DIR");
+    }
+    return configured;
+  }
   if (!configured) return defaultDir();
 
   // On Windows, ignore Unix-style absolute paths (e.g. /var/lib/...) that come

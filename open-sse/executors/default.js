@@ -1,4 +1,5 @@
 import { BaseExecutor } from "./base.js";
+import { refreshProviderCredentials } from "../services/oauthCredentialManager.js";
 import { PROVIDERS, PROVIDER_OAUTH } from "../config/providers.js";
 import { ANTHROPIC_API_VERSION, OPENAI_COMPAT_BASE, ANTHROPIC_COMPAT_BASE, OPENAI_ULTRAFAST_ROUTE, selectAnthropicBeta, mergeAnthropicBeta } from "../providers/shared.js";
 import { resolveOpenAICompatibleApiType } from "../services/provider.js";
@@ -236,6 +237,10 @@ export class DefaultExecutor extends BaseExecutor {
   }
 
   async refreshCredentials(credentials, log, proxyOptions = null) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      if (proxyOptions) throw new Error("Managed refresh proxy contract unavailable");
+      return refreshProviderCredentials(this.provider, credentials, null);
+    }
     if (!credentials.refreshToken) return null;
 
     const refreshers = {

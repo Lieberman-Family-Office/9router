@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { BaseExecutor } from "./base.js";
+import { refreshProviderCredentials } from "../services/oauthCredentialManager.js";
 import { PROVIDERS } from "../config/providers.js";
 import { OAUTH_ENDPOINTS, ANTIGRAVITY_HEADERS, AG_DEFAULT_TOOLS, AG_TOOL_SUFFIX, ANTIGRAVITY_PROMPT_REWRITES } from "../config/appConstants.js";
 import { HTTP_STATUS } from "../config/runtimeConfig.js";
@@ -312,6 +313,10 @@ export class AntigravityExecutor extends BaseExecutor {
   }
 
   async refreshCredentials(credentials, log, proxyOptions = null) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      if (proxyOptions) throw new Error("Managed refresh proxy contract unavailable");
+      return refreshProviderCredentials("antigravity", credentials, null);
+    }
     if (!credentials.refreshToken) return null;
 
     try {

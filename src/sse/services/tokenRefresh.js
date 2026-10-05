@@ -1,6 +1,6 @@
 // Re-export from open-sse with local logger
 import * as log from "../utils/logger.js";
-import { updateProviderConnection } from "../../lib/localDb.js";
+import { updateProviderConnection, getProviderConnectionById } from "../../lib/localDb.js";
 import {
   getProjectIdForConnection,
   invalidateProjectId,
@@ -194,13 +194,15 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
     }
     if (newCredentials.projectId)            updates.projectId = newCredentials.projectId;
 
-    const result = await updateProviderConnection(connectionId, updates);
+    const result = await updateProviderConnection(connectionId, updates,
+      process.env.NINEROUTER_MANAGED_WORKER === "1" ? newCredentials.refreshGeneration : undefined);
     log.info("TOKEN_REFRESH", "Credentials updated in localDb", {
       connectionId,
       success: !!result
     });
     return !!result;
   } catch (error) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") throw new Error("Managed credential persistence refused");
     log.error("TOKEN_REFRESH", "Error updating credentials in localDb", {
       connectionId,
       error: error.message,
@@ -225,6 +227,13 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
   let creds = { ...credentials };
   if (!creds.connectionId && creds.id) {
     creds.connectionId = creds.id;
+  }
+
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+    if (!creds.connectionId) throw new Error("Managed refresh requires a persisted connection");
+    const current = await getProviderConnectionById(creds.connectionId);
+    if (!current) throw new Error("Managed refresh connection missing");
+    creds = { ...creds, ...current };
   }
 
   const force = options?.force === true;
@@ -292,6 +301,7 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
         };
 
         await updateProviderCredentials(creds.connectionId, {
+          refreshGeneration: copilotTokenResult.refreshGeneration,
           providerSpecificData: updatedSpecific,
         });
 
@@ -322,6 +332,7 @@ export async function refreshGitHubAndCopilotTokens(credentials) {
 
   return {
     ...newGitHubCreds,
+    refreshGeneration: copilotToken.refreshGeneration ?? newGitHubCreds.refreshGeneration,
     providerSpecificData: {
       copilotToken:          copilotToken.token,
       copilotTokenExpiresAt: copilotToken.expiresAt,

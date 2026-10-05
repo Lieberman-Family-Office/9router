@@ -1,0 +1,87 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fork } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
+import managed from '../../src/lib/db/managed.cjs';
+import { TABLES, buildCreateTableSql } from '../../src/lib/db/schema.js';
+const self = import.meta.filename;
+if (process.argv[2] === 'child') {
+  const { updateProviderConnection, getProviderConnectionById } = await import('../../src/lib/db/repos/connectionsRepo.js');
+  const generation = Number(process.argv[3]);
+  await updateProviderConnection('fake-id', generation ? { accessToken: `fake-${generation}` } : { usageMarker: 'fake-usage' }, generation || undefined);
+  if (generation) {
+    await assert.rejects(() => updateProviderConnection('fake-id', { accessToken: 'fake-ungated' }), /generation CAS/);
+    await assert.rejects(() => updateProviderConnection('fake-id', { accessToken: 'fake-invalid' }, true), /generation/);
+  }
+  const row = await getProviderConnectionById('fake-id');
+  assert.ok(row);
+  global._dbAdapter?.instance?.close();
+} else {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), '9r-cas-'));
+  const directory = path.join(root, 'db');
+  fs.mkdirSync(directory, { mode: 0o700 });
+  const file = path.join(directory, 'data.sqlite');
+  fs.writeFileSync(file, '', { mode: 0o600 });
+  const db = new DatabaseSync(file);
+  const children = new Set();
+  try {
+    db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
+    for (const [name, definition] of Object.entries(TABLES)) {
+      db.exec(buildCreateTableSql(name, definition));
+      for (const index of definition.indexes || []) db.exec(index);
+    }
+    db.exec("INSERT INTO _meta VALUES('schemaVersion','1'),('backupSchemaVersion','1')");
+    db.exec("INSERT INTO providerConnections VALUES('fake-id','codex','oauth',NULL,NULL,1,1,'{}','now','now')");
+    const manifest = await managed.createManifest(path.resolve(import.meta.dirname, '../..'));
+    const receipt = path.join(directory, 'enrolled.json');
+    fs.writeFileSync(receipt, JSON.stringify(manifest), { mode: 0o600 });
+    const refresh = path.join(directory, 'refresh.sqlite');
+    managed.enrollRefreshStore(refresh, 2);
+    function child(generation, expectFailure = false) {
+      return new Promise((resolve, reject) => {
+        const proc = fork(self, ['child', String(generation)], {
+          execArgv: ['--loader', path.join(import.meta.dirname, 'managed-imports.loader.mjs')],
+          env: { ...process.env, HOME: root, DATA_DIR: root,
+            NINEROUTER_MANAGED_WORKER: '1', NINEROUTER_HOTSWAP_MANIFEST: receipt,
+            NINEROUTER_HOTSWAP_ENROLLED_MANIFEST: receipt, NINEROUTER_HOTSWAP_REFRESH_DB: refresh },
+          stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+        });
+        children.add(proc);
+        let output = '';
+        proc.stdout.on('data', data => { output += data; });
+        proc.stderr.on('data', data => { output += data; });
+        const deadline = setTimeout(() => { proc.kill(); reject(new Error('CAS child deadline')); }, 10000);
+        proc.on('error', reject);
+        proc.on('exit', code => {
+          children.delete(proc);
+          clearTimeout(deadline);
+          if (output.includes('fake-ungated') || output.includes('fake-invalid')) return reject(new Error('Credential output forbidden'));
+          if (expectFailure ? code === 0 : code !== 0) return reject(new Error(`CAS child failed (exit ${code}): ${output.replace(/fake-[\w-]+/g, '[redacted]')}`));
+          resolve();
+        });
+      });
+    }
+    for (const order of [[1, 2], [2, 1]]) {
+      db.exec("UPDATE providerConnections SET data='{}' WHERE id='fake-id'");
+      for (const generation of order) await child(generation);
+      const row = JSON.parse(db.prepare("SELECT data FROM providerConnections WHERE id='fake-id'").get().data);
+      assert.equal(row.accessToken, 'fake-2');
+      assert.equal(row.refreshGeneration, 2);
+    }
+    db.exec("UPDATE providerConnections SET data='{}' WHERE id='fake-id'");
+    await Promise.all([child(2), child(0)]);
+    const row = JSON.parse(db.prepare("SELECT data FROM providerConnections WHERE id='fake-id'").get().data);
+    assert.equal(row.accessToken, 'fake-2');
+    assert.equal(row.usageMarker, 'fake-usage');
+    db.exec('ALTER TABLE settings ADD COLUMN incompatible TEXT');
+    await child(0, true);
+    assert.ok(db.prepare('PRAGMA table_info(settings)').all().some(row => row.name === 'incompatible'));
+    console.log('GREEN: actual repo CAS both orders, two-process usage/credential contention, readiness refuses mutated DB');
+  } finally {
+    for (const proc of children) proc.kill('SIGTERM');
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+}

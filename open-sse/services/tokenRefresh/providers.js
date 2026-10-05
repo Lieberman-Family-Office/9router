@@ -1,11 +1,12 @@
 import { PROVIDERS, PROVIDER_OAUTH } from "../../config/providers.js";
 import { OAUTH_ENDPOINTS, GITHUB_COPILOT, buildKimiHeaders } from "../../config/appConstants.js";
 import { proxyAwareFetch } from "../../utils/proxyFetch.js";
-import { dedupRefresh } from "./dedup.js";
+import { dedupRefresh, refreshLogger } from "./dedup.js";
 import { buildExternalIdpRefreshParams } from "../../../src/lib/oauth/kiroExternalIdp.js";
 
 let _xaiServiceSingleton = null;
 export async function refreshXaiToken(refreshToken, log) {
+  log = refreshLogger(log);
   if (!refreshToken) return null;
   return dedupRefresh("xai", refreshToken, async () => {
     try {
@@ -83,6 +84,7 @@ function buildRefreshBody(profile, config, refreshToken) {
 }
 
 export async function refreshAccessToken(provider, refreshToken, credentials, log) {
+  log = refreshLogger(log);
   const config = PROVIDERS[provider];
   const profile = REFRESH_PROFILES[provider] || {};
   const url = resolveRefreshUrl(provider, config, profile);
@@ -148,6 +150,7 @@ export async function refreshKimiToken(refreshToken, credentials, log) {
 }
 
 export async function refreshClineToken(refreshToken, log) {
+  log = refreshLogger(log);
   if (!refreshToken) return null;
 
   return dedupRefresh("cline", refreshToken, async () => {
@@ -200,6 +203,7 @@ export async function refreshClaudeOAuthToken(refreshToken, log) {
 }
 
 export async function refreshGoogleToken(refreshToken, clientId, clientSecret, log) {
+  log = refreshLogger(log);
   if (!refreshToken) return null;
   return dedupRefresh(`google:${clientId}`, refreshToken, async () => {
   try {
@@ -255,6 +259,7 @@ export function classifyOAuthRefreshError(errorText = "", status = 0) {
 }
 
 export async function refreshCodexToken(refreshToken, log) {
+  log = refreshLogger(log);
   if (!refreshToken) return null;
   return dedupRefresh("codex", refreshToken, async () => {
     try {
@@ -324,6 +329,7 @@ async function resolveKiroProfileArnPatch(providerSpecificData, accessToken, ref
 }
 
 export async function refreshKiroToken(refreshToken, providerSpecificData, log, proxyOptions = null) {
+  log = refreshLogger(log);
   if (!refreshToken) return null;
   return dedupRefresh("kiro", refreshToken, async () => {
   const authMethod = providerSpecificData?.authMethod;
@@ -466,6 +472,7 @@ export async function refreshGitHubToken(refreshToken, log) {
 }
 
 export async function refreshCopilotToken(githubAccessToken, log) {
+  log = refreshLogger(log);
   if (!githubAccessToken) return null;
   return dedupRefresh("copilot", githubAccessToken, async () => {
   try {
@@ -513,6 +520,7 @@ export async function refreshCopilotToken(githubAccessToken, log) {
 // refresh token carried in the X-Refresh-Token header (not a form body),
 // matching the official CodeBuddy CLI. Response: { code: 0, data: <token> }.
 export async function refreshCodebuddyToken(refreshToken, log) {
+  log = refreshLogger(log);
   if (!refreshToken) return null;
   return dedupRefresh("codebuddy-cn", refreshToken, async () => {
     const oauth = PROVIDER_OAUTH["codebuddy-cn"] || {};
@@ -564,6 +572,7 @@ export async function refreshCodebuddyToken(refreshToken, log) {
 }
 
 export async function refreshCodebuddyIntlToken(refreshToken, log) {
+  log = refreshLogger(log);
   if (!refreshToken) return null;
   return dedupRefresh("codebuddy-intl", refreshToken, async () => {
     const oauth = PROVIDER_OAUTH["codebuddy-intl"] || {};
@@ -617,6 +626,7 @@ export async function refreshCodebuddyIntlToken(refreshToken, log) {
 // Trae refresh — POST ExchangeToken with JSON body {ClientID, RefreshToken, ClientSecret, UserID}.
 // Response: {Result: {AccessToken, RefreshToken, TokenType, ExpiresAt}}.
 export async function refreshTraeToken(refreshToken, credentials, log) {
+  log = refreshLogger(log);
   if (!refreshToken) return null;
   const oauth = PROVIDER_OAUTH.trae || {};
   const url = oauth.exchangeTokenUrl || oauth.tokenUrl;

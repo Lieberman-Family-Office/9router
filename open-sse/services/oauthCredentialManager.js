@@ -72,6 +72,7 @@ export function mergeRefreshedCredentials(provider, currentCredentials, refreshe
   if (isUnrecoverableRefreshError(refreshedCredentials)) return refreshedCredentials;
 
   const next = {};
+  if (refreshedCredentials.refreshGeneration !== undefined) next.refreshGeneration = refreshedCredentials.refreshGeneration;
   const nowIso = new Date(nowMs).toISOString();
 
   if (refreshedCredentials.accessToken) next.accessToken = refreshedCredentials.accessToken;

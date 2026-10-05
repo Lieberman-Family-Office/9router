@@ -1,4 +1,5 @@
 import { BaseExecutor } from "./base.js";
+import { refreshCopilotToken, refreshGitHubToken } from "../services/tokenRefresh.js";
 import { PROVIDERS } from "../config/providers.js";
 import { OAUTH_ENDPOINTS, GITHUB_COPILOT } from "../config/appConstants.js";
 import { HTTP_STATUS } from "../config/runtimeConfig.js";
@@ -341,6 +342,10 @@ export class GithubExecutor extends BaseExecutor {
   }
 
   async refreshCopilotToken(githubAccessToken, log, proxyOptions = null) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      if (proxyOptions) throw new Error("Managed refresh proxy contract unavailable");
+      return refreshCopilotToken(githubAccessToken, null);
+    }
     try {
       const response = await proxyAwareFetch("https://api.github.com/copilot_internal/v2/token", {
         headers: {
@@ -367,6 +372,10 @@ export class GithubExecutor extends BaseExecutor {
   }
 
   async refreshGitHubToken(refreshToken, log, proxyOptions = null) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      if (proxyOptions) throw new Error("Managed refresh proxy contract unavailable");
+      return refreshGitHubToken(refreshToken, null);
+    }
     try {
       const params = {
         grant_type: "refresh_token",
@@ -400,14 +409,14 @@ export class GithubExecutor extends BaseExecutor {
       if (githubTokens?.accessToken) {
         copilotResult = await this.refreshCopilotToken(githubTokens.accessToken, log, proxyOptions);
         if (copilotResult) {
-          return { ...githubTokens, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+          return { ...githubTokens, refreshGeneration: copilotResult.refreshGeneration ?? githubTokens.refreshGeneration, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
         }
         return githubTokens;
       }
     }
 
     if (copilotResult) {
-      return { accessToken: credentials.accessToken, refreshToken: credentials.refreshToken, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+      return { accessToken: credentials.accessToken, refreshToken: credentials.refreshToken, ...(copilotResult.refreshGeneration !== undefined ? { refreshGeneration: copilotResult.refreshGeneration } : {}), copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
     }
 
     return null;
