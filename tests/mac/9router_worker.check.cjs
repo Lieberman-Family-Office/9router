@@ -22,12 +22,12 @@ const wait = async (fn, seconds = 5) => {
     await delay(25);
   }
 };
-function command(slot, op, raw) {
+function command(slot, op, raw, timeout = 4000) {
   assert.ok(['a', 'b'].includes(slot), 'invalid control slot');
   return new Promise((resolve, reject) => {
     const socket = net.connect(path.join(root, `${slot}.ctl`));
     let bytes = '';
-    socket.setTimeout(4000, () => socket.destroy(new Error('control timeout')));
+    socket.setTimeout(timeout, () => socket.destroy(new Error('control timeout')));
     socket.on('error', reject);
     socket.on('connect', () => socket.end(raw ?? JSON.stringify({ op }) + '\n'));
     socket.on('data', chunk => { bytes += chunk; });
@@ -94,6 +94,10 @@ process.send = (message, ...args) => {
   return send(message, ...args);
 };
 managed.workState().initialized = true;
+process.once('SIGTERM', () => {
+  const delayed = fs.existsSync(path.join(process.env.NINEROUTER_HOTSWAP_RUNTIME, process.env.NINEROUTER_SLOT + '.exit-delay'));
+  setTimeout(() => process.exit(0), delayed ? 5500 : 0);
+});
 const held = [];
 const server = http.createServer(async (req, res) => {
   if (req.url === '/api/version') {
@@ -132,8 +136,8 @@ server.listen(Number(process.env.PORT), '127.0.0.1');
   fs.writeFileSync(file, JSON.stringify(config), { mode: 0o600 });
   return { config, file };
 }
-async function launch(file) {
-  const child = spawn(process.execPath, [worker, file], {
+async function launch(file, preload) {
+  const child = spawn(process.execPath, [...(preload ? ['--require', preload] : []), worker, file], {
     env: { ...process.env, HOME: root, NINEROUTER_SKIP_BACKGROUND_REFRESH: '1', NINEROUTER_SKIP_RESPONSES_WS: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -180,6 +184,22 @@ async function main() {
     await wait(() => ws.data().includes('a:' + turn));
   }
   await assert.rejects(() => command('a', 'stop'));
+  const incomplete = net.connect(path.join(root, 'a.ctl'));
+  sockets.push(incomplete);
+  incomplete.on('error', () => {});
+  incomplete.resume();
+  await once(incomplete, 'connect');
+  const receivedAt = Date.now();
+  incomplete.write('{');
+  const trickle = setInterval(() => incomplete.write(' '), 250);
+  try {
+    await wait(() => incomplete.closed, 7);
+    assert.ok(Date.now() - receivedAt < 6500, 'trickled incomplete command obeys absolute receipt deadline');
+  } finally { clearInterval(trickle); }
+  assert.equal(sse.socket.destroyed, false, 'receipt deadline does not close healthy SSE');
+  assert.equal(ws.socket.destroyed, false, 'receipt deadline does not close healthy WebSocket');
+  ws.socket.write('after-receipt-deadline');
+  await wait(() => ws.data().includes('a:after-receipt-deadline'));
   const racing = await connect('a', '/cleanup'); // Previously selected dial is admitted after switch.
   racing.socket.destroy();
   await request(a.config.port, '/release');
@@ -251,24 +271,68 @@ async function main() {
     try { await delay(1250); } finally { process.kill(wa.pid, 'SIGCONT'); }
   });
   await delay(10500);
-  const stopped = await command('a', 'stop');
-  assert.equal(stopped.mode, 'stopped');
+  fs.writeFileSync(path.join(root, 'a.exit-delay'), 'delay owned fixture shutdown');
+  const stopped = await command('a', 'stop', undefined, 10000);
+  assert.equal(stopped.mode, 'stopped', 'accepted stop survives >5s app exit wait without a receipt deadline');
   assert.equal(wa.exitCode, null, 'stopped wrapper must not exit and trigger KeepAlive');
   await assert.rejects(() => request(a.config.port, '/version'));
   await assert.rejects(() => command('b', 'status', '{bad}\n'));
   await assert.rejects(() => command('b', 'status', 'x'.repeat(4097) + '\n'));
   await assert.rejects(() => command('b', 'stop'));
   const bpid = (await command('b', 'status')).appPid;
-  process.kill(bpid, 'SIGKILL'); // Only the exact isolated fake-app PID, deliberate crash test.
-  await wait(() => wb.exitCode !== null);
-  assert.notEqual(wb.exitCode, 0);
-  assert.ok(fs.existsSync(path.join(root, 'b.failed.json')));
+  const crashControls = [];
+  for (const input of ['', '{', JSON.stringify({ op: 'status' }) + '\n']) {
+    const socket = net.connect(path.join(root, 'b.ctl'));
+    sockets.push(socket); crashControls.push(socket);
+    socket.on('error', () => {});
+    socket.resume();
+    await once(socket, 'connect');
+    if (input.includes('\n')) fs.writeFileSync(path.join(root, 'b.status-hold'), 'open');
+    if (input) socket.write(input);
+  }
+  await wait(() => fs.existsSync(path.join(root, 'b.status-hold.waiting')));
+  const crashTrickle = setInterval(() => crashControls[1].write(' '), 100);
+  try {
+    process.kill(bpid, 'SIGKILL'); // Only the exact isolated fake-app PID, deliberate crash test.
+    await wait(() => wb.exitCode !== null, 3);
+    await wait(() => crashControls.every(socket => socket.closed), 1);
+  } finally { clearInterval(crashTrickle); }
+  assert.notEqual(wb.exitCode, 0, 'idle, trickled and accepted pending controls cannot retain failed wrapper');
+  const crashEvidence = JSON.parse(fs.readFileSync(path.join(root, 'b.failed.json'), 'utf8'));
+  assert.equal(crashEvidence.appPid, bpid);
+  assert.equal(crashEvidence.signal, 'SIGKILL');
+  assert.equal(fs.existsSync(path.join(root, 'b.sock')), false);
+  assert.equal(fs.existsSync(path.join(root, 'b.ctl')), false);
+  fs.unlinkSync(path.join(root, 'b.status-hold')); fs.unlinkSync(path.join(root, 'b.status-hold.waiting'));
   fs.unlinkSync(path.join(root, 'active.sock'));
   const candidate = await launch(b.file);
   await wait(async () => { try { return (await command('b', 'status')).mode === 'ready'; } catch { assert.equal(candidate.exitCode, null, candidate.log()); } });
   process.kill((await command('b', 'status')).appPid, 'SIGKILL');
   await wait(() => candidate.exitCode !== null);
   assert.notEqual(candidate.exitCode, 0, 'failed candidate must not silently stay ready');
+  const spawnFault = path.join(root, 'spawn-fault.cjs');
+  const missingExecutable = path.join(root, 'missing-node-executable');
+  fs.writeFileSync(spawnFault, `
+const cp = require('node:child_process');
+const spawn = cp.spawn;
+cp.spawn = (_executable, args, options) => spawn(${JSON.stringify(missingExecutable)}, args, options);
+`);
+  fs.unlinkSync(path.join(root, 'b.failed.json'));
+  const spawnFailedWorker = await launch(b.file, spawnFault);
+  await wait(() => spawnFailedWorker.exitCode !== null);
+  assert.notEqual(spawnFailedWorker.exitCode, 0, 'spawn failure refuses readiness');
+  const spawnEvidence = JSON.parse(fs.readFileSync(path.join(root, 'b.failed.json'), 'utf8'));
+  assert.equal(spawnEvidence.slot, 'b');
+  assert.equal(spawnEvidence.version, 'b');
+  assert.equal(spawnEvidence.appPid, null, 'unspawned child has no fabricated PID');
+  assert.equal(spawnEvidence.error.code, 'ENOENT', 'real asynchronous spawn error retains controlled failure evidence');
+  assert.equal(spawnEvidence.code, null);
+  assert.equal(spawnEvidence.signal, null);
+  assert.equal(fs.statSync(path.join(root, 'b.failed.json')).mode & 0o777, 0o600);
+  assert.equal(fs.existsSync(path.join(root, 'b.sock')), false);
+  assert.equal(fs.existsSync(path.join(root, 'b.ctl')), false);
+  assert.equal(spawnFailedWorker.log().includes('Unhandled \'error\' event'), false);
+  assert.equal((await command('a', 'status')).mode, 'stopped', 'spawn failure does not affect other owned slot');
   const attachmentStarted = path.join(root, 'ws-started');
   const attachmentRelease = path.join(root, 'ws-release');
   const delayed = await makeConfig('b', `

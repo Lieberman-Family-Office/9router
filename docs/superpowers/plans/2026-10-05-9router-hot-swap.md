@@ -257,6 +257,21 @@ git commit -m "test(mac): prove stream-safe proxy route switching"
 
 **Task 2 follow-up review fixes, 2026-10-05:** Read/Git inspection of existing commit `08b004e6` confirms the first three source fixes and independent registry restoration; these were not rerun. The remaining observability catch now marks managed work unknown and propagates the settings error instead of silently dropping records. The existing buffer unit check adds rejected-settings, explicit-disabled and unmanaged-compatibility cases with independent registry/config state. The worker check adds an exact-owned-wrapper SIGSTOP/SIGCONT scheduling gap while final IPC is held. The valid startup case uses explicitly disabled ingress without manually clearing unknown. These checks are **NOT RUN**, including RED/GREEN, syntax, lint, scans, builds and package validation. No Namespace activation or production change is authorized. Fake attachment modules test lifecycle gating only; they do not prove packaged WebSocket readiness, shared DB binding, native Caddy delayed-dial barriers or launchd behavior. Historical laptop results remain provenance, never acceptance.
 
+**Task 2 packaging/control/spawn continuation, 2026-10-05:** Source inspection at verified `8abc824c` confirms all three reported findings. The WebSocket registry copy used `cliDir`, although `session.js` resolves `../../../src/lib/db/managed.cjs` from the actual copied output; the copy now derives that destination from the output handler directory. Accepted control sockets were not owned and used a resettable inactivity timeout; the worker now tracks them, destroys them on unexpected app failure, and applies an absolute five-second deadline only until complete command receipt. Accepted operations and healthy bridge streams have no new deadline. App spawn errors now enter the same idempotent owned failure cleanup as unexpected exit, retaining error code/message and a null PID when no child spawned. Failure-evidence write errors do not skip cleanup. Existing retirement/readiness/strict-settings/observability fixes remain unchanged. Focused regressions cover isolated alternate output using the actual session import, incomplete trickled receipt alongside healthy SSE/WebSocket sessions, accepted stop with a 5.5-second child exit delay, idle/trickled/pending accepted controls during app crash, and a real asynchronous ENOENT spawn fault injected through a temporary preload. Every executable check is **NOT RUN / Namespace pending**. No acceptance verdict, Namespace activation, push or production action.
+
+Additional guest-only checks for this continuation, from the exact reviewed revision with guest locked dependencies:
+
+```sh
+node tests/mac/9router_worker.check.cjs
+node --test tests/unit/cli-build-artifacts.test.js
+node --check scripts/mac/9router_worker.cjs
+node --check tests/mac/9router_worker.check.cjs
+node --check cli/scripts/build-cli.js
+node --check tests/unit/cli-build-artifacts.test.js
+```
+
+The existing combined Caddy check and route counterfactual must also be rerun against these bytes under the commands below; the 120-second counterfactual budget remains unproven. Required lint/format, secret scans, builds, exact-tarball/package validation and mutation/RED evidence remain **NOT RUN**. Task 5 must qualify `NINEROUTER_CLI_APP_DIR` alternate-output packages, not substitute the isolated copy fixture. Parent owns Namespace lifecycle and revision/evidence export. This continuation preserves untracked `tests/mac/__pycache__/` and does not rewrite prior commits.
+
 Retirement relies on Task 4's single-controller exclusion: reconciliation must retain the deployment lock across retirement and route mutations. No worker lock is introduced. A synchronous final route check cannot exclude a competing external route writer; controller implementation/qualification must prove this contract before acceptance.
 
 Guest-only review commands, from the revision-bound source checkout inside an authorized Namespace macOS ARM64 guest:

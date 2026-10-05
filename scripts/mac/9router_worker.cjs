@@ -74,6 +74,7 @@ async function main() {
   });
   let mode = 'starting';
   let intentional = false;
+  let failed = false;
   let draining = false;
   let busy = false;
   let serial = 0;
@@ -81,6 +82,7 @@ async function main() {
   let lastPoll = performance.now();
   const pending = new Map();
   const pipes = new Set();
+  const controlSockets = new Set();
   const active = () => {
     const route = path.join(config.runtime, 'active.sock');
     const stat = fs.lstatSync(route);
@@ -143,6 +145,7 @@ async function main() {
   };
   const closeBridge = () => new Promise((resolve, reject) => bridge.close(error => error ? reject(error) : resolve()));
   const listenBridge = () => new Promise((resolve, reject) => {
+    if (mode === 'failed') { reject(new Error('App failed')); return; }
     bridge.once('error', reject);
     bridge.listen(path.join(config.runtime, `${config.slot}.sock`), () => { bridge.off('error', reject); resolve(); });
   });
@@ -196,19 +199,24 @@ async function main() {
     } finally { busy = false; }
   };
   const control = net.createServer({ allowHalfOpen: true }, socket => {
+    controlSockets.add(socket);
     let bytes = Buffer.alloc(0);
     let handled = false;
-    socket.setTimeout(5000, () => socket.destroy());
+    // Absolute receipt deadline only: complete commands and accepted work remain unbounded.
+    const receiptDeadline = setTimeout(() => socket.destroy(), 5000);
+    socket.once('close', () => { clearTimeout(receiptDeadline); controlSockets.delete(socket); });
     socket.on('error', () => {});
     socket.on('data', chunk => {
       if (handled) return;
       bytes = Buffer.concat([bytes, chunk]);
       const newline = bytes.indexOf(10);
       if (bytes.length > 4096 || (newline >= 0 && newline !== bytes.length - 1)) {
-        handled = true; socket.end(JSON.stringify({ slot: config.slot, error: 'Malformed control command' }) + '\n'); return;
+        handled = true; clearTimeout(receiptDeadline);
+        socket.end(JSON.stringify({ slot: config.slot, error: 'Malformed control command' }) + '\n'); return;
       }
       if (newline < 0) return;
       handled = true;
+      clearTimeout(receiptDeadline);
       Promise.resolve().then(() => {
         const value = JSON.parse(bytes.toString());
         if (!value || Object.keys(value).length !== 1 || typeof value.op !== 'string') throw new Error('Malformed control command');
@@ -216,30 +224,42 @@ async function main() {
       }).then(value => socket.end(JSON.stringify(value) + '\n'), error => socket.end(JSON.stringify({ slot: config.slot, error: error.message }) + '\n'));
     });
   });
-  app.on('exit', (code, signal) => {
-    if (intentional) return;
+  const fail = (code, signal, error) => {
+    if (intentional || failed) return;
+    failed = true;
     mode = 'failed';
-    fs.writeFileSync(path.join(config.runtime, `${config.slot}.failed.json`), JSON.stringify({ slot: config.slot, version: config.version, appPid: app.pid, code, signal }) + '\n', { mode: 0o600 });
     process.exitCode = 1;
+    try {
+      fs.writeFileSync(path.join(config.runtime, `${config.slot}.failed.json`), JSON.stringify({
+        slot: config.slot, version: config.version, appPid: app.pid ?? null, code, signal,
+        ...(error ? { error: { code: error.code ?? null, message: error.message } } : {}),
+      }) + '\n', { mode: 0o600 });
+    } catch (evidenceError) { console.error('[ManagedWorker] Failure evidence write failed:', evidenceError.message); }
     clearInterval(timer);
     for (const pair of pipes) { pair.incoming.destroy(); pair.outgoing.destroy(); }
+    for (const socket of controlSockets) socket.destroy();
     bridge.close(); control.close();
+    if (app.exitCode === null && app.signalCode === null) app.kill('SIGTERM');
     // Only owned socket paths; failed evidence is retained for the controller.
     for (const suffix of ['sock', 'ctl']) { try { fs.unlinkSync(path.join(config.runtime, `${config.slot}.${suffix}`)); } catch {} }
-  });
+  };
+  app.on('error', error => fail(null, null, error));
+  app.on('exit', (code, signal) => fail(code, signal));
   const shutdown = () => {
     intentional = true;
     clearInterval(timer);
     bridge.close(); control.close();
     for (const pair of pipes) { pair.incoming.destroy(); pair.outgoing.destroy(); }
+    for (const socket of controlSockets) socket.destroy();
     if (app.exitCode === null) app.kill('SIGTERM');
   };
   process.once('SIGTERM', shutdown); process.once('SIGINT', shutdown);
   try {
     const until = performance.now() + 30000;
     while (true) {
-      if (app.exitCode !== null) throw new Error('App failed during startup');
+      if (mode === 'failed' || app.exitCode !== null) throw new Error('App failed during startup');
       try { await verifyVersion(config); break; } catch {
+        if (mode === 'failed') throw new Error('App failed during startup');
         if (performance.now() > until) throw new Error('Private app readiness unproven');
         await delay(100);
       }
