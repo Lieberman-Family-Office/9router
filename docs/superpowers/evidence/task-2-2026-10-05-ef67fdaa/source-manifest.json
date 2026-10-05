@@ -1,0 +1,15 @@
+{
+  "head": "05b606931b824cf77dc3cc1164b75df88590ed24",
+  "baseline": "5fd82262218f5f00b4f987587318908e548ad65a",
+  "operatorQuote": "Yes\u2014authorize Namespace startup and testing, with verified shutdown afterward (Recommended)",
+  "operatorTurn": "2026-10-05 17:56 EDT; actual user records at transcript lines 3353 and 3355",
+  "devboxId": "2tc0b2eg4mveo",
+  "devboxName": "9router-qualify-recovery",
+  "guestRoot": "/Volumes/devbox/task2-ef67fdaa-20261005-2215",
+  "inputs": {
+    "head.tar": "3ae08a954578cb35a3bfe281486915c61f5a9a29fa95c8b7f3f8c2615656b6ec",
+    "source.bundle": "c1021cb83263d0f6094e9821e9eea87470ab5e0745db90a7bab22eefc353eb75",
+    "vitest.config.mjs": "fc2136a6f373a2e8aa67a0b63fd591bdbb700e473025e9be38d6c6b3ca270f4e",
+    "baseline.tar": "341fc3b52de1e7ca4e63e8744adea25dc14ff5bd7781341ba136c8879e7f422a"
+  }
+}

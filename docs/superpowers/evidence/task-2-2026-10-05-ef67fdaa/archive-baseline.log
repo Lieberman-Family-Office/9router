@@ -1,0 +1,1 @@
+COMMAND: ["git", "archive", "--format=tar", "--output=/tmp/task2-export-ef67fdaa-20261005-2215/baseline.tar", "5fd82262218f5f00b4f987587318908e548ad65a"]

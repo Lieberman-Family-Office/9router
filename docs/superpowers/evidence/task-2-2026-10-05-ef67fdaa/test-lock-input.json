@@ -1,0 +1,9 @@
+{
+  "source": "/Users/jasonlieberman/dev/9router/tests/package-lock.json",
+  "sha256": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff",
+  "provenance": "Existing ignored local lock, read-only inspection; extra hashed dependency input, not source commit",
+  "vitestVersion": "4.1.11",
+  "manifestDependencies": {
+    "vitest": "^4.0.0"
+  }
+}

@@ -1,0 +1,204 @@
+[
+  {
+    "name": "metadata-before",
+    "command": [
+      "node",
+      "/tmp/namespace-runtime-check-ef67fdaa/task2-metadata.mjs"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-before.log",
+    "at": "2026-10-05T22:15:01.252229+00:00"
+  },
+  {
+    "name": "archive-head",
+    "command": [
+      "git",
+      "archive",
+      "--format=tar",
+      "--output=/tmp/task2-export-ef67fdaa-20261005-2215/head.tar",
+      "05b606931b824cf77dc3cc1164b75df88590ed24"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/archive-head.log",
+    "at": "2026-10-05T22:15:01.517791+00:00"
+  },
+  {
+    "name": "archive-baseline",
+    "command": [
+      "git",
+      "archive",
+      "--format=tar",
+      "--output=/tmp/task2-export-ef67fdaa-20261005-2215/baseline.tar",
+      "5fd82262218f5f00b4f987587318908e548ad65a"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/archive-baseline.log",
+    "at": "2026-10-05T22:15:01.644676+00:00"
+  },
+  {
+    "name": "bundle",
+    "command": [
+      "git",
+      "bundle",
+      "create",
+      "/tmp/task2-export-ef67fdaa-20261005-2215/source.bundle",
+      "HEAD",
+      "5fd82262218f5f00b4f987587318908e548ad65a"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/bundle.log",
+    "at": "2026-10-05T22:15:02.096304+00:00"
+  },
+  {
+    "name": "guest-isolated-directory",
+    "command": [
+      "devbox",
+      "exec",
+      "9router-qualify-recovery",
+      "--",
+      "/bin/mkdir",
+      "/Volumes/devbox/task2-ef67fdaa-20261005-2215"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/guest-isolated-directory.log",
+    "at": "2026-10-05T22:15:15.375446+00:00"
+  },
+  {
+    "name": "upload-head.tar",
+    "command": [
+      "devbox",
+      "upload",
+      "9router-qualify-recovery",
+      "/tmp/task2-export-ef67fdaa-20261005-2215/head.tar",
+      "/Volumes/devbox/task2-ef67fdaa-20261005-2215/head.tar"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-head.tar.log",
+    "at": "2026-10-05T22:15:17.401883+00:00"
+  },
+  {
+    "name": "upload-source.bundle",
+    "command": [
+      "devbox",
+      "upload",
+      "9router-qualify-recovery",
+      "/tmp/task2-export-ef67fdaa-20261005-2215/source.bundle",
+      "/Volumes/devbox/task2-ef67fdaa-20261005-2215/source.bundle"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-source.bundle.log",
+    "at": "2026-10-05T22:15:19.344635+00:00"
+  },
+  {
+    "name": "upload-expected-inputs.json",
+    "command": [
+      "devbox",
+      "upload",
+      "9router-qualify-recovery",
+      "/tmp/task2-export-ef67fdaa-20261005-2215/expected-inputs.json",
+      "/Volumes/devbox/task2-ef67fdaa-20261005-2215/expected-inputs.json"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-expected-inputs.json.log",
+    "at": "2026-10-05T22:15:20.168383+00:00"
+  },
+  {
+    "name": "upload-vitest.config.mjs",
+    "command": [
+      "devbox",
+      "upload",
+      "9router-qualify-recovery",
+      "/tmp/task2-export-ef67fdaa-20261005-2215/vitest.config.mjs",
+      "/Volumes/devbox/task2-ef67fdaa-20261005-2215/vitest.config.mjs"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-vitest.config.mjs.log",
+    "at": "2026-10-05T22:15:20.939072+00:00"
+  },
+  {
+    "name": "upload-baseline.tar",
+    "command": [
+      "devbox",
+      "upload",
+      "9router-qualify-recovery",
+      "/tmp/task2-export-ef67fdaa-20261005-2215/baseline.tar",
+      "/Volumes/devbox/task2-ef67fdaa-20261005-2215/baseline.tar"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-baseline.tar.log",
+    "at": "2026-10-05T22:15:22.626644+00:00"
+  },
+  {
+    "name": "upload-guest-runner",
+    "command": [
+      "devbox",
+      "upload",
+      "9router-qualify-recovery",
+      "/tmp/task2-guest-ef67fdaa.py",
+      "/Volumes/devbox/task2-ef67fdaa-20261005-2215/runner.py"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-guest-runner.log",
+    "at": "2026-10-05T22:15:23.665855+00:00"
+  },
+  {
+    "name": "metadata-running",
+    "command": [
+      "node",
+      "/tmp/namespace-runtime-check-ef67fdaa/task2-metadata.mjs"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-running.log",
+    "at": "2026-10-05T22:15:23.908813+00:00"
+  },
+  {
+    "name": "guest-battery",
+    "command": [
+      "devbox",
+      "exec",
+      "9router-qualify-recovery",
+      "--",
+      "/opt/homebrew/bin/python3",
+      "/Volumes/devbox/task2-ef67fdaa-20261005-2215/runner.py"
+    ],
+    "exit": 1,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/guest-battery.log",
+    "at": "2026-10-05T22:16:09.795578+00:00"
+  },
+  {
+    "name": "export-evidence",
+    "command": [
+      "devbox",
+      "download",
+      "9router-qualify-recovery",
+      "/Volumes/devbox/task2-ef67fdaa-20261005-2215/evidence.tar",
+      "/tmp/task2-export-ef67fdaa-20261005-2215/evidence.tar"
+    ],
+    "exit": 1,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/export-evidence.log",
+    "at": "2026-10-05T22:16:27.033090+00:00"
+  },
+  {
+    "name": "stop-cli",
+    "command": [
+      "devbox",
+      "stop",
+      "9router-qualify-recovery",
+      "--force"
+    ],
+    "exit": 0,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/stop-cli.log",
+    "at": "2026-10-05T22:16:42.421770+00:00"
+  },
+  {
+    "name": "metadata-immediate",
+    "command": [
+      "node",
+      "/tmp/namespace-runtime-check-ef67fdaa/task2-metadata.mjs",
+      "verify"
+    ],
+    "exit": 2,
+    "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-immediate.log",
+    "at": "2026-10-05T22:16:42.710815+00:00"
+  }
+]

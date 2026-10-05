@@ -1,0 +1,8 @@
+COMMAND: ["devbox", "stop", "9router-qualify-recovery", "--force"]
+Shut down 1 instance.
+
+
+ A new version of devbox is available: 0.0.196. 
+
+ Run `devbox update` to upgrade.
+

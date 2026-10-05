@@ -1,0 +1,1 @@
+COMMAND: ["git", "archive", "--format=tar", "--output=/tmp/task2-export-ef67fdaa-20261005-2215/head.tar", "05b606931b824cf77dc3cc1164b75df88590ed24"]
