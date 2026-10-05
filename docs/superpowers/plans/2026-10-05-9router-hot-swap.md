@@ -223,6 +223,12 @@ git commit -m "test(mac): prove stream-safe proxy route switching"
 
 **Interfaces:** Worker invocation `node 9router_worker.cjs <slot.json>`. Slot configuration supplies concrete `release`, `version`, `port`, `runtime`, `dataDir`, and shared secret environment loaded by its launcher. Expose the control protocol above. Never use `9router/cli.js`.
 
+**Approved scope completion in this execution turn:** The `drain_scope` selection is `complete`. Include minimal completion tracking in `open-sse/utils/streamHandler.js`, `open-sse/handlers/chatCore/streamingHandler.js`, and active-slot tick gating/tracking in `src/shared/services/quotaAutoPing.js`. Track all detached response persistence and cleanup at these boundaries, not only OAuth work. Retain existing unmanaged behavior. If another untracked completion boundary is found, identify it before expanding scope.
+
+**Stop ownership:** The controller owns launchd bootout. Worker `stop` is a prepare/retirement operation, not self-bootout. Close admission only after positive zero-work and route-away checks; reconfirm app quiescence after admission closes. Return `mode: stopped` only after the owned app exits and the bridge is closed. Keep control/wrapper alive so KeepAlive cannot recreate the app; the controller then bootouts that slot. A failed or unknown final count retains the app and refuses retirement. Standalone tests terminate the wrapper they created after this acknowledgement. Do NOT invoke launchctl from the worker.
+
+**Current baseline revalidation:** All seven isolated Task 1/3 checks exited 0 at `2fe136b84f9cad6b06c95d3f8ccdd82a0b655359`, including specific mirror counterfactuals. The dispatch census measured 596 files, 64 dispatches and 53 issuer paths. These checks do NOT establish packaged qualification.
+
 - [ ] **Step 1: Write failing drain tests.**
 
 ```javascript
