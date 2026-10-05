@@ -16,6 +16,9 @@ export async function withRefreshWork(fn) {
 }
 
 function validResult(result, generation, family) {
+  const expiry = typeof result?.expiresAt === "number" ? result.expiresAt * 1000 : Date.parse(result?.expiresAt);
+  if (family === "copilot" && !Number.isFinite(expiry)) return false;
+  if (family === "oauth" && result?.expiresIn !== undefined && !Number.isFinite(expiry)) return false;
   return result && typeof result === "object" && !Array.isArray(result) &&
     Number.isSafeInteger(generation) && generation > 0 &&
     Object.keys(result.refreshGenerations || {}).length === 1 &&
@@ -45,10 +48,31 @@ async function managedRefresh(provider, oldToken, fn) {
     db.exec("BEGIN IMMEDIATE");
     let claimed;
     try {
-      claimed = db.prepare("INSERT OR IGNORE INTO refresh_flights(key,owner,state,started_at) VALUES(?,?,'pending',?)")
-        .run(key, owner, new Date().toISOString()).changes === 1;
+      const flight = db.prepare("SELECT state,result,generation FROM refresh_flights WHERE key=?").get(key);
+      let replace = false;
+      if (flight?.state === "done") {
+        let result;
+        try { result = JSON.parse(flight.result); } catch { throw new Error("Invalid durable refresh result"); }
+        if (!validResult(result, flight.generation, family)) throw new Error("Invalid durable refresh result");
+        if (family === "copilot") {
+          const expiry = typeof result.expiresAt === "number" ? result.expiresAt * 1000 : Date.parse(result.expiresAt);
+          if (!Number.isFinite(expiry)) throw new Error("Invalid Copilot expiry");
+          replace = expiry <= Date.now();
+        }
+      }
+      claimed = !flight || replace;
+      if (claimed) {
+        const generation = managed.nextRefreshGeneration(db);
+        db.prepare("INSERT INTO refresh_flights(key,owner,state,started_at,generation) VALUES(?,?,'pending',?,?) " +
+          "ON CONFLICT(key) DO UPDATE SET owner=excluded.owner,state='pending',result=NULL,started_at=excluded.started_at,generation=excluded.generation")
+          .run(key, owner, new Date().toISOString(), generation);
+      }
       db.exec("COMMIT");
-    } catch { db.exec("ROLLBACK"); throw new Error("Refresh claim refused"); }
+    } catch (error) {
+      db.exec("ROLLBACK");
+      if (error.message === "Invalid durable refresh result") throw error;
+      throw new Error("Refresh claim refused");
+    }
     if (!claimed) {
       const deadline = Date.now() + waitMs;
       while (true) {
@@ -73,15 +97,22 @@ async function managedRefresh(provider, oldToken, fn) {
       }
       db.exec("BEGIN IMMEDIATE");
       try {
-        const sequence = db.prepare("SELECT value FROM refresh_sequence WHERE id=1").get()?.value;
-        if (!Number.isSafeInteger(sequence) || sequence < 0 || sequence >= Number.MAX_SAFE_INTEGER) {
-          throw new Error("Invalid refresh sequence");
+        const generation = db.prepare("SELECT generation FROM refresh_flights WHERE key=? AND owner=? AND state='pending'").get(key, owner)?.generation;
+        const result = JSON.parse(JSON.stringify({ ...response, refreshGenerations: { [family]: generation } }));
+        if (family === "oauth") {
+          if (result.expiresAt === undefined && result.expiresIn !== undefined) {
+            if (typeof result.expiresIn !== "number" || !Number.isFinite(result.expiresIn) || result.expiresIn < 0) throw new Error("Invalid refresh expiry");
+            result.expiresAt = new Date(Date.now() + result.expiresIn * 1000).toISOString();
+          }
+          if (result.expiresAt !== undefined) {
+            const expiry = typeof result.expiresAt === "number" ? result.expiresAt * 1000 : Date.parse(result.expiresAt);
+            if (!Number.isFinite(expiry)) throw new Error("Invalid refresh expiry");
+            result.expiresAt = new Date(expiry).toISOString();
+          }
         }
-        const result = JSON.parse(JSON.stringify({ ...response, refreshGenerations: { [family]: sequence + 1 } }));
-        if (!validResult(result, sequence + 1, family)) throw new Error("Invalid refresh result");
-        db.prepare("UPDATE refresh_sequence SET value=? WHERE id=1").run(sequence + 1);
-        const saved = db.prepare("UPDATE refresh_flights SET state='done',result=?,generation=? WHERE key=? AND owner=? AND state='pending'")
-          .run(JSON.stringify(result), sequence + 1, key, owner);
+        if (!validResult(result, generation, family)) throw new Error("Invalid refresh result");
+        const saved = db.prepare("UPDATE refresh_flights SET state='done',result=? WHERE key=? AND owner=? AND state='pending'")
+          .run(JSON.stringify(result), key, owner);
         if (saved.changes !== 1) throw new Error("Refresh ownership changed");
         db.exec("COMMIT");
         return result;

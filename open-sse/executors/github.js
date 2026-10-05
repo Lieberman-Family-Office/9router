@@ -8,7 +8,7 @@ import { openaiResponsesToOpenAIResponse } from "../translator/response/openai-r
 import { initState, translateRequest, translateResponse } from "../translator/index.js";
 import { FORMATS } from "../translator/formats.js";
 import { parseSSELine, formatSSE } from "../utils/streamHelpers.js";
-import { proxyAwareFetch } from "../utils/proxyFetch.js";
+import { proxyAwareFetch, hasEnabledProxy } from "../utils/proxyFetch.js";
 import { stripUnsupportedParams } from "../translator/concerns/paramSupport.js";
 import { SSE_DONE } from "../utils/sseConstants.js";
 import { ANTHROPIC_API_VERSION } from "../providers/shared.js";
@@ -343,7 +343,7 @@ export class GithubExecutor extends BaseExecutor {
 
   async refreshCopilotToken(githubAccessToken, log, proxyOptions = null) {
     if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
-      if (proxyOptions) throw new Error("Managed refresh proxy contract unavailable");
+      if (hasEnabledProxy(proxyOptions)) throw new Error("Managed refresh proxy contract unavailable");
       return refreshCopilotToken(githubAccessToken, null);
     }
     try {
@@ -373,7 +373,7 @@ export class GithubExecutor extends BaseExecutor {
 
   async refreshGitHubToken(refreshToken, log, proxyOptions = null) {
     if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
-      if (proxyOptions) throw new Error("Managed refresh proxy contract unavailable");
+      if (hasEnabledProxy(proxyOptions)) throw new Error("Managed refresh proxy contract unavailable");
       return refreshGitHubToken(refreshToken, null);
     }
     try {

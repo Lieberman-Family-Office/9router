@@ -9,11 +9,13 @@ const self = fileURLToPath(import.meta.url);
 if (process.argv[2] === 'child') {
   const { dedupRefresh } = await import('../../open-sse/services/tokenRefresh/dedup.js');
   const token = process.argv[3];
+  const provider = process.argv[4] || 'fake-issuer';
   try {
-    const result = await dedupRefresh('fake-issuer', token, async () => {
+    const result = await dedupRefresh(provider, token, async () => {
       process.send({ op: 'issue' });
-      await new Promise(resolve => process.once('message', resolve));
-      return { accessToken: 'fake-access', refreshToken: `fake-rotated-${token}` };
+      const response = await new Promise(resolve => process.once('message', resolve));
+      return provider === 'copilot' ? { token: 'fake-copilot', expiresAt: response.expiry }
+        : { accessToken: 'fake-access', refreshToken: `fake-rotated-${token}` };
     });
     process.send({ op: 'result', result });
   } catch {
@@ -26,8 +28,8 @@ if (process.argv[2] === 'child') {
   const store = path.join(privateDir, 'refresh.sqlite');
   let calls = 0;
   const children = new Set();
-  function child(token, hold = false) {
-    const proc = fork(self, ['child', token], {
+  function child(token, hold = false, provider = 'fake-issuer', expiry = Math.floor(Date.now() / 1000) + 3600) {
+    const proc = fork(self, ['child', token, provider], {
       env: { ...process.env, HOME: root, DATA_DIR: root,
         NINEROUTER_MANAGED_WORKER: '1', NINEROUTER_HOTSWAP_REFRESH_DB: store,
         NINEROUTER_HOTSWAP_REFRESH_WAIT_MS: '300' },
@@ -45,7 +47,7 @@ if (process.argv[2] === 'child') {
         if (message.op === 'issue') {
           calls++;
           issued();
-          if (!hold) setTimeout(() => proc.connected && proc.send({ op: 'respond' }), 40);
+          if (!hold) setTimeout(() => proc.connected && proc.send({ op: 'respond', expiry }), 40);
         } else {
           clearTimeout(deadline);
           resolve(message);
@@ -79,7 +81,15 @@ if (process.argv[2] === 'child') {
     assert.equal(successor.op, 'refused', 'uncertain owner death must refuse replay');
     assert.equal(calls, 2, 'owner death must not send another issuer call');
     for (const proc of [a, b]) assert.ok(!proc.output().includes('fake-access'), 'credential output forbidden');
-    console.log('GREEN: two-process single-use refresh, durable result/generation, owner-death refusal');
+    const expired = await child('fake-gh', false, 'copilot', 1).result;
+    const beforeRenewal = calls;
+    const [renewedA, renewedB] = await Promise.all([
+      child('fake-gh', false, 'copilot').result, child('fake-gh', false, 'copilot').result,
+    ]);
+    assert.equal(calls, beforeRenewal + 1, 'expired Copilot replacement must serialize across processes');
+    assert.deepEqual(renewedA, renewedB);
+    assert.ok(renewedA.result.refreshGenerations.copilot > expired.result.refreshGenerations.copilot);
+    console.log('GREEN: two-process single-use refresh, durable result/generation, owner-death refusal, expired Copilot replacement');
   } finally {
     for (const proc of children) proc.kill('SIGTERM');
     rmSync(root, { recursive: true, force: true });

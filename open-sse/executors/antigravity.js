@@ -5,7 +5,7 @@ import { PROVIDERS } from "../config/providers.js";
 import { OAUTH_ENDPOINTS, ANTIGRAVITY_HEADERS, AG_DEFAULT_TOOLS, AG_TOOL_SUFFIX, ANTIGRAVITY_PROMPT_REWRITES } from "../config/appConstants.js";
 import { HTTP_STATUS } from "../config/runtimeConfig.js";
 import { resolveSessionId, toNumericSessionId } from "../utils/sessionManager.js";
-import { proxyAwareFetch } from "../utils/proxyFetch.js";
+import { proxyAwareFetch, hasEnabledProxy } from "../utils/proxyFetch.js";
 import { cleanJSONSchemaForAntigravity, normalizeGeminiContents } from "../translator/formats/gemini.js";
 import { DEFAULT_THINKING_AG_SIGNATURE } from "../config/defaultThinkingSignature.js";
 import { getGeminiThoughtSignatureSync } from "../services/thoughtSignatureStore.js";
@@ -314,7 +314,7 @@ export class AntigravityExecutor extends BaseExecutor {
 
   async refreshCredentials(credentials, log, proxyOptions = null) {
     if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
-      if (proxyOptions) throw new Error("Managed refresh proxy contract unavailable");
+      if (hasEnabledProxy(proxyOptions)) throw new Error("Managed refresh proxy contract unavailable");
       return refreshProviderCredentials("antigravity", credentials, null);
     }
     if (!credentials.refreshToken) return null;

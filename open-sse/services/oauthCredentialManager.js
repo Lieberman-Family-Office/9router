@@ -85,7 +85,7 @@ export function mergeRefreshedCredentials(provider, currentCredentials, refreshe
   const idToken = refreshedCredentials.idToken ?? currentCredentials?.idToken;
   if (idToken) next.idToken = idToken;
 
-  if (refreshedCredentials.expiresIn) {
+  if (refreshedCredentials.expiresIn && !(process.env.NINEROUTER_MANAGED_WORKER === "1" && refreshedCredentials.expiresAt)) {
     next.expiresIn = refreshedCredentials.expiresIn;
     next.expiresAt = toExpiresAt(refreshedCredentials.expiresIn, nowMs);
   } else if (refreshedCredentials.expiresAt) {

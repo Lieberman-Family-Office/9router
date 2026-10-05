@@ -907,7 +907,7 @@ export async function testSingleConnection(id) {
     if (result.newTokens.idToken) updateData.idToken = result.newTokens.idToken;
     if (result.newTokens.lastRefreshAt) updateData.lastRefreshAt = result.newTokens.lastRefreshAt;
     if (result.newTokens.expiresIn) updateData.expiresIn = result.newTokens.expiresIn;
-    if (result.newTokens.expiresIn) {
+    if (result.newTokens.expiresIn && !(process.env.NINEROUTER_MANAGED_WORKER === "1" && result.newTokens.expiresAt)) {
       updateData.expiresAt = new Date(Date.now() + result.newTokens.expiresIn * 1000).toISOString();
     } else if (result.newTokens.expiresAt) {
       updateData.expiresAt = result.newTokens.expiresAt;

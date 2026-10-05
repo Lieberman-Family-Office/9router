@@ -168,5 +168,13 @@ function verifyManagedDatabase(file, buildFile, enrolledFile, refreshFile) {
   } finally { refresh?.close(); db.close(); }
 }
 
-module.exports = { privateDirectory, privateFile, openRefreshStore, enrollRefreshStore,
+// Caller holds BEGIN IMMEDIATE. Reserve before issuer work so reauthorization can fence pending results.
+function nextRefreshGeneration(db) {
+  const value = db.prepare('SELECT value FROM refresh_sequence WHERE id=1').get()?.value;
+  if (!Number.isSafeInteger(value) || value < 0 || value >= Number.MAX_SAFE_INTEGER) throw new Error('Invalid refresh sequence');
+  db.prepare('UPDATE refresh_sequence SET value=? WHERE id=1').run(value + 1);
+  return value + 1;
+}
+
+module.exports = { privateDirectory, privateFile, openRefreshStore, enrollRefreshStore, nextRefreshGeneration,
   createManifest, readManifest, verifyManagedDatabase, schemaLayout };

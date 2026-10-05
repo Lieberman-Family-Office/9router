@@ -175,7 +175,7 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
     if (newCredentials.idToken)             updates.idToken = newCredentials.idToken;
     if (newCredentials.lastRefreshAt)       updates.lastRefreshAt = newCredentials.lastRefreshAt;
     if (newCredentials.expiresAt)           updates.expiresAt = newCredentials.expiresAt;
-    if (newCredentials.expiresIn) {
+    if (newCredentials.expiresIn && !(managed && newCredentials.expiresAt)) {
       updates.expiresAt = toExpiresAt(newCredentials.expiresIn);
       updates.expiresIn = newCredentials.expiresIn;
     } else if (newCredentials.expiresAt) {
@@ -271,7 +271,7 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
       creds = {
         ...creds,
         ...newCreds,
-        expiresAt: newCreds.expiresIn
+        expiresAt: newCreds.expiresIn && !(process.env.NINEROUTER_MANAGED_WORKER === "1" && newCreds.expiresAt)
           ? toExpiresAt(newCreds.expiresIn)
           : normalizeExpiresAt(newCreds.expiresAt) || newCreds.expiresAt || creds.expiresAt,
         providerSpecificData: newCreds.providerSpecificData

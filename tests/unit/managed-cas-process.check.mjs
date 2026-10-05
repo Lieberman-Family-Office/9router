@@ -8,8 +8,26 @@ import managed from '../../src/lib/db/managed.cjs';
 import { TABLES, buildCreateTableSql } from '../../src/lib/db/schema.js';
 const self = import.meta.filename;
 if (process.argv[2] === 'child') {
-  const { updateProviderConnection, getProviderConnectionById } = await import('../../src/lib/db/repos/connectionsRepo.js');
+  const { updateProviderConnection, getProviderConnectionById, createProviderConnection } = await import('../../src/lib/db/repos/connectionsRepo.js');
   const generation = Number(process.argv[3]);
+  if (generation < 0) {
+    if (generation === -1) {
+      await createProviderConnection({ provider: 'github', authType: 'oauth', email: 'fake@example.invalid',
+        accessToken: 'fake-reauth', refreshToken: 'fake-reauth-refresh' });
+    } else {
+      const { dedupRefresh } = await import('../../open-sse/services/tokenRefresh/dedup.js');
+      const result = await dedupRefresh('github', generation === -2 ? 'fake-old-refresh' : 'fake-reauth-refresh', async () => {
+        if (generation === -2) {
+          process.send({ op: 'pending' });
+          await new Promise(resolve => process.once('message', resolve));
+        }
+        return { accessToken: generation === -2 ? 'fake-delayed' : 'fake-next', refreshToken: 'fake-rotated', expiresIn: 3600 };
+      });
+      await updateProviderConnection('fake-id', result);
+    }
+    global._dbAdapter?.instance?.close();
+    process.exit(0);
+  }
   const family = process.argv[4] || 'oauth';
   await updateProviderConnection('fake-id', generation ? (family === 'oauth'
     ? { accessToken: `fake-${generation}`, expiresAt: `expiry-${generation}` }
@@ -43,7 +61,7 @@ if (process.argv[2] === 'child') {
     fs.writeFileSync(receipt, JSON.stringify(manifest), { mode: 0o600 });
     const refresh = path.join(directory, 'refresh.sqlite');
     managed.enrollRefreshStore(refresh, 2);
-    function child(generation, expectFailure = false, family = 'oauth') {
+    function child(generation, expectFailure = false, family = 'oauth', onPending) {
       return new Promise((resolve, reject) => {
         const proc = fork(self, ['child', String(generation), family], {
           execArgv: ['--loader', path.join(import.meta.dirname, 'managed-imports.loader.mjs')],
@@ -53,6 +71,7 @@ if (process.argv[2] === 'child') {
           stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
         });
         children.add(proc);
+        proc.on('message', message => { if (message.op === 'pending') onPending?.(proc); });
         let output = '';
         proc.stdout.on('data', data => { output += data; });
         proc.stderr.on('data', data => { output += data; });
@@ -90,10 +109,23 @@ if (process.argv[2] === 'child') {
     const row = JSON.parse(db.prepare("SELECT data FROM providerConnections WHERE id='fake-id'").get().data);
     assert.equal(row.accessToken, 'fake-2');
     assert.ok(row.providerSpecificData.usageMarker === 'fake-usage');
+    db.prepare("UPDATE providerConnections SET provider='github',email='fake@example.invalid',data=? WHERE id='fake-id'")
+      .run(JSON.stringify({ accessToken: 'fake-old', refreshToken: 'fake-old-refresh' }));
+    let announce;
+    const pending = new Promise(resolve => { announce = resolve; });
+    const delayed = child(-2, false, 'oauth', announce);
+    const oldWorker = await pending;
+    await child(-1);
+    oldWorker.send({ op: 'finish' });
+    await delayed;
+    assert.equal(JSON.parse(db.prepare("SELECT data FROM providerConnections WHERE id='fake-id'").get().data).accessToken,
+      'fake-reauth', 'pending old refresh must not overwrite a reauthorized grant');
+    await child(-3);
+    assert.equal(JSON.parse(db.prepare("SELECT data FROM providerConnections WHERE id='fake-id'").get().data).accessToken, 'fake-next');
     db.exec('ALTER TABLE settings ADD COLUMN incompatible TEXT');
     await child(0, true);
     assert.ok(db.prepare('PRAGMA table_info(settings)').all().some(row => row.name === 'incompatible'));
-    console.log('GREEN: actual repo OAuth/Copilot CAS both same-family and crossed orders, nested usage contention, readiness refuses mutated DB');
+    console.log('GREEN: actual repo OAuth/Copilot CAS both same-family and crossed orders, nested usage contention, pending refresh/reauth fencing, new-grant refresh, readiness refuses mutated DB');
   } finally {
     for (const proc of children) proc.kill('SIGTERM');
     db.close();

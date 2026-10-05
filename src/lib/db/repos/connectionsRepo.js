@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
+import managedState from "../managed.cjs";
 
 const OPTIONAL_FIELDS = [
   "displayName", "email", "globalPriority", "defaultModel",
@@ -137,6 +138,11 @@ export async function createProviderConnection(data) {
   const now = new Date().toISOString();
   let result;
 
+  const managed = process.env.NINEROUTER_MANAGED_WORKER === "1";
+  const coordination = managed ? managedState.openRefreshStore(process.env.NINEROUTER_HOTSWAP_REFRESH_DB) : null;
+  // Lock coordination before the app row, matching refresh claim ordering. No issuer runs here.
+  try {
+  if (managed) { coordination.exec("BEGIN IMMEDIATE"); db.exec("BEGIN IMMEDIATE"); }
   db.transaction(() => {
     // apikey connections are deduped by name and need only the current max
     // priority, so query for those directly instead of loading the whole pool
@@ -211,6 +217,16 @@ export async function createProviderConnection(data) {
       }
       const normalized = resetHealthStateOnActivation(existing, data);
       const merged = { ...existing, ...normalized, updatedAt: now };
+      if (managed) {
+        const generation = managedState.nextRefreshGeneration(coordination);
+        merged.refreshGenerations = { oauth: generation, copilot: generation };
+        merged.providerSpecificData = { ...existing.providerSpecificData, ...data.providerSpecificData };
+        // A new OAuth grant invalidates Copilot credentials tied to the old GitHub access token.
+        if (!Object.hasOwn(data.providerSpecificData || {}, "copilotToken")) {
+          delete merged.providerSpecificData.copilotToken;
+          delete merged.providerSpecificData.copilotTokenExpiresAt;
+        }
+      }
       upsert(db, merged);
       result = merged;
       return;
@@ -247,6 +263,10 @@ export async function createProviderConnection(data) {
     }
     if (data.email !== undefined) conn.email = data.email;
 
+    if (managed) {
+      const generation = managedState.nextRefreshGeneration(coordination);
+      conn.refreshGenerations = { oauth: generation, copilot: generation };
+    }
     upsert(db, conn);
     // No reorderInTx here. `conn.priority` is already MAX(priority)+1, so the
     // row sorts last and the resulting order is what reorderInTx would have
@@ -255,6 +275,15 @@ export async function createProviderConnection(data) {
     // serialized every parallel writer on the same transaction. #4311
     result = conn;
   });
+  // Durable sequence first: a failed app commit burns a generation safely, never reuses it.
+  if (managed) { coordination.exec("COMMIT"); db.exec("COMMIT"); }
+  } catch (error) {
+    if (managed) {
+      try { db.exec("ROLLBACK"); } catch {}
+      try { coordination.exec("ROLLBACK"); } catch {}
+    }
+    throw error;
+  } finally { coordination?.close(); }
 
   return result;
 }
