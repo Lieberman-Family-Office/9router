@@ -115,21 +115,25 @@ The WebSocket self-fetch path still uses the worker's private loopback port. Do 
 
 ### Task 1: Prove the stable proxy switching primitive
 
-**Files:** Existing on this planning branch: `scripts/mac/templates/9router.Caddyfile`, `tests/mac/9router_hotswap.check.cjs`. Reuse them; do not overwrite with the older Appendix A sketch. The isolated primitive check has passed, but Task 1 remains incomplete until its counterfactual and required packaged coverage are proven.
+**Files:** Existing on this planning branch: `scripts/mac/templates/9router.Caddyfile`, `tests/mac/9router_hotswap.check.cjs`. Reuse them; do not overwrite with the older Appendix A sketch. Counterfactual: `tests/mac/9router_hotswap_counterfactual.check.cjs`.
+
+**Progress, 2026-10-05:** The original check and byte-identical temporary mirror pass. Removing only the mirror's atomic symlink replacement fails the B-routing assertion with actual `a`, expected `b`, and `ERR_ASSERTION`. Task 1 proves the fake-app switching primitive only. Packaged-app continuity and full qualification belong to later tasks; neither is proven here. No deployment controller, asset-staging implementation, enrollment, or production change is included.
 
 **Interfaces:** Consumes installed Caddy and ephemeral fake applications. Produces a runnable proof of request-level switching without proxy reload.
 
-- [ ] **Step 1: Write failing native integration assertions.**
+- [x] **Step 1: Write failing native integration assertions.**
 
 Use Node `assert`, `http`, `net`, `fs`, `child_process`, and `events`. Start two fake HTTP applications on ephemeral loopback ports. Each bridge listens on its own temporary Unix socket. Emit SSE `data: a-start\n\n`, hold it open, and implement a standards-compliant WebSocket echo handshake. Reserve a random proxy port; never use production `20128` in the local test.
 
 Reuse the existing `tests/mac/9router_hotswap.check.cjs`. For RED, copy the check and its template into a temporary mirror preserving their relative paths, prove that mirror passes unchanged, then remove the mirror's symlink replacement and require the B-routing assertion to fail. Never mutate the checkout to manufacture RED. The check uses a persistent client agent and tests original SSE/WebSocket sessions after switching. Extend this real-process check for the task-specific assertions below. Bind Caddy to `http://:<test-port>` plus `bind 127.0.0.1`, not a host-specific matcher that accidentally refuses other Host headers.
 
-- [ ] **Step 2: Run the check against the unswitched route.**
+- [x] **Step 2: Run the check against the unswitched route.**
 
-Run `node tests/mac/9router_hotswap.check.cjs`. Before `select()` performs the atomic replacement, expect the B-version assertion to fail. This is the counterfactual that proves routing is checked.
+Run `node tests/mac/9router_hotswap_counterfactual.check.cjs`. It first runs the unchanged mirror GREEN, then removes only the mirror's atomic replacement and requires the specific B-routing assertion to fail (`a` instead of `b`). An unrelated nonzero exit does not pass this counterfactual. The checkout is never mutated.
 
-- [ ] **Step 3: Add the template and atomic switch.**
+- [x] **Step 3: Add the template and atomic switch.**
+
+The existing template and fake-app check already implement this primitive and are retained unchanged. The controller, validated runtime/state paths, and asset staging described below remain later runtime work, not Task 1 implementation.
 
 ```caddyfile
 {
@@ -178,14 +182,14 @@ def replace_route(runtime: Path, slot: str) -> None:
 
 Import `stat` and `uuid` in the new controller. The parent directory validation must run before this function.
 
-- [ ] **Step 4: Run the complete check.**
+- [x] **Step 4: Run the complete check.**
 
-Run `node tests/mac/9router_hotswap.check.cjs`. Expect all assertions to pass, including post-switch HTTP on the same CLIENT keepalive connection. Test another swap back to A without changing the proxy PID. Add forged forwarding headers, POST bodies, query strings, non-200 status, cancellation, and large streamed bodies; compare against direct app responses.
+Run `node tests/mac/9router_hotswap.check.cjs`. Expect all assertions to pass, including post-switch HTTP on the same CLIENT keepalive connection. Test another swap back to A without changing the proxy PID. Add forged forwarding headers, POST bodies, query strings, non-200 status, cancellation, and large streamed bodies; compare against direct app responses. All these assertions already exist and passed unchanged in this Task 1 turn.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
-git add scripts/mac/templates/9router.Caddyfile tests/mac/9router_hotswap.check.cjs
+git add docs/superpowers/plans/2026-10-05-9router-hot-swap.md tests/mac/9router_hotswap_counterfactual.check.cjs
 git commit -m "test(mac): prove stream-safe proxy route switching"
 ```
 
