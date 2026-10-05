@@ -78,8 +78,44 @@ try {
   const callback = async () => { calls++; return { accessToken: 'fake-unmanaged' }; };
   await Promise.all([dedupRefresh('fake', 'unmanaged', callback), dedupRefresh('fake', 'unmanaged', callback)]);
   assert.equal(calls, 1);
+  // The family ceiling binds both generations to the same durable sequence.
+  db.exec("INSERT INTO providerConnections VALUES('fake-id','github','oauth',NULL,NULL,1,1,'{}','now','now')");
+  for (const generations of [{ oauth: 1, copilot: 999 }, { oauth: true }, { unknown: 1 }]) {
+    db.prepare("UPDATE providerConnections SET data=? WHERE id='fake-id'").run(JSON.stringify({ refreshGenerations: generations }));
+    assert.throws(verify, /generation store/);
+  }
+  db.exec("UPDATE providerConnections SET data='{}' WHERE id='fake-id'");
+  // Unsupported native runtime refuses before any adapter fallback or store recreation.
+  Object.defineProperty(process.versions, 'bun', { value: 'test-only', configurable: true });
+  try { assert.throws(verify, /requires node:sqlite/); }
+  finally { delete process.versions.bun; }
+  const mirror = path.join(root, 'mirror');
+  const base = path.join(mirror, 'src/lib/db');
+  fs.mkdirSync(base, { recursive: true });
+  for (const name of ['schema.js', 'version.js', 'migrate.js', 'migrations']) {
+    fs.cpSync(path.join(source, 'src/lib/db', name), path.join(base, name), { recursive: true });
+  }
+  fs.writeFileSync(path.join(mirror, 'package.json'), '{"type":"module"}');
+  assert.deepEqual(await managed.createManifest(mirror), manifest);
+  // Every required input changes the digest. Relative path identity also changes it.
+  const inputs = ['schema.js', 'version.js', 'migrate.js', ...fs.readdirSync(path.join(base, 'migrations')).map(name => `migrations/${name}`)];
+  for (const name of inputs) {
+    const input = path.join(base, name);
+    const original = fs.readFileSync(input);
+    fs.appendFileSync(input, '\n// mirror-only fingerprint mutation\n');
+    assert.notEqual((await managed.createManifest(mirror)).persistenceFingerprint, manifest.persistenceFingerprint);
+    fs.writeFileSync(input, original);
+  }
+  fs.writeFileSync(path.join(base, 'migrations', 'extra.js'), '// mirror only');
+  assert.notEqual((await managed.createManifest(mirror)).persistenceFingerprint, manifest.persistenceFingerprint);
+  fs.renameSync(path.join(base, 'migrations', 'extra.js'), path.join(base, 'migrations', 'renamed.js'));
+  const renamed = await managed.createManifest(mirror);
+  fs.renameSync(path.join(base, 'migrations', 'renamed.js'), path.join(base, 'migrations', 'extra.js'));
+  assert.notEqual((await managed.createManifest(mirror)).persistenceFingerprint, renamed.persistenceFingerprint);
+  fs.unlinkSync(path.join(base, 'version.js'));
+  await assert.rejects(() => managed.createManifest(mirror), /ENOENT/);
   db.close();
-  console.log('GREEN: real layout/metadata/fingerprint refusal, private paths, durable-write failure, corrupt result, counters, unmanaged dedup');
+  console.log('GREEN: layout/metadata/fingerprint refusal, private paths, durable-write failure, corrupt result, counters, family sequence ceiling, unsupported runtime, all manifest inputs and path identity');
 } finally {
   delete process.env.NINEROUTER_MANAGED_WORKER;
   delete process.env.NINEROUTER_HOTSWAP_REFRESH_DB;

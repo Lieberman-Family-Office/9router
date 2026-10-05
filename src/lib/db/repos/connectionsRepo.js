@@ -260,17 +260,26 @@ export async function createProviderConnection(data) {
 }
 
 // Critical: OAuth refresh token race — atomic merge inside transaction
-export async function updateProviderConnection(id, data, credentialGeneration) {
+export async function updateProviderConnection(id, data, credentialGenerations) {
   const db = await getAdapter();
   const managed = process.env.NINEROUTER_MANAGED_WORKER === "1";
-  const credentialPatch = ["accessToken", "refreshToken", "idToken", "copilotToken", "refreshGeneration"]
-    .some(key => Object.hasOwn(data, key)) ||
-    ["copilotToken", "copilotTokenExpiresAt"].some(key => Object.hasOwn(data.providerSpecificData || {}, key));
-  if (managed && credentialPatch && credentialGeneration === undefined) {
-    throw new Error("Managed credential writes require generation CAS");
-  }
-  if (credentialGeneration !== undefined && (!Number.isSafeInteger(credentialGeneration) || credentialGeneration < 1)) {
-    throw new Error("Invalid credential generation");
+  const families = {
+    oauth: ["accessToken", "refreshToken", "idToken", "apiKey", "token", "expiresAt", "expiresIn", "tokenExpiresAt", "lastRefreshAt", "tokenType", "scope"],
+    copilot: ["copilotToken", "copilotTokenExpiresAt"],
+  };
+  if (managed) {
+    if (credentialGenerations === undefined) credentialGenerations = data.refreshGenerations;
+    if (Object.hasOwn(data, "refreshGeneration") || (credentialGenerations !== undefined &&
+        (!credentialGenerations || typeof credentialGenerations !== "object" || Array.isArray(credentialGenerations) ||
+         Object.entries(credentialGenerations).some(([family, value]) => !Object.hasOwn(families, family) || !Number.isSafeInteger(value) || value < 1)))) {
+      throw new Error("Invalid credential family generation");
+    }
+    for (const [family, fields] of Object.entries(families)) {
+      if (fields.some(key => Object.hasOwn(data, key) || Object.hasOwn(data.providerSpecificData || {}, key)) &&
+          !Object.hasOwn(credentialGenerations || {}, family)) {
+        throw new Error("Managed credential writes require matching family generation CAS");
+      }
+    }
   }
   let result;
   if (managed) db.exec("BEGIN IMMEDIATE");
@@ -279,12 +288,28 @@ export async function updateProviderConnection(id, data, credentialGeneration) {
     const row = db.get(`SELECT * FROM providerConnections WHERE id = ?`, [id]);
     if (!row) { result = null; return; }
     const existing = rowToConn(row);
-    if (credentialGeneration !== undefined) {
-      const currentGeneration = existing.refreshGeneration ?? 0;
-      if (!Number.isSafeInteger(currentGeneration) || currentGeneration < 0) throw new Error("Invalid stored credential generation");
-      if (credentialGeneration <= currentGeneration) { result = existing; return; }
-      data = { ...data, refreshGeneration: credentialGeneration };
-      if (data.providerSpecificData) data.providerSpecificData = { ...existing.providerSpecificData, ...data.providerSpecificData };
+    if (managed) {
+      data = { ...data };
+      delete data.refreshGenerations;
+      const generations = { ...existing.refreshGenerations };
+      const specific = { ...data.providerSpecificData };
+      for (const [family, fields] of Object.entries(families)) {
+        const current = generations[family] ?? 0;
+        if (!Number.isSafeInteger(current) || current < 0) throw new Error("Invalid stored credential generation");
+        const incoming = credentialGenerations?.[family];
+        if (incoming === undefined || incoming <= current) {
+          for (const field of fields) { delete data[field]; delete specific[field]; }
+        } else {
+          generations[family] = incoming;
+        }
+      }
+      if (credentialGenerations) data.refreshGenerations = generations;
+      if (Object.hasOwn(data, "providerSpecificData")) {
+        if (!data.providerSpecificData || typeof data.providerSpecificData !== "object" || Array.isArray(data.providerSpecificData)) {
+          throw new Error("Invalid managed nested credential patch");
+        }
+        data.providerSpecificData = { ...existing.providerSpecificData, ...specific };
+      }
     }
     const normalized = resetHealthStateOnActivation(existing, data);
     const merged = { ...existing, ...normalized, updatedAt: new Date().toISOString() };

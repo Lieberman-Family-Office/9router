@@ -120,7 +120,7 @@ export async function resolveCopilotModels(credentials, options = {}) {
         if (typeof options.onCredentialsRefreshed === "function") {
           try {
             await options.onCredentialsRefreshed({
-              refreshGeneration: refreshed.refreshGeneration,
+              refreshGenerations: refreshed.refreshGenerations,
               copilotToken: refreshed.token,
               copilotTokenExpiresAt: refreshed.expiresAt,
             });

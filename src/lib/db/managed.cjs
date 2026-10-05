@@ -155,8 +155,12 @@ function verifyManagedDatabase(file, buildFile, enrolledFile, refreshFile) {
     const sequence = refresh.prepare('SELECT value FROM refresh_sequence WHERE id=1').get()?.value;
     if (!Number.isSafeInteger(sequence) || sequence < 0) throw new Error('Invalid refresh sequence');
     for (const row of db.prepare('SELECT data FROM providerConnections').all()) {
-      const generation = JSON.parse(row.data).refreshGeneration ?? 0;
-      if (!Number.isSafeInteger(generation) || generation < 0 || generation > sequence) {
+      const data = JSON.parse(row.data);
+      if (data.refreshGeneration !== undefined) throw new Error('Legacy credential generation requires maintenance');
+      const generations = data.refreshGenerations ?? {};
+      if (!generations || typeof generations !== 'object' || Array.isArray(generations) ||
+          Object.entries(generations).some(([family, generation]) => !['oauth', 'copilot'].includes(family) ||
+            !Number.isSafeInteger(generation) || generation < 1 || generation > sequence)) {
         throw new Error('Refresh generation store is stale');
       }
     }

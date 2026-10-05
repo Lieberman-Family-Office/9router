@@ -70,7 +70,7 @@ if (process.argv[2] === 'child') {
     const late = await child('fake-old').result;
     assert.deepEqual(late, first);
     assert.equal(calls, 1, 'completed result must survive child restarts');
-    assert.ok(Number.isSafeInteger(first.result.refreshGeneration));
+    assert.ok(Number.isSafeInteger(first.result.refreshGenerations.oauth));
     const doomed = child('fake-crash', true);
     await doomed.issuing;
     doomed.proc.kill('SIGTERM');

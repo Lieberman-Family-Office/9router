@@ -72,7 +72,7 @@ export function mergeRefreshedCredentials(provider, currentCredentials, refreshe
   if (isUnrecoverableRefreshError(refreshedCredentials)) return refreshedCredentials;
 
   const next = {};
-  if (refreshedCredentials.refreshGeneration !== undefined) next.refreshGeneration = refreshedCredentials.refreshGeneration;
+  if (refreshedCredentials.refreshGenerations !== undefined) next.refreshGenerations = refreshedCredentials.refreshGenerations;
   const nowIso = new Date(nowMs).toISOString();
 
   if (refreshedCredentials.accessToken) next.accessToken = refreshedCredentials.accessToken;
@@ -96,7 +96,7 @@ export function mergeRefreshedCredentials(provider, currentCredentials, refreshe
 
   if (refreshedCredentials.providerSpecificData) {
     next.providerSpecificData = mergeProviderSpecificData(
-      currentCredentials?.providerSpecificData,
+      process.env.NINEROUTER_MANAGED_WORKER === "1" ? {} : currentCredentials?.providerSpecificData,
       refreshedCredentials.providerSpecificData
     );
   }
@@ -118,6 +118,9 @@ export function mergeRefreshedCredentials(provider, currentCredentials, refreshe
     next.lastRefreshAt = refreshedCredentials.lastRefreshAt || nowIso;
   }
 
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1" && !next.refreshGenerations?.oauth) {
+    for (const field of ["accessToken", "refreshToken", "idToken", "apiKey", "token", "expiresAt", "expiresIn", "lastRefreshAt"]) delete next[field];
+  }
   return next;
 }
 

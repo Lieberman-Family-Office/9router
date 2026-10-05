@@ -86,7 +86,7 @@ Do NOT modify `cli/app/` generated output by hand, production home files, live l
 
 Execute Task 1, Task 3, Task 2, Task 4, Task 4b, Task 5, then Task 6. Shared refresh/migration protections must exist before real packaged workers overlap. Task 2 may use fake workers to develop lifecycle tests before Task 3; it may not attach two unprotected app processes to the live database.
 
-Planning-branch proof command: `node tests/mac/9router_hotswap.check.cjs` (run from this worktree). GREEN in this turn. The check uses temporary fake applications, isolated Caddy state, and ephemeral ports. It does not start Namespace or production. All runtime feature tasks remain unimplemented; existing proof files are not deployment machinery.
+Planning-branch proof command: `node tests/mac/9router_hotswap.check.cjs` (run from this worktree). GREEN in this turn. The check uses temporary fake applications, isolated Caddy state, and ephemeral ports. It does not start Namespace or production. Task 3 now supplies shared-state protections; worker/controller and enrollment tasks remain unimplemented. Existing proxy proof files are not deployment machinery.
 
 ## Runtime contract
 
@@ -292,11 +292,24 @@ git commit -m "feat(mac): run pinned workers with preserved-session draining"
 
 **Interfaces:** Preserve `dedupRefresh(provider, oldToken, fn, log): Promise<object|null>`. Managed workers share a private native SQLite coordination file, distinct from the app schema. Emit `app/hotswap-manifest.json` with protocol version and a canonical persistence fingerprint.
 
-**Partial implementation evidence, 2026-10-05 — NEEDS_CONTEXT, NOT COMPLETE:** Started from verified `a7861146d80261b5aa08b765f59b37b0b0cdbc6c`. The native two-process check was RED on the original `dedupRefresh` with two issuer calls instead of one, then GREEN with durable results, persistent generations, restart reuse, and owner-death replay refusal. `node tests/unit/managed-state.check.mjs` passes actual SQLite layout/index/migration metadata mutations, manifest mismatch, unsafe directories/symlinks, corrupt result, durable completion-write refusal, work counters, and unmanaged dedup. `NINEROUTER_TEST_PACKAGES=$HOME/dev/9router node tests/unit/managed-cas-process.check.mjs` passes actual repository CAS in both callback orderings and two-process usage/credential contention. Existing Vitest 4.1.11, via a temporary alias-only configuration using installed packages, passes `managed-credentials`, `db-driver-chain`, `db-migration-chain`, `token-refresh-generic`, and `codex-refresh-token`: five files, 26 tests. No package installs or provider calls ran. No worker/controller/enrollment/production changes ran.
+**Historical partial implementation evidence, 2026-10-05 — resolved by the tested family-generation completion below:** Started from verified `a7861146d80261b5aa08b765f59b37b0b0cdbc6c`. The native two-process check was RED on the original `dedupRefresh` with two issuer calls instead of one, then GREEN with durable results, persistent generations, restart reuse, and owner-death replay refusal. `node tests/unit/managed-state.check.mjs` passes actual SQLite layout/index/migration metadata mutations, manifest mismatch, unsafe directories/symlinks, corrupt result, durable completion-write refusal, work counters, and unmanaged dedup. `NINEROUTER_TEST_PACKAGES=$HOME/dev/9router node tests/unit/managed-cas-process.check.mjs` passes actual repository CAS in both callback orderings and two-process usage/credential contention. Existing Vitest 4.1.11, via a temporary alias-only configuration using installed packages, passes `managed-credentials`, `db-driver-chain`, `db-migration-chain`, `token-refresh-generic`, and `codex-refresh-token`: five files, 26 tests. No package installs or provider calls ran. No worker/controller/enrollment/production changes ran.
 
-**Architectural blocker verified in source:** `open-sse/executors/github.js:refreshCredentials` and `src/sse/services/tokenRefresh.js:checkAndRefreshToken` update GitHub OAuth and Copilot independently. A delayed OAuth generation 1 callback can follow a Copilot-only generation 2 callback. The specified single connection-wide generation rejects generation 1 and loses the rotated OAuth credentials. A decision is required: separate credential-family generations in existing JSON, or a causal contract that ensures generation 2 includes all prior OAuth updates. Do not qualify managed overlap until that contract and dispatch-level proof exist. The scoped implementation is partial for parent review; all Task 3 checkboxes remain incomplete. Private IPC hookup is deferred to Task 2; `getRefreshWorkStatus()` exposes refresh work now. Remaining evidence includes complete AST/import-aware dispatch coverage, unsupported-runtime refusal proof, and exact packaged manifest/runtime integration. An explicit separate maintenance enrollment remains required; workers refuse missing coordination stores instead of recreating them.
+**Historical architectural blocker — RESOLVED after tests, 2026-10-05:** `open-sse/executors/github.js:refreshCredentials` and `src/sse/services/tokenRefresh.js:checkAndRefreshToken` update OAuth and Copilot independently. The previous row-wide comparison lost delayed OAuth rotation after newer Copilot completion. The operator selected family generations in plan commit `bc0343ee`; completion retains the durable global sequence and compares `refreshGenerations.oauth` and `.copilot` independently in existing JSON. Combined refreshes preserve both generations. The transaction re-reads nested state and merges accepted family fields/expiries independently; unmanaged behavior is retained. Missing matching generations, unknown families, invalid generations and null nested patches refuse. Tests below resolve this blocker, not packaged overlap qualification.
 
-- [ ] **Step 1: Write a two-process regression check with a fake single-use issuer.**
+**Task 3 completion evidence, 2026-10-05:** Started at verified `bc0343ee` with partial checkpoint `6a4dee7c`. The new family-dispatch test ran RED against that checkpoint: nine failures, one pass, including missing family generations, ungated OAuth expiry and combined generation loss. Final GREEN: five Vitest files, 36 tests; both stale same-family orders and crossed-family orders enter persistence dispatch AND actual repository, plus GitHub executor and combined issuer dispatch. Native two-process repository checks cover both families/orders and concurrent nested usage writes. The import-aware AST census parses 596 source files and checks 64 dispatches; removing the managed executor guard in an AST mirror and inserting raw issuer code both fail with specific assertions. Native manifest tests verify build emitter/runtime equality, every required input byte, relative path identity, missing input refusal, layout/index/migration metadata mutation, family sequence ceilings, unsafe paths, uncertain owner death, corrupted durable result and completion-write refusal. Unsupported Bun/native runtime tests refuse before fallback/migration. `getRefreshWorkStatus()` exposes issuer/waiter and persistence work; Task 2 must add the private IPC hookup and whole-request/background task accounting. The isolated Caddy fake-app primitive still passes.
+
+Exact commands from this worktree (all final exits 0):
+- `node tests/unit/token-refresh-cross-process.check.mjs`
+- `node tests/unit/managed-state.check.mjs`
+- `NINEROUTER_TEST_PACKAGES=$HOME/dev/9router node tests/unit/managed-cas-process.check.mjs`
+- `NINEROUTER_TEST_PACKAGES=$HOME/dev/9router node tests/unit/managed-dispatch.check.mjs`
+- `node "$HOME/dev/9router/tests/node_modules/vitest/vitest.mjs" run --config /tmp/9router-task3-vitest.config.mjs tests/unit/managed-credentials.test.js tests/unit/db-driver-chain.test.js tests/unit/db-migration-chain.test.js tests/unit/token-refresh-generic.test.js tests/unit/codex-refresh-token.test.js --reporter=dot --silent` (5 files, 36 tests). Temporary config supplies only worktree/installed-package aliases and isolated `DATA_DIR`; no packages installed.
+- `node tests/mac/9router_hotswap.check.cjs` (fake-app routing/stream proof only).
+- `git diff --check`
+
+No real provider, production, Namespace, launchd, engine, worker/controller, push or PR ran. Exact-tarball packaged-app overlap/runtime qualification remains Tasks 2/5/6, not a Task 3 readiness claim. Native module-type warnings and adapter signal-listener warnings from repeated test module resets remain unrelated; no adapter lifecycle refactor was made. Separate maintenance enrollment remains mandatory; workers refuse missing coordination stores rather than recreating them.
+
+- [x] **Step 1: Write a two-process regression check with a fake single-use issuer.**
 
 ```javascript
 const [first, second] = await Promise.all([
@@ -312,11 +325,11 @@ assert.equal(issuer.refreshCalls, 1);
 
 The check imports the actual `dedupRefresh` in child processes. Each child sets its own managed slot and the SAME isolated coordination path. The issuer only accepts one refresh for a token. No real OAuth calls or credentials. Also hold one child mid-refresh, terminate it, and assert a successor refuses uncertain replay rather than issuing another refresh.
 
-- [ ] **Step 2: Run it red.**
+- [x] **Step 2: Run it red.**
 
 Run `node tests/unit/token-refresh-cross-process.check.mjs`. Expect the duplicate refresh counter or failed second result to demonstrate the current process-local defect.
 
-- [ ] **Step 3: Extend the EXISTING dedup primitive, not each executor.**
+- [x] **Step 3: Extend the EXISTING dedup primitive, not each executor.**
 
 Use native SQLite transactions for a flight claim. Key by SHA-256 of the length-delimited `(provider, oldToken)` tuple. Store no raw old token. Persist successful refresh output so a late old-worker callback cannot consume the original token again. Protect result data like the provider database. Resolve file paths from managed environment and reject unsafe directories.
 
@@ -347,11 +360,13 @@ For shared app writes, retain native WAL and the current transaction merge. Oper
 
 Manifest creation hashes sorted relative paths AND exact bytes of `src/lib/db/schema.js`, `version.js`, `migrate.js`, and every migration file. Include `protocol: 1`, `schemaVersion`, supported adapter, and the resulting digest. Fail if a required input cannot be read. Verify the actual enrolled SQLite layout against expected tables, columns, indexes, and applied migration metadata; a matching source manifest alone cannot prove the live database matches. Qualification mutates a database mirror to add/remove a column and requires readiness refusal. Do not treat equal schema version numbers alone as compatibility proof. This deliberately over-rejects benign migration-code changes rather than under-rejecting destructive ones.
 
-- [ ] **Step 4: Run the safety checks.**
+- [x] **Step 4: Run the safety checks.**
 
 Run `node tests/unit/token-refresh-cross-process.check.mjs`. Expect one issuer call per token across both workers; uncertain owner death refuses replay. Run the targeted SQLite adapter tests and worker check. Verify unsafe directory, corrupted result, write failure, unsupported runtime, and changed persistence fingerprint all refuse managed readiness. Assert logs and receipt output contain no credentials.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
+
+Completion commits are reported by the executing session; stage the Task 3 implementation, native proofs, dispatch tests and this evidence only.
 
 ```bash
 git add open-sse/services/tokenRefresh/dedup.js src/lib/db/driver.js cli/scripts/build-cli.js custom-server.js tests/unit/token-refresh-cross-process.check.mjs

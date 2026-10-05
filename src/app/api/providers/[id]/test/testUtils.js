@@ -914,14 +914,14 @@ export async function testSingleConnection(id) {
     }
     if (result.newTokens.providerSpecificData) {
       updateData.providerSpecificData = {
-        ...(connection.providerSpecificData || {}),
+        ...(process.env.NINEROUTER_MANAGED_WORKER !== "1" ? connection.providerSpecificData || {} : {}),
         ...result.newTokens.providerSpecificData,
       };
     }
   }
 
   await updateProviderConnection(id, updateData,
-    process.env.NINEROUTER_MANAGED_WORKER === "1" ? result.newTokens?.refreshGeneration : undefined);
+    process.env.NINEROUTER_MANAGED_WORKER === "1" ? result.newTokens?.refreshGenerations : undefined);
 
   return { valid: result.valid, error: result.error, refreshed: !!result.refreshed, latencyMs, testedAt: new Date().toISOString() };
 }

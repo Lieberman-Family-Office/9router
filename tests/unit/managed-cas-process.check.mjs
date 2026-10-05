@@ -10,7 +10,11 @@ const self = import.meta.filename;
 if (process.argv[2] === 'child') {
   const { updateProviderConnection, getProviderConnectionById } = await import('../../src/lib/db/repos/connectionsRepo.js');
   const generation = Number(process.argv[3]);
-  await updateProviderConnection('fake-id', generation ? { accessToken: `fake-${generation}` } : { usageMarker: 'fake-usage' }, generation || undefined);
+  const family = process.argv[4] || 'oauth';
+  await updateProviderConnection('fake-id', generation ? (family === 'oauth'
+    ? { accessToken: `fake-${generation}`, expiresAt: `expiry-${generation}` }
+    : { providerSpecificData: { copilotToken: `fake-${generation}`, copilotTokenExpiresAt: generation } })
+    : { providerSpecificData: { usageMarker: 'fake-usage' } }, generation ? { [family]: generation } : undefined);
   if (generation) {
     await assert.rejects(() => updateProviderConnection('fake-id', { accessToken: 'fake-ungated' }), /generation CAS/);
     await assert.rejects(() => updateProviderConnection('fake-id', { accessToken: 'fake-invalid' }, true), /generation/);
@@ -39,9 +43,9 @@ if (process.argv[2] === 'child') {
     fs.writeFileSync(receipt, JSON.stringify(manifest), { mode: 0o600 });
     const refresh = path.join(directory, 'refresh.sqlite');
     managed.enrollRefreshStore(refresh, 2);
-    function child(generation, expectFailure = false) {
+    function child(generation, expectFailure = false, family = 'oauth') {
       return new Promise((resolve, reject) => {
-        const proc = fork(self, ['child', String(generation)], {
+        const proc = fork(self, ['child', String(generation), family], {
           execArgv: ['--loader', path.join(import.meta.dirname, 'managed-imports.loader.mjs')],
           env: { ...process.env, HOME: root, DATA_DIR: root,
             NINEROUTER_MANAGED_WORKER: '1', NINEROUTER_HOTSWAP_MANIFEST: receipt,
@@ -63,22 +67,33 @@ if (process.argv[2] === 'child') {
         });
       });
     }
-    for (const order of [[1, 2], [2, 1]]) {
+    for (const family of ['oauth', 'copilot']) {
+      for (const order of [[1, 2], [2, 1]]) {
+        db.exec("UPDATE providerConnections SET data='{}' WHERE id='fake-id'");
+        for (const generation of order) await child(generation, false, family);
+        const row = JSON.parse(db.prepare("SELECT data FROM providerConnections WHERE id='fake-id'").get().data);
+        assert.ok((family === 'oauth' ? row.accessToken : row.providerSpecificData.copilotToken) === 'fake-2');
+        assert.equal(row.refreshGenerations[family], 2);
+      }
+    }
+    for (const order of [['oauth', 'copilot'], ['copilot', 'oauth']]) {
       db.exec("UPDATE providerConnections SET data='{}' WHERE id='fake-id'");
-      for (const generation of order) await child(generation);
+      for (const family of order) await child(family === 'oauth' ? 1 : 2, false, family);
       const row = JSON.parse(db.prepare("SELECT data FROM providerConnections WHERE id='fake-id'").get().data);
-      assert.equal(row.accessToken, 'fake-2');
-      assert.equal(row.refreshGeneration, 2);
+      assert.ok(row.accessToken === 'fake-1' && row.providerSpecificData.copilotToken === 'fake-2');
+      assert.deepEqual(row.refreshGenerations, { oauth: 1, copilot: 2 });
+      assert.equal(row.expiresAt, 'expiry-1');
+      assert.equal(row.providerSpecificData.copilotTokenExpiresAt, 2);
     }
     db.exec("UPDATE providerConnections SET data='{}' WHERE id='fake-id'");
     await Promise.all([child(2), child(0)]);
     const row = JSON.parse(db.prepare("SELECT data FROM providerConnections WHERE id='fake-id'").get().data);
     assert.equal(row.accessToken, 'fake-2');
-    assert.equal(row.usageMarker, 'fake-usage');
+    assert.ok(row.providerSpecificData.usageMarker === 'fake-usage');
     db.exec('ALTER TABLE settings ADD COLUMN incompatible TEXT');
     await child(0, true);
     assert.ok(db.prepare('PRAGMA table_info(settings)').all().some(row => row.name === 'incompatible'));
-    console.log('GREEN: actual repo CAS both orders, two-process usage/credential contention, readiness refuses mutated DB');
+    console.log('GREEN: actual repo OAuth/Copilot CAS both same-family and crossed orders, nested usage contention, readiness refuses mutated DB');
   } finally {
     for (const proc of children) proc.kill('SIGTERM');
     db.close();

@@ -9,11 +9,17 @@ export function refreshLogger(log) {
 
 let activeRefreshOperations = 0;
 export function getRefreshWorkStatus() { return { activeRefreshOperations }; }
+export async function withRefreshWork(fn) {
+  if (process.env.NINEROUTER_MANAGED_WORKER !== "1") return fn();
+  activeRefreshOperations++;
+  try { return await fn(); } finally { activeRefreshOperations--; }
+}
 
-function validResult(result, generation) {
+function validResult(result, generation, family) {
   return result && typeof result === "object" && !Array.isArray(result) &&
     Number.isSafeInteger(generation) && generation > 0 &&
-    result.refreshGeneration === generation &&
+    Object.keys(result.refreshGenerations || {}).length === 1 &&
+    result.refreshGenerations?.[family] === generation &&
     ["accessToken", "apiKey", "token", "copilotToken"].some(key => typeof result[key] === "string" && result[key]);
 }
 
@@ -21,6 +27,7 @@ async function managedRefresh(provider, oldToken, fn) {
   if (typeof provider !== "string" || !provider || typeof oldToken !== "string" || !oldToken) {
     throw new Error("Managed refresh requires a token identity");
   }
+  const family = provider === "copilot" ? "copilot" : "oauth";
   const file = process.env.NINEROUTER_HOTSWAP_REFRESH_DB;
   if (!file) throw new Error("Managed refresh enrollment required");
   const waitMs = Number(process.env.NINEROUTER_HOTSWAP_REFRESH_WAIT_MS ?? 30000);
@@ -49,7 +56,7 @@ async function managedRefresh(provider, oldToken, fn) {
         if (flight?.state === "done") {
           let result;
           try { result = JSON.parse(flight.result); } catch { throw new Error("Invalid durable refresh result"); }
-          if (!validResult(result, flight.generation)) throw new Error("Invalid durable refresh result");
+          if (!validResult(result, flight.generation, family)) throw new Error("Invalid durable refresh result");
           return result;
         }
         if (flight?.state !== "pending") throw new Error("Uncertain refresh requires maintenance recovery");
@@ -70,8 +77,8 @@ async function managedRefresh(provider, oldToken, fn) {
         if (!Number.isSafeInteger(sequence) || sequence < 0 || sequence >= Number.MAX_SAFE_INTEGER) {
           throw new Error("Invalid refresh sequence");
         }
-        const result = JSON.parse(JSON.stringify({ ...response, refreshGeneration: sequence + 1 }));
-        if (!validResult(result, sequence + 1)) throw new Error("Invalid refresh result");
+        const result = JSON.parse(JSON.stringify({ ...response, refreshGenerations: { [family]: sequence + 1 } }));
+        if (!validResult(result, sequence + 1, family)) throw new Error("Invalid refresh result");
         db.prepare("UPDATE refresh_sequence SET value=? WHERE id=1").run(sequence + 1);
         const saved = db.prepare("UPDATE refresh_flights SET state='done',result=?,generation=? WHERE key=? AND owner=? AND state='pending'")
           .run(JSON.stringify(result), sequence + 1, key, owner);

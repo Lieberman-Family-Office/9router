@@ -409,14 +409,21 @@ export class GithubExecutor extends BaseExecutor {
       if (githubTokens?.accessToken) {
         copilotResult = await this.refreshCopilotToken(githubTokens.accessToken, log, proxyOptions);
         if (copilotResult) {
-          return { ...githubTokens, refreshGeneration: copilotResult.refreshGeneration ?? githubTokens.refreshGeneration, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+          return { ...githubTokens,
+            ...(process.env.NINEROUTER_MANAGED_WORKER === "1" ? { refreshGenerations: { ...githubTokens.refreshGenerations, ...copilotResult.refreshGenerations } } : {}),
+            copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
         }
         return githubTokens;
       }
     }
 
     if (copilotResult) {
-      return { accessToken: credentials.accessToken, refreshToken: credentials.refreshToken, ...(copilotResult.refreshGeneration !== undefined ? { refreshGeneration: copilotResult.refreshGeneration } : {}), copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+      return {
+        ...(process.env.NINEROUTER_MANAGED_WORKER === "1"
+          ? { refreshGenerations: copilotResult.refreshGenerations }
+          : { accessToken: credentials.accessToken, refreshToken: credentials.refreshToken }),
+        copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt,
+      };
     }
 
     return null;
