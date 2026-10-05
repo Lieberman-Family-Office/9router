@@ -12,7 +12,9 @@ if (managed && process.send) {
     if (message?.type !== "9router-managed" || !Number.isSafeInteger(message.id)) return;
     if (message.op === "drain") managed.workState().draining = true;
     if (message.op === "resume") managed.workState().draining = false;
-    process.send({ type: "9router-managed", id: message.id, work: { ...managed.workState() } }, () => {});
+    const work = { ...managed.workState() };
+    work.initialized = work.initialized === true && work.responsesWsAttached === true;
+    process.send({ type: "9router-managed", id: message.id, work }, () => {});
   });
 }
 
@@ -65,43 +67,49 @@ function startBackgroundTokenRefreshFromCustomServer() {
 /**
  * Mid-turn steering: accept WebSocket upgrades on /v1/responses.
  * Loads open-sse ESM when present (repo/dev); falls back to ~/.9router/lib/responses-ws
- * for the published CLI install hot-patch.
- * Set NINEROUTER_SKIP_RESPONSES_WS=1 to disable (e.g. unit tests that require this module).
+ * for the unmanaged published CLI install hot-patch. Managed readiness requires pinned attachment.
+ * Set NINEROUTER_SKIP_RESPONSES_WS=1 to disable only in unmanaged mode.
  */
 function startResponsesWsFromCustomServer(server) {
   if (responsesWsStarted || !server) return;
-  if (process.env.NINEROUTER_SKIP_RESPONSES_WS === "1") return;
+  if (!managed && process.env.NINEROUTER_SKIP_RESPONSES_WS === "1") return;
   // Always attach on the live Next server. Unit tests that require() this module
   // without wanting WS should set NINEROUTER_SKIP_RESPONSES_WS=1.
   responsesWsStarted = true;
   const candidates = [
     path.join(__dirname, "open-sse", "handlers", "responsesWs", "index.js"),
     path.join(__dirname, "handlers", "responsesWs", "index.js"),
-    path.join(process.env.HOME || "", ".9router", "lib", "responses-ws", "index.mjs"),
   ];
+  if (!managed) candidates.push(path.join(process.env.HOME || "", ".9router", "lib", "responses-ws", "index.mjs"));
   const tryAttach = async () => {
     let lastErr = null;
     for (const modPath of candidates) {
-      if (managed && modPath.includes(path.join('.9router', 'lib'))) continue;
       if (!fs.existsSync(modPath)) continue;
       try {
         const m = await import(pathToFileURL(modPath).href);
         const attach = m.attachResponsesWebSocket || m.installOnServer || m.default?.attachResponsesWebSocket;
-        if (typeof attach !== "function") continue;
+        if (typeof attach !== "function") {
+          if (managed) throw new Error("Invalid pinned WebSocket module");
+          continue;
+        }
         const addr = server.address();
         const localPort = addr && typeof addr === "object" ? addr.port : Number(process.env.PORT) || 20128;
-        attach(server, { localPort });
+        await attach(server, { localPort });
         console.log(`[ResponsesWS] mid-turn steering enabled on /v1/responses (port ${localPort})`);
         return;
       } catch (e) {
+        if (managed) throw e;
         lastErr = e;
       }
     }
+    if (managed) throw new Error("Pinned WebSocket module missing");
     if (process.env.DEBUG_RESPONSES_WS || lastErr) {
       console.error("[ResponsesWS] attach skipped:", lastErr && lastErr.message ? lastErr.message : "module not found");
     }
   };
-  tryAttach().catch((e) => {
+  const attachment = tryAttach();
+  if (managed) managed.setResponsesWsReady(attachment);
+  attachment.catch((e) => {
     console.error("[ResponsesWS] attach failed:", e && e.message ? e.message : e);
   });
 }

@@ -59,7 +59,7 @@ function select(slot) {
   fs.symlinkSync(path.join(root, `${slot}.sock`), temporary);
   fs.renameSync(temporary, path.join(root, 'active.sock'));
 }
-async function makeConfig(slot) {
+async function makeConfig(slot, attachment = 'exports.attachResponsesWebSocket = () => {};') {
   const reservation = net.createServer();
   reservation.listen(0, '127.0.0.1');
   await once(reservation, 'listening');
@@ -71,13 +71,36 @@ async function makeConfig(slot) {
   fs.copyFileSync(path.resolve(__dirname, '../../custom-server.js'), path.join(release, 'app', 'custom-server.js'));
   fs.mkdirSync(path.join(release, 'app', 'src/lib/db'), { recursive: true });
   fs.copyFileSync(path.resolve(__dirname, '../../src/lib/db/managed.cjs'), path.join(release, 'app', 'src/lib/db/managed.cjs'));
+  fs.mkdirSync(path.join(release, 'app', 'handlers/responsesWs'), { recursive: true });
+  const attachmentFile = path.join(release, 'app', 'handlers/responsesWs/index.js');
+  if (attachment === null) fs.rmSync(attachmentFile, { force: true });
+  else fs.writeFileSync(attachmentFile, attachment);
   fs.writeFileSync(path.join(release, 'app', 'server.js'), `
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const managed = require('./src/lib/db/managed.cjs');
+const statusHold = path.join(process.env.NINEROUTER_HOTSWAP_RUNTIME, process.env.NINEROUTER_SLOT + '.status-hold');
+const send = process.send.bind(process);
+const waiting = [];
+process.send = (message, ...args) => {
+  const sealed = !fs.existsSync(path.join(process.env.NINEROUTER_HOTSWAP_RUNTIME, process.env.NINEROUTER_SLOT + '.sock'));
+  if (message.type === '9router-managed' && fs.existsSync(statusHold) &&
+      fs.readFileSync(statusHold, 'utf8') === (sealed ? 'sealed' : 'open')) {
+    waiting.push(() => send(message, ...args));
+    fs.writeFileSync(statusHold + '.waiting', 'held');
+    return true;
+  }
+  return send(message, ...args);
+};
 managed.workState().initialized = true;
 const held = [];
 const server = http.createServer(async (req, res) => {
-  if (req.url === '/api/version') return res.end(JSON.stringify({currentVersion: process.env.NINEROUTER_SLOT}));
+  if (req.url === '/api/version') {
+    try { await managed.awaitResponsesWsReady(); } catch { res.statusCode = 503; return res.end('unready'); }
+    return res.end(JSON.stringify({currentVersion: process.env.NINEROUTER_SLOT}));
+  }
+  if (req.url === '/status-release') { fs.unlinkSync(statusHold); fs.unlinkSync(statusHold + '.waiting'); for (const finish of waiting.splice(0)) finish(); return res.end('ok'); }
   if (req.url === '/unknown') { managed.workState().unknown = true; return res.end('ok'); }
   if (req.url === '/known') { Object.defineProperty(managed.workState(), 'unknown', { value: false, writable: true, configurable: true, enumerable: true }); return res.end('ok'); }
   if (req.url === '/final-unknown') { Object.defineProperty(managed.workState(), 'unknown', { configurable: true, enumerable: true, get: () => !require('fs').existsSync(require('path').join(process.env.NINEROUTER_HOTSWAP_RUNTIME, process.env.NINEROUTER_SLOT + '.sock')) }); return res.end('ok'); }
@@ -191,6 +214,39 @@ async function main() {
   await assert.rejects(() => command('a', 'stop'));
   assert.equal(await request(a.config.port, '/known'), 'ok', 'unknown final count must preserve child');
   assert.ok(fs.lstatSync(path.join(root, 'a.sock')).isSocket(), 'unknown final count restores admission');
+  const holdFile = path.join(root, 'a.status-hold');
+  async function retirementRace(stage, race) {
+    await delay(10500);
+    fs.writeFileSync(holdFile, stage);
+    const retirement = command('a', 'stop');
+    const refused = assert.rejects(retirement, /Retirement not quiescent/);
+    await wait(() => fs.existsSync(holdFile + '.waiting'));
+    await race();
+    await request(a.config.port, '/status-release');
+    await refused;
+    assert.equal(wa.exitCode, null, 'race must retain owned app and wrapper');
+    assert.equal(await request(a.config.port, '/version'), 'a');
+    assert.ok(fs.lstatSync(path.join(root, 'a.sock')).isSocket(), 'race restores or preserves admission');
+    await assert.rejects(() => command('a', 'stop'), /Retirement not quiescent/);
+  }
+  await retirementRace('open', async () => {
+    const late = net.connect(path.join(root, 'a.sock'));
+    sockets.push(late);
+    let body = '';
+    late.on('data', chunk => { body += chunk; });
+    await once(late, 'connect');
+    late.write('GET /version HTTP/1.1\r\nHost: test.invalid\r\nConnection: close\r\n\r\n');
+    await once(late, 'close');
+    const payload = body.slice(body.indexOf('\r\n\r\n') + 4);
+    assert.ok(body.includes('200 OK') && (payload === 'a' || payload === '1\r\na\r\n0\r\n\r\n'), 'late accepted request completes during status wait');
+  });
+  await retirementRace('open', async () => { select('a'); });
+  select('b');
+  await retirementRace('sealed', async () => {
+    select('a'); // Sealed target is now invalid: ownership proof must fail closed.
+  });
+  select('b');
+  await delay(10500);
   const stopped = await command('a', 'stop');
   assert.equal(stopped.mode, 'stopped');
   assert.equal(wa.exitCode, null, 'stopped wrapper must not exit and trigger KeepAlive');
@@ -209,6 +265,39 @@ async function main() {
   process.kill((await command('b', 'status')).appPid, 'SIGKILL');
   await wait(() => candidate.exitCode !== null);
   assert.notEqual(candidate.exitCode, 0, 'failed candidate must not silently stay ready');
+  const attachmentStarted = path.join(root, 'ws-started');
+  const attachmentRelease = path.join(root, 'ws-release');
+  const delayed = await makeConfig('b', `
+exports.attachResponsesWebSocket = async () => {
+  const fs = require('fs'); const path = require('path');
+  const root = process.env.NINEROUTER_HOTSWAP_RUNTIME;
+  fs.writeFileSync(path.join(root, 'ws-started'), 'started');
+  await new Promise(resolve => {
+    const timer = setInterval(() => { if (fs.existsSync(path.join(root, 'ws-release'))) { clearInterval(timer); resolve(); } }, 10);
+  });
+};`);
+  const delayedWorker = await launch(delayed.file);
+  await wait(() => fs.existsSync(attachmentStarted));
+  assert.equal(fs.existsSync(path.join(root, 'b.ctl')), false, 'attachment wait cannot expose ready worker controls');
+  let versionReady = false;
+  const versionPending = request(delayed.config.port, '/api/version').then(body => { versionReady = true; return body; });
+  await delay(100);
+  assert.equal(versionReady, false, 'private version waits for promise-returning attachment');
+  fs.writeFileSync(attachmentRelease, 'release');
+  assert.equal(JSON.parse(await versionPending).currentVersion, 'b');
+  await wait(async () => { try { return (await command('b', 'status')).mode === 'ready'; } catch { assert.equal(delayedWorker.exitCode, null, delayedWorker.log()); } });
+  delayedWorker.kill('SIGTERM'); await once(delayedWorker, 'exit');
+  const homeModule = path.join(root, '.9router/lib/responses-ws/index.mjs');
+  fs.mkdirSync(path.dirname(homeModule), { recursive: true });
+  fs.writeFileSync(homeModule, `import fs from 'node:fs'; fs.writeFileSync(${JSON.stringify(path.join(root, 'home-loaded'))}, 'loaded'); export const attachResponsesWebSocket = () => {};`);
+  for (const attachment of [null, 'exports.notAnAttachment = true;', 'exports.attachResponsesWebSocket = async () => { throw new Error("attachment failed"); };']) {
+    const refusedConfig = await makeConfig('b', attachment);
+    const refusedWorker = await launch(refusedConfig.file);
+    await wait(async () => { try { return (await request(refusedConfig.config.port, '/api/version')) === 'unready'; } catch { assert.equal(refusedWorker.exitCode, null, refusedWorker.log()); } });
+    assert.equal(fs.existsSync(path.join(root, 'b.ctl')), false, 'missing/invalid/failed attachment cannot expose readiness');
+    assert.equal(fs.existsSync(path.join(root, 'home-loaded')), false, 'managed mode never imports home fallback');
+    refusedWorker.kill('SIGTERM'); await once(refusedWorker, 'exit');
+  }
   const invalid = path.join(root, 'invalid.json');
   fs.writeFileSync(invalid, JSON.stringify({ ...b.config, slot: 'bad' }), { mode: 0o600 });
   const bad = await launch(invalid);

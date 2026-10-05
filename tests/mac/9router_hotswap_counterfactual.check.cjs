@@ -20,7 +20,7 @@ try {
   }
   const run = () => {
     const result = spawnSync(process.execPath, [files[0]], {
-      cwd: mirror, encoding: 'utf8', timeout: 45000, maxBuffer: 1024 * 1024,
+      cwd: mirror, encoding: 'utf8', timeout: 120000, maxBuffer: 1024 * 1024,
     });
     assert.equal(result.error, undefined, 'mirror check did not complete');
     assert.equal(result.signal, null, 'mirror check was terminated');

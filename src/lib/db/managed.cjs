@@ -184,6 +184,18 @@ function workState() {
     refresh: 0, background: 0, quota: 0, websocket: 0,
   };
 }
+function setResponsesWsReady(promise) {
+  workState().responsesWsAttached = false;
+  const ready = Promise.resolve(promise).then(() => { workState().responsesWsAttached = true; });
+  globalThis[Symbol.for('9router.managed.responsesWsReady')] = ready;
+  ready.catch(() => { workState().unknown = true; workState().initialized = false; });
+  return ready;
+}
+async function awaitResponsesWsReady() {
+  const ready = globalThis[Symbol.for('9router.managed.responsesWsReady')];
+  if (!ready) throw new Error('Managed WebSocket attachment missing');
+  await ready;
+}
 function beginWork(kind) {
   if (process.env.NINEROUTER_MANAGED_WORKER !== '1') return () => {};
   const state = workState();
@@ -216,4 +228,4 @@ function isActiveSlot() {
 }
 
 module.exports = { privateDirectory, privateFile, openRefreshStore, enrollRefreshStore, nextRefreshGeneration,
-  createManifest, readManifest, verifyManagedDatabase, schemaLayout, workState, beginWork, trackWork, isActiveSlot };
+  createManifest, readManifest, verifyManagedDatabase, schemaLayout, workState, setResponsesWsReady, awaitResponsesWsReady, beginWork, trackWork, isActiveSlot };

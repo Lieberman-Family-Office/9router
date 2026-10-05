@@ -166,6 +166,19 @@ describe('managed family generation persistence', () => {
     await persistence;
     expect(getRefreshWorkStatus().activeRefreshOperations).toBe(0);
   });
+  it('reads native stored settings strictly without changing legacy defaults', async () => {
+    const { getManagedIngressSettings, getSettings } = await import('@/lib/db/repos/settingsRepo.js');
+    expect(await getManagedIngressSettings()).toEqual({});
+    for (const data of ['{bad', 'null', '[]', 'true', '3', '"text"']) {
+      db.prepare('INSERT INTO settings(id,data) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data').run(data);
+      await expect(getManagedIngressSettings()).rejects.toThrow();
+      expect((await getSettings()).tunnelEnabled).toBe(false);
+    }
+    db.prepare('UPDATE settings SET data=? WHERE id=1').run('{"tunnelEnabled":false,"tailscaleEnabled":false,"mitmEnabled":false}');
+    expect(await getManagedIngressSettings()).toEqual({ tunnelEnabled: false, tailscaleEnabled: false, mitmEnabled: false });
+    db.exec('DROP TABLE settings');
+    await expect(getManagedIngressSettings()).rejects.toThrow();
+  });
   it('refuses unsupported native runtime before fallback or migration', async () => {
     const fallback = vi.fn();
     const migration = vi.fn();

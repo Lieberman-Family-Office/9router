@@ -146,6 +146,12 @@ async function main() {
     bridge.once('error', reject);
     bridge.listen(path.join(config.runtime, `${config.slot}.sock`), () => { bridge.off('error', reject); resolve(); });
   });
+  const requireQuiet = () => {
+    poll();
+    if (!draining || awaySince === null || performance.now() - awaySince < 10000 || pipes.size || active()) {
+      throw new Error('Retirement not quiescent');
+    }
+  };
   const operate = async op => {
     if (op === 'status') return status();
     if (!['drain', 'resume', 'stop'].includes(op) || busy || mode === 'stopped' || mode === 'failed') throw new Error('Operation refused');
@@ -160,9 +166,10 @@ async function main() {
         await ipc('resume');
         mode = 'ready'; awaySince = null;
       } else {
-        poll();
-        if (!draining || awaySince === null || performance.now() - awaySince < 10000 || pipes.size || active()) throw new Error('Retirement not quiescent');
-        if (!validateWork(await ipc('status')) || pipes.size) throw new Error('App still working');
+        requireQuiet();
+        const initialWork = await ipc('status');
+        requireQuiet();
+        if (!validateWork(initialWork)) throw new Error('App still working');
         // Seal only after the initial proof; a late accepted connection invalidates it.
         const closing = closeBridge();
         if (pipes.size) {
@@ -170,10 +177,14 @@ async function main() {
           closing.then(listenBridge).catch(() => { mode = 'failed'; });
           throw new Error('Late dial refused retirement');
         }
-        await closing;
         try {
-          poll();
-          if (active() || awaySince === null || !validateWork(await ipc('status'))) throw new Error('Final quiescence unproven');
+          await closing;
+          requireQuiet();
+          const finalWork = await ipc('status');
+          requireQuiet();
+          if (!validateWork(finalWork)) throw new Error('Final quiescence unproven');
+          // Requires controller exclusion of route mutations during retirement (Task 4).
+          requireQuiet();
         } catch (error) { await listenBridge(); throw error; }
         intentional = true;
         const exited = once(app, 'exit');

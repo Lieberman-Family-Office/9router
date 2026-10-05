@@ -253,6 +253,36 @@ git commit -m "test(mac): prove stream-safe proxy route switching"
 
 **Task 2 acceptance status:** Git verifies implementation commit `baf26ca4f48a810bb6303615590443e3b3d40643`. The completion report records local native checks and 66 targeted unit tests passing; this session has not independently rerun them. Keep Task 2 unaccepted until independent specification/code review and revision-bound Namespace revalidation complete. The reported h2c timeout remains unproven; compare baseline and reviewed head in Namespace as specified above. Do not proceed to release acceptance or production enrollment using local results.
 
+**Task 2 review-fix record, 2026-10-05:** Source fixes authored on parent head `abb0a330` recheck the full ten-second route-away/zero-pipe proof after IPC and bridge-close waits, await pinned WebSocket attachment before managed initialization/private readiness, and read stored settings JSON strictly before defaults. Regression sources cover late accepted requests during held status replies, route changes during initial/final status waits, malformed/non-object/unreadable settings, delayed/failed/missing/invalid pinned attachment, managed home-fallback refusal, and per-case registry restoration. The native route counterfactual deadline is 120 seconds to accommodate the added real quiet intervals. All new tests, syntax/lint/build/scans and qualification are **NOT RUN / Namespace pending**; no compute activation, push or deployment occurred. Source inspection is not a correctness verdict. Native Caddy-to-real-worker integration, packaged runtime and launchd qualification remain unproven. The existing h2c hang still needs bounded baseline/head guest comparison.
+
+Retirement relies on Task 4's single-controller exclusion: reconciliation must retain the deployment lock across retirement and route mutations. No worker lock is introduced. A synchronous final route check cannot exclude a competing external route writer; controller implementation/qualification must prove this contract before acceptance.
+
+Guest-only review commands, from the revision-bound source checkout inside an authorized Namespace macOS ARM64 guest:
+
+```sh
+node tests/mac/9router_worker.check.cjs
+node tests/mac/9router_hotswap.check.cjs
+node tests/mac/9router_hotswap_counterfactual.check.cjs
+NODE_ENV=production node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/unit/managed-cleanup.check.mjs
+python3 tests/mac/test_9router_worker_templates.py
+NINEROUTER_TEST_PACKAGES="$PWD" node tests/unit/managed-dispatch.check.mjs
+node tests/unit/managed-state.check.mjs
+node tests/unit/token-refresh-cross-process.check.mjs
+NINEROUTER_TEST_PACKAGES="$PWD" node tests/unit/managed-cas-process.check.mjs
+NINEROUTER_TEST_PACKAGES="$PWD" node tests/node_modules/vitest/vitest.mjs run --config .superpowers/sdd/task-2-vitest.config.mjs tests/unit/managed-buffer.test.js tests/unit/managed-detached.test.js tests/unit/managed-worker.test.js tests/unit/background-token-refresh.test.js tests/unit/quota-auto-ping.test.js tests/unit/cli-build-artifacts.test.js tests/unit/custom-server-peer-headers.test.js tests/unit/managed-credentials.test.js tests/unit/request-details-metadata-mode.test.js tests/unit/responses-mid-turn-steering.test.js --reporter=dot
+node --check scripts/mac/9router_worker.cjs
+node --check custom-server.js
+node --check src/lib/db/managed.cjs
+node --check src/lib/db/repos/settingsRepo.js
+node --check src/shared/services/initializeApp.js
+node --check tests/mac/9router_worker.check.cjs
+node --check tests/mac/9router_hotswap_counterfactual.check.cjs
+node --check tests/unit/managed-worker.test.js
+node --check tests/unit/managed-credentials.test.js
+```
+
+The ignored report's alias-only config must be explicitly transferred as hashed input or regenerated in guest temporary storage. Guest locked dependencies and recorded runtime versions are prerequisites; no host module/native-binary borrowing. Execute `node tests/unit/custom-server-h2c.test.cjs` under the Namespace owner's bounded process runner (60-second limit) in separate isolated checkouts of baseline `5fd82262218f5f00b4f987587318908e548ad65a` and reviewed fix HEAD. Record exit/timeout and logs separately. Packaging, native Caddy-to-real-worker and launchd qualification have no completed Task 2 command/evidence yet; Tasks 4/5 must supply them. Do not substitute mocked checks.
+
 - [ ] **Step 1: Write failing drain tests.**
 
 ```javascript

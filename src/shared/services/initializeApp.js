@@ -1,5 +1,6 @@
 import os from "os";
 import managed from "../../lib/db/managed.cjs";
+import { getManagedIngressSettings } from "../../lib/db/repos/settingsRepo.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { existsSync } from "fs";
@@ -52,8 +53,13 @@ const g = global.__appSingleton ??= {
 
 export async function initializeApp() {
   if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+    await managed.awaitResponsesWsReady();
     if (managed.workState().initialized) return;
-    const settings = await getSettings();
+    let settings;
+    try { settings = await getManagedIngressSettings(); } catch (error) {
+      managed.workState().unknown = true;
+      throw error;
+    }
     if (!settings || typeof settings !== 'object' || Array.isArray(settings) ||
         ['tunnelEnabled', 'tailscaleEnabled', 'mitmEnabled'].some(key =>
           settings[key] !== undefined && settings[key] !== false)) {
