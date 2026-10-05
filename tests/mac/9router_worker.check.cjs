@@ -246,6 +246,10 @@ async function main() {
     select('a'); // Sealed target is now invalid: ownership proof must fail closed.
   });
   select('b');
+  await retirementRace('sealed', async () => {
+    process.kill(wa.pid, 'SIGSTOP'); // Exact owned fixture wrapper: interrupt the quiet observation clock.
+    try { await delay(1250); } finally { process.kill(wa.pid, 'SIGCONT'); }
+  });
   await delay(10500);
   const stopped = await command('a', 'stop');
   assert.equal(stopped.mode, 'stopped');

@@ -114,7 +114,11 @@ async function getObservabilityConfig() {
       flushIntervalMs: settings.observabilityFlushIntervalMs || parseInt(process.env.OBSERVABILITY_FLUSH_INTERVAL_MS || String(DEFAULT_FLUSH_INTERVAL_MS), 10),
       maxJsonSize: (settings.observabilityMaxJsonSize || parseInt(process.env.OBSERVABILITY_MAX_JSON_SIZE || "5", 10)) * 1024,
     };
-  } catch {
+  } catch (error) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === '1') {
+      managed.workState().unknown = true;
+      throw error;
+    }
     cachedConfig = {
       enabled: false,
       maxRecords: DEFAULT_MAX_RECORDS,

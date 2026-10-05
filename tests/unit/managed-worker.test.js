@@ -112,7 +112,7 @@ describe('managed worker ownership', () => {
     const { runBackgroundTokenRefreshTick, stopBackgroundTokenRefresh } = await import('../../src/sse/services/backgroundTokenRefresh.js');
     const { runQuotaAutoPingTick, stopQuotaAutoPing } = await import('../../src/shared/services/quotaAutoPing.js');
     try {
-      managed.workState().unknown = false;
+      settings.row = { data: '{"tunnelEnabled":false,"tailscaleEnabled":false,"mitmEnabled":false}' };
       const { initializeApp } = await import('../../src/shared/services/initializeApp.js');
       await initializeApp();
       expect(managed.workState().initialized).toBe(true);
