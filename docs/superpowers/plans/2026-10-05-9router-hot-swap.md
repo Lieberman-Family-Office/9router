@@ -684,11 +684,11 @@ Record exact serving version, tarball/runtime hashes, proxy PID before/after, co
 
 Coverage maps to Tasks 1–6, including Task 4b: native switching, preservation, shared-state safety, transactional rollback/recovery, destructive dashboard-path refusal, gates/watchdog/qualification, and authorized enrollment. Review corrected three activation hazards: managed initialization must retain active-slot background work; enrollment must not overlap legacy and managed workers against the live database; dashboard updater endpoints must not bypass managed deployment. Two-slot saturation and schema refusal are explicit ceilings, not a universal promise that arbitrary future releases can swap safely. Task 3 must define complete durable refresh and compare-and-swap code before its GREEN run; the SQL and test snippets here are not that implementation.
 
-Implementation confidence: moderate. The installed Caddy socket-switch primitive has direct experimental proof. Full packaged-worker continuity, token-flight durability, native-driver enforcement, and existing hotpatch compatibility remain acceptance tests, not established facts.
+Implementation confidence: moderate. The source branch reports direct socket-switch and shared-state proof; this session has not rerun it. Packaged-worker continuity, exact-package qualification, launchd recovery, and live hotpatch compatibility remain acceptance tests, not established facts.
 
 ## Appendix A: Complete native switching check
 
-This is proposed test code. It uses fake applications and a separate Caddy instance, not production. Run with `node tests/mac/9router_hotswap.check.cjs`; Caddy must be on PATH. Remove the `renameSync` route switch to prove RED.
+This historical sketch uses fake applications and a separate Caddy instance, not production. The committed runnable check supersedes it. Run the existing `tests/mac/9router_hotswap_counterfactual.check.cjs` to prove RED in a temporary mirror; do NOT remove the route switch from the checkout.
 
 ```javascript
 const assert = require('node:assert/strict');
