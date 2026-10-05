@@ -11,8 +11,8 @@
 ## Global Constraints
 
 - User request, 2026-10-05: "I want hot swap capability built so that releases moving forward dont require downtime /writing-plans".
-- Selected approach: `caddy`. Selected drain behavior: `preserve`.
-- Selected enrollment boundary: `explicit`. First enrollment requires a separate, explicitly approved maintenance step.
+- Current operator answers, 2026-10-05, question `architecture`: `Selected option(s) caddy`; question `drain`: `Selected option(s) preserve`; question `enrollment`: `Selected option(s) explicit`.
+- These answers select the planning architecture only. First enrollment requires a separate, explicitly approved maintenance step.
 - Never terminate accepted requests or WebSocket sessions because a release drain took too long.
 - Keep exactly two release slots. Refuse another deployment while the inactive slot still drains.
 - Keep the client URL, port `20128`, API keys, and dashboard session secrets unchanged after enrollment.
@@ -24,7 +24,8 @@
 - No request replay after an upstream request may have been sent.
 - No Caddy reload, proxy restart, `launchctl kickstart -k`, CLI `killAllAppProcesses`, or forced worker termination on the healthy deployment path.
 - Both workers use the same live native SQLite database. Refuse `sql.js` in managed mode.
-- Schema-changing releases refuse hot swap in the first implementation. Use a separate migration workflow.
+- Schema-changing releases refuse hot swap in the first implementation. Use a separate migration workflow. Do not advertise this as zero downtime for arbitrary incompatible releases.
+- Enrollment starts with a newly built, qualified protocol-1 release containing ALL managed-mode protections. A legacy `.7` or `.8` package does not become safe for overlap merely by changing its environment.
 - Do not implement host-failure high availability. This feature prevents release-induced downtime, not failures of the host, provider, proxy, or operating system.
 - Do not create tests or credentials in the real home directory. Use isolated temporary directories.
 
@@ -32,11 +33,11 @@
 
 ## Verified evidence and boundaries
 
-**Verified source baseline:** `lfenergy/master`, commit `a6e5f9e83737c77a9f06ad9f0c09672df327008a`. The live `/api/version` returned `0.5.91-lfenergy.7` on 2026-10-05. Re-read both before implementation; do not infer live version from a previously qualified `.8` tarball.
+**Verified source baseline:** Local `lfenergy/master` resolves to `a6e5f9e83737c77a9f06ad9f0c09672df327008a`; measured in this planning turn. This is not a fresh remote-state measurement. The version served by production has not been re-read in this turn. Re-read both before implementation; do not infer live version from a previously qualified `.8` tarball.
 
 **Verified downtime cause:** `scripts/mac/9router_deploy.py:83-96, 296-327` switches the package symlink, calls `launchctl kickstart -k`, then probes. `cli/cli.js:558-559, 669-711` invokes destructive launcher cleanup. Do not use that CLI to start parallel workers.
 
-**Verified native primitive:** Caddy `2.11.4`, Node `26.6.0`. An isolated loopback experiment switched a Unix-socket symlink, sent 100 subsequent HTTP requests to B, completed an existing SSE stream on A, and exchanged a WebSocket frame with A after the switch. No Caddy reload occurred. The experiment proves the routing primitive, NOT the complete app, long-duration drain, launchd recovery, concurrent credential safety, or production readiness.
+**Verified native primitive:** Caddy `2.11.4`, Node `26.6.0`, measured in this turn. `node tests/mac/9router_hotswap.check.cjs` passed in this turn. Its isolated loopback checks cover 100 new requests on the original client keepalive socket, A/B SSE and WebSocket preservation across swap and rollback, retained static assets, exact POST/query/Host forwarding, forged-header stripping, cancellation, and a 4 MiB streamed response. No Caddy reload occurred. This proves the fake-app routing primitive, NOT packaged-app continuity, indefinite drain, launchd recovery, concurrent credential safety, or production readiness.
 
 **Verified persistence constraints:** `src/lib/db/schema.js:8-17` enables WAL and a five-second busy timeout. `src/lib/db/adapters/sqljsAdapter.js` is an in-memory fallback that must not participate in shared concurrent writes. `open-sse/services/tokenRefresh/dedup.js` only deduplicates within one process. `src/lib/db/repos/connectionsRepo.js:262-275` merges a connection inside a transaction, but this does not serialize external OAuth refresh calls.
 
@@ -75,9 +76,17 @@ Modify:
 - `src/sse/services/tokenRefresh.js` and `src/lib/db/repos/connectionsRepo.js`: persist rotated credential updates using a monotonic generation/compare-and-swap contract.
 - `src/app/api/providers/[id]/models/route.js`, `src/app/api/providers/[id]/test/testUtils.js`, and `src/app/api/v1/models/route.js`: audit direct refresh calls; route token-backed calls through the shared dedup boundary where they currently bypass it.
 - `cli/scripts/build-cli.js`: emit a compatibility manifest from schema/migration inputs; bundle worker-required artifacts.
+- `src/app/api/version/update/route.js` and `src/app/api/version/shutdown/route.js`: refuse legacy destructive updater/shutdown operations in managed mode before any side effect.
+- `tests/unit/managed-update.test.js`: prove managed dashboard update/shutdown calls do not kill, spawn an updater, or schedule process exit.
 - `tests/mac/test_9router_deploy.py`, `tests/mac/test_9router_vm_qualify.py`, `tests/mac/test_9router_path_watchdog.py`: retain legacy assertions and add enrolled dispatch tests.
 
 Do NOT modify `cli/app/` generated output by hand, production home files, live launchd configuration, Tailscale settings, provider models, or unrelated upstream fixes.
+
+## Execution order and current proof
+
+Execute Task 1, Task 3, Task 2, Task 4, Task 4b, Task 5, then Task 6. Shared refresh/migration protections must exist before real packaged workers overlap. Task 2 may use fake workers to develop lifecycle tests before Task 3; it may not attach two unprotected app processes to the live database.
+
+Planning-branch proof command: `node tests/mac/9router_hotswap.check.cjs` (run from this worktree). GREEN in this turn. The check uses temporary fake applications, isolated Caddy state, and ephemeral ports. It does not start Namespace or production. All runtime feature tasks remain unimplemented; existing proof files are not deployment machinery.
 
 ## Runtime contract
 
@@ -106,7 +115,7 @@ The WebSocket self-fetch path still uses the worker's private loopback port. Do 
 
 ### Task 1: Prove the stable proxy switching primitive
 
-**Files:** Create `scripts/mac/templates/9router.Caddyfile`, `tests/mac/9router_hotswap.check.cjs`.
+**Files:** Existing on this planning branch: `scripts/mac/templates/9router.Caddyfile`, `tests/mac/9router_hotswap.check.cjs`. Reuse them; do not overwrite with the older Appendix A sketch. The isolated primitive check has passed, but Task 1 remains incomplete until its counterfactual and required packaged coverage are proven.
 
 **Interfaces:** Consumes installed Caddy and ephemeral fake applications. Produces a runnable proof of request-level switching without proxy reload.
 
@@ -114,7 +123,7 @@ The WebSocket self-fetch path still uses the worker's private loopback port. Do 
 
 Use Node `assert`, `http`, `net`, `fs`, `child_process`, and `events`. Start two fake HTTP applications on ephemeral loopback ports. Each bridge listens on its own temporary Unix socket. Emit SSE `data: a-start\n\n`, hold it open, and implement a standards-compliant WebSocket echo handshake. Reserve a random proxy port; never use production `20128` in the local test.
 
-Copy the complete runnable check from Appendix A into `tests/mac/9router_hotswap.check.cjs`. Remove its symlink replacement for the initial RED run; restore it for GREEN. The check uses a persistent client agent and tests original SSE/WebSocket sessions after switching. Extend this real-process check for the task-specific assertions below. Bind Caddy to `http://:<test-port>` plus `bind 127.0.0.1`, not a host-specific matcher that accidentally refuses other Host headers.
+Reuse the existing `tests/mac/9router_hotswap.check.cjs`. For RED, copy the check and its template into a temporary mirror preserving their relative paths, prove that mirror passes unchanged, then remove the mirror's symlink replacement and require the B-routing assertion to fail. Never mutate the checkout to manufacture RED. The check uses a persistent client agent and tests original SSE/WebSocket sessions after switching. Extend this real-process check for the task-specific assertions below. Bind Caddy to `http://:<test-port>` plus `bind 127.0.0.1`, not a host-specific matcher that accidentally refuses other Host headers.
 
 - [ ] **Step 2: Run the check against the unswitched route.**
 
@@ -256,7 +265,7 @@ Validate every configuration field before spawning, including path ownership, co
 
 The `drain` operation sets `draining = true` but leaves the bridge listening for already-selected dials. `resume` clears it only after private version verification. To retire a zero-work slot, also prove the route has pointed away continuously longer than Caddy's explicitly configured `dial_timeout 3s` and the measured scheduling grace. Use a 10-second quiet interval restarted by every accepted bridge connection. This is a routing-quiescence check, NOT a stream deadline: any positive work count waits indefinitely. Qualification must hold a pre-switch dial at a barrier, switch, then complete it successfully before retirement. If scheduler stalls make dial quiescence unprovable, retain the slot and refuse the next release; do not guess. Do not call `server.closeAllConnections()`, set a force-close timer, or signal the child during drain. Before `stop`, prove `pipes.size === 0` AND app-side async work is quiescent. Extend `custom-server.js` with a private managed-status IPC message reporting active responses/upgrades and tracked token-refresh operations; do not expose a public HTTP control API. Count completion/cancellation separately from asynchronous persistence completion. Unknown IPC status refuses stop.
 
-In `initializeApp()`, add the explicit early managed-mode branch before infrastructure signal handlers. Validate stored settings and refuse managed enrollment if app-owned `tunnelEnabled`, `tailscaleEnabled`, or `mitmEnabled` is active; this deployment uses external daemons. Do not silently disable enabled features. Preserve ordinary unmanaged behavior.
+In `initializeApp()`, add the explicit early managed-mode branch before infrastructure signal handlers. Validate stored settings and refuse managed enrollment if app-owned `tunnelEnabled`, `tailscaleEnabled`, or `mitmEnabled` is active; externally owned ingress must be verified during enrollment rather than assumed. Do not silently disable enabled features. Preserve ordinary unmanaged behavior. Continue required background work through an explicitly active-slot-gated startup path; an early return must not silently disable quota refresh or token refresh for both workers.
 
 In `runBackgroundTokenRefreshTick()`, managed workers check whether `active.sock` targets their own slot before starting a tick. Draining workers stop starting background ticks, but an already-running tick may finish. Use the shared refresh serialization from Task 3. No secret is read from the active route file. Status must report active refresh tasks, including background ticks.
 
@@ -326,9 +335,9 @@ rg -n 'dedupRefresh|refreshProviderCredentials|refreshTokenByProvider|refreshCod
 
 The planning census verified calls in chat, embeddings, search, fetch, image/video generation, models, provider tests, and background refresh. Enter tests through these dispatches. Use the shared primitive for token-backed bypasses; keep provider response translation unchanged. Prove direct calls cannot bypass shared coordination with an AST/import-aware test. Do not rely on text matching alone.
 
-For shared app writes, retain native WAL and the current transaction merge. The deduplicated refresh result alone is insufficient: a delayed old worker could overwrite a newer token generation. Assign a durable monotonically increasing generation to each completed refresh. Return it as `refreshGeneration` with the result. In `updateProviderCredentials` pass the generation to a credential-specific compare-and-swap transaction in `connectionsRepo.js`; update token fields only when the incoming generation is greater than the stored generation, and return the current row otherwise. Re-read current credentials before further refreshes. Keep unrelated project ID/usage patches independent. Pin the credential-update statement and its generation comparison with a test. Test both callback orderings: old-result persistence after new-result persistence must leave the new token intact. Add a contention check that writes usage and credential patches from two processes and confirms both fields survive. Refuse `sql.js` BEFORE it opens/exports a shared file, rather than detecting it afterward. In managed mode bypass automatic migration entirely after matching the build manifest to the enrolled database fingerprint. Never test a candidate's incompatible migrations on the live DB.
+For shared app writes, retain native WAL and the current transaction merge. The deduplicated refresh result alone is insufficient: a delayed old worker could overwrite a newer token generation. Assign a durable monotonically increasing generation to each completed refresh. Return it as `refreshGeneration` with the result. In `updateProviderCredentials` pass the generation to a credential-specific compare-and-swap transaction in `connectionsRepo.js`; update token fields only when the incoming generation is greater than the stored generation, and return the current row otherwise. Store the generation in the EXISTING `providerConnections.data` JSON, not a new app-table column. `rowToConn()` and `connToRow()` already preserve JSON extras. The coordination database owns the monotonic sequence and persists it across worker restarts; deleting it while retaining credential generations is prohibited. Re-read current credentials before further refreshes. Keep unrelated project ID/usage patches independent. Pin the credential-update statement and its generation comparison with a test. Test both callback orderings: old-result persistence after new-result persistence must leave the new token intact. Add a contention check that writes usage and credential patches from two processes and confirms both fields survive. Refuse `sql.js` BEFORE it opens/exports a shared file, rather than detecting it afterward. In managed mode bypass automatic migration entirely after matching the build manifest to the enrolled database fingerprint. Never test a candidate's incompatible migrations on the live DB.
 
-Manifest creation hashes sorted relative paths AND exact bytes of `src/lib/db/schema.js`, `version.js`, `migrate.js`, and every migration file. Include `protocol: 1`, `schemaVersion`, supported adapter, and the resulting digest. Fail if a required input cannot be read. Do not treat equal schema version numbers alone as compatibility proof. This deliberately over-rejects benign migration-code changes rather than under-rejecting destructive ones.
+Manifest creation hashes sorted relative paths AND exact bytes of `src/lib/db/schema.js`, `version.js`, `migrate.js`, and every migration file. Include `protocol: 1`, `schemaVersion`, supported adapter, and the resulting digest. Fail if a required input cannot be read. Verify the actual enrolled SQLite layout against expected tables, columns, indexes, and applied migration metadata; a matching source manifest alone cannot prove the live database matches. Qualification mutates a database mirror to add/remove a column and requires readiness refusal. Do not treat equal schema version numbers alone as compatibility proof. This deliberately over-rejects benign migration-code changes rather than under-rejecting destructive ones.
 
 - [ ] **Step 4: Run the safety checks.**
 
@@ -414,6 +423,90 @@ Run `python3 -m pytest tests/mac/test_9router_deploy.py tests/mac/test_9router_h
 ```bash
 git add scripts/mac/9router_hotswap.py scripts/mac/9router_deploy.py tests/mac/test_9router_hotswap.py tests/mac/test_9router_deploy.py
 git commit -m "feat(mac): transact hot-swap deployment and rollback"
+```
+
+### Task 4b: Block dashboard release paths that kill managed workers
+
+**Files:** Modify `src/app/api/version/update/route.js`, `src/app/api/version/shutdown/route.js`. Create `tests/unit/managed-update.test.js`.
+
+**Interfaces:** Preserve both existing `POST()` signatures. Managed calls return HTTP 409 with a deployment-controller instruction before any process mutation. Unmanaged behavior stays unchanged. The supported release entry remains `9router_deploy.py deploy <qualified-tarball>`; this task does not expose a shell-running dashboard deployment endpoint.
+
+- [ ] **Step 1: Add a dispatch-level regression test.**
+
+```javascript
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const effects = vi.hoisted(() => ({
+  killAppProcesses: vi.fn(async () => {}),
+  spawnUpdaterAndExit: vi.fn(),
+}));
+vi.mock('@/lib/appUpdater', () => effects);
+vi.mock('next/server', () => ({
+  NextResponse: { json: (body, options = {}) => Response.json(body, options) },
+}));
+import { POST as update } from '../../src/app/api/version/update/route.js';
+import { POST as shutdown } from '../../src/app/api/version/shutdown/route.js';
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.useFakeTimers();
+  vi.stubEnv('NODE_ENV', 'production');
+  vi.stubEnv('NINEROUTER_MANAGED_WORKER', '1');
+});
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+});
+
+describe('managed release endpoints', () => {
+  for (const [name, post] of [['update', update], ['shutdown', shutdown]]) {
+    it(`${name} refuses before process side effects`, async () => {
+      const response = await post();
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({
+        success: false,
+        message: 'Managed releases use 9router_deploy.py with a qualified tarball.',
+      });
+      expect(effects.killAppProcesses).not.toHaveBeenCalled();
+      expect(effects.spawnUpdaterAndExit).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    });
+  }
+  it('retains unmanaged production update behavior', async () => {
+    vi.stubEnv('NINEROUTER_MANAGED_WORKER', '0');
+    expect((await update()).status).toBe(200);
+    expect(effects.killAppProcesses).toHaveBeenCalledTimes(1);
+    expect(effects.spawnUpdaterAndExit).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+- [ ] **Step 2: Run RED.**
+
+From `tests/`, run `npx vitest run unit/managed-update.test.js`. Expect managed status assertions to fail against the current 200 responses. Fake timers prevent the shutdown callback from terminating the test process.
+
+- [ ] **Step 3: Insert this guard at the start of EACH existing `POST()` body.**
+
+```javascript
+if (process.env.NINEROUTER_MANAGED_WORKER === '1') {
+  return NextResponse.json(
+    { success: false, message: 'Managed releases use 9router_deploy.py with a qualified tarball.' },
+    { status: 409 }
+  );
+}
+```
+
+The update guard precedes the production check. The shutdown guard precedes `killAppProcesses()`. Do NOT modify auth middleware or disable existing access controls.
+
+- [ ] **Step 4: Run GREEN.**
+
+From `tests/`, run `npx vitest run unit/managed-update.test.js`. Expect all three tests to pass. Test dashboard update and manual-shutdown refusal again through the packaged candidate during qualification.
+
+- [ ] **Step 5: Commit.**
+
+```bash
+git add src/app/api/version/update/route.js src/app/api/version/shutdown/route.js tests/unit/managed-update.test.js
+git commit -m "fix(mac): refuse destructive dashboard updates in managed mode"
 ```
 
 ### Task 5: Integrate watchdog, qualification, and enrollment
@@ -502,7 +595,7 @@ State that replacing the existing listener on `20128` can interrupt existing con
 
 - [ ] **Step 3: Enroll and verify.**
 
-Start a pinned baseline worker on A and prove native shared persistence first. Stop the legacy label within the approved maintenance window; start the separate Caddy label on `20128`; verify baseline version, models, auth, complete streams, WebSockets, and client IP sanitization through existing ingress. On enrollment failure, stop only newly introduced jobs and restore the previous launchd configuration without restoring an old provider database. Preserve diagnostics and report whether legacy service is actually healthy.
+Before the maintenance window, validate the protocol-1 baseline against an isolated SQLite backup, never the live database. During the approved maintenance window, positively quiesce and stop the legacy worker BEFORE attaching any managed worker to the live database: legacy workers lack the cross-process refresh and migration protections. Start A from the newly built qualified protocol-1 release with its concrete manifest and paths, then start the separate Caddy label on `20128`. Verify version, models, auth, complete streams, WebSockets, and client IP sanitization through existing ingress. On enrollment failure, stop only newly introduced jobs and restore the previous launchd configuration without restoring an old provider database. Preserve diagnostics and report whether legacy service is actually healthy. Rolling back after enrollment may only use another compatible protocol-1 release; never overlap the unprotected legacy package with a managed worker.
 
 - [ ] **Step 4: Prove a real release swap.**
 
@@ -529,7 +622,7 @@ Record exact serving version, tarball/runtime hashes, proxy PID before/after, co
 
 ## Plan self-review
 
-Coverage maps to Tasks 1–6: native switching, preservation, shared-state safety, transactional rollback/recovery, gates/watchdog/qualification, and authorized enrollment. No requested feature is deferred silently. Two-slot saturation and schema refusal are explicit ceilings, not a universal promise that any arbitrary future release can swap safely.
+Coverage maps to Tasks 1–6, including Task 4b: native switching, preservation, shared-state safety, transactional rollback/recovery, destructive dashboard-path refusal, gates/watchdog/qualification, and authorized enrollment. Review corrected three activation hazards: managed initialization must retain active-slot background work; enrollment must not overlap legacy and managed workers against the live database; dashboard updater endpoints must not bypass managed deployment. Two-slot saturation and schema refusal are explicit ceilings, not a universal promise that arbitrary future releases can swap safely. Task 3 must define complete durable refresh and compare-and-swap code before its GREEN run; the SQL and test snippets here are not that implementation.
 
 Implementation confidence: moderate. The installed Caddy socket-switch primitive has direct experimental proof. Full packaged-worker continuity, token-flight durability, native-driver enforcement, and existing hotpatch compatibility remain acceptance tests, not established facts.
 
