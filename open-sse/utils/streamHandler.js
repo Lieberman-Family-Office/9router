@@ -1,5 +1,6 @@
 // Stream handler with disconnect detection - shared for all providers
 import { STREAM_STALL_TIMEOUT_MS } from "../config/runtimeConfig.js";
+import managed from "../../src/lib/db/managed.cjs";
 import { dbg, isDebugEnabled } from "./debugLog.js";
 
 // Get HH:MM:SS timestamp
@@ -46,8 +47,9 @@ export function createStreamController({ onDisconnect, onError, log, provider, m
       dbg("CTRL", `${provider}/${model} | disconnect=${reason} | dur=${Date.now() - startTime}ms`);
 
       // Delay abort to allow cleanup
+      const done = managed.beginWork('cleanup');
       abortTimeout = setTimeout(() => {
-        abortController.abort();
+        try { abortController.abort(); } finally { done(); }
       }, 500);
 
       onDisconnect?.({ reason, duration: Date.now() - startTime });
@@ -137,8 +139,8 @@ export function createDisconnectAwareStream(transformStream, streamController, o
         const msg0 = error?.message || "";
         const isControllerClosed = msg0.includes("already closed") || msg0.includes("Invalid state");
         if (!isControllerClosed) streamController.handleError(error);
-        reader.cancel().catch(() => {});
-        writer.abort().catch(() => {});
+        managed.trackWork('cleanup', () => reader.cancel()).catch(() => {});
+        managed.trackWork('cleanup', () => writer.abort()).catch(() => {});
 
         // Treat network resets / socket hang up / abort as graceful close
         const msg = error?.message || "";
@@ -170,8 +172,8 @@ export function createDisconnectAwareStream(transformStream, streamController, o
 
     cancel(reason) {
       streamController.handleDisconnect(reason || "cancelled");
-      reader.cancel();
-      writer.abort();
+      if (process.env.NINEROUTER_MANAGED_WORKER !== '1') { reader.cancel(); writer.abort(); return; }
+      return managed.trackWork('cleanup', () => Promise.allSettled([reader.cancel(reason), writer.abort(reason)]));
     }
   });
 }
@@ -247,9 +249,15 @@ export function pipeWithDisconnect(providerResponse, transformStream, streamCont
     flush() { dbg(tag, `upstream EOF | chunks=${chunkCount} | bytes=${totalBytes} | dur=${Date.now() - t0}ms`); clearStall(); }
   });
 
-  const transformedBody = providerResponse.body
-    .pipeThrough(upstreamTap)
-    .pipeThrough(transformStream);
+  let transformedBody;
+  if (process.env.NINEROUTER_MANAGED_WORKER === '1') {
+    // Retain both pump promises through asynchronous source cancellation/transform cleanup.
+    managed.trackWork('cleanup', () => providerResponse.body.pipeTo(upstreamTap.writable)).catch(() => {});
+    managed.trackWork('cleanup', () => upstreamTap.readable.pipeTo(transformStream.writable)).catch(() => {});
+    transformedBody = transformStream.readable;
+  } else {
+    transformedBody = providerResponse.body.pipeThrough(upstreamTap).pipeThrough(transformStream);
+  }
 
   return createDisconnectAwareStream(
     { readable: transformedBody, writable: { getWriter: () => ({ abort: () => Promise.resolve() }) } },

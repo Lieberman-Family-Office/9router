@@ -132,10 +132,10 @@ function _refreshProjectId(provider, connectionId, accessToken) {
   // Eagerly fetching projectId across multiple accounts simultaneously triggers Google Cloud anti-abuse / rate limits.
   // Runtime handlers (e.g. chat handler) will lazily call getProjectIdForConnection() on demand.
   if (process.env.EAGER_PROJECT_ID_REFRESH === "true") {
-    getProjectIdForConnection(connectionId, accessToken, provider)
+    withRefreshWork(() => getProjectIdForConnection(connectionId, accessToken, provider)
       .then((projectId) => {
         if (!projectId) return;
-        updateProviderCredentials(connectionId, { projectId }).catch((err) => {
+        return updateProviderCredentials(connectionId, { projectId }).catch((err) => {
           log.debug("TOKEN_REFRESH", "Failed to persist refreshed projectId", {
             connectionId,
             error: err?.message ?? err,
@@ -147,7 +147,7 @@ function _refreshProjectId(provider, connectionId, accessToken) {
           connectionId,
           error: err?.message ?? err,
         });
-      });
+      }));
   }
 }
 
@@ -230,7 +230,10 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
  *   (used by background scheduler which applies a larger lead). Request path omits this.
  * @returns {Promise<object>} updated credentials object
  */
-export async function checkAndRefreshToken(provider, credentials, options = {}) {
+export function checkAndRefreshToken(provider, credentials, options = {}) {
+  return withRefreshWork(() => checkAndRefreshTokenImpl(provider, credentials, options));
+}
+async function checkAndRefreshTokenImpl(provider, credentials, options) {
   let creds = { ...credentials };
   if (!creds.connectionId && creds.id) {
     creds.connectionId = creds.id;

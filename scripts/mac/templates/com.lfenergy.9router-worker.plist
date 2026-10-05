@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>com.lfenergy.9router-worker-__SLOT__</string>
+<key>ProgramArguments</key><array><string>__NODE__</string><string>__WRAPPER__</string><string>__CONFIG__</string></array>
+<key>KeepAlive</key><true/>
+<key>ThrottleInterval</key><integer>5</integer>
+<key>StandardOutPath</key><string>__STDOUT__</string>
+<key>StandardErrorPath</key><string>__STDERR__</string>
+<key>EnvironmentVariables</key><dict><key>HOME</key><string>__HOME__</string></dict>
+</dict></plist>

@@ -73,6 +73,7 @@ function frame(body, masked, opcode = 1, fin = true) {
 }
 
 async function main() {
+  execFileSync(process.execPath, [path.join(__dirname, '9router_worker.check.cjs')], { stdio: 'inherit' });
   const root = fs.mkdtempSync(path.join(os.tmpdir(), '9r-swap-'));
   fs.chmodSync(root, 0o700);
   const servers = [];

@@ -1,4 +1,5 @@
 import { getAdapter } from "../driver.js";
+import managed from "../managed.cjs";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getRequestScope } from "../../requestScope.js";
 import { serviceTier } from "open-sse/providers/shared.js";
@@ -211,19 +212,28 @@ async function flushToDatabase() {
           );
         }
       });
+      for (const item of items) item.__managedDone?.();
     }
   } catch (e) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === '1') managed.workState().unknown = true;
     console.error("[requestDetailsRepo] Batch write failed:", e);
   } finally {
     isFlushing = false;
   }
 }
 
-export async function saveRequestDetail(detail) {
+export function saveRequestDetail(detail) {
+  return managed.trackWork('persistence', () => saveDetail(detail));
+}
+async function saveDetail(detail) {
   const config = await getObservabilityConfig();
   if (!config.enabled && !isMetadataOnly()) {return;}
 
-  writeBuffer.push(isMetadataOnly() ? applyRequestScope(detail) : detail);
+  const done = managed.beginWork('persistence');
+  const input = isMetadataOnly() ? applyRequestScope(detail) : detail;
+  const record = process.env.NINEROUTER_MANAGED_WORKER === '1' ? { ...input } : input;
+  if (process.env.NINEROUTER_MANAGED_WORKER === '1') Object.defineProperty(record, '__managedDone', { value: done });
+  writeBuffer.push(record);
 
   // Trigger immediate flush if batch threshold reached.
   // flushToDatabase() drains entire buffer in a loop, so all pushes during await are persisted.

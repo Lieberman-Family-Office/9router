@@ -12,7 +12,8 @@ export function getRefreshWorkStatus() { return { activeRefreshOperations }; }
 export async function withRefreshWork(fn) {
   if (process.env.NINEROUTER_MANAGED_WORKER !== "1") return fn();
   activeRefreshOperations++;
-  try { return await fn(); } finally { activeRefreshOperations--; }
+  const done = managed.beginWork('refresh');
+  try { return await fn(); } finally { activeRefreshOperations--; done(); }
 }
 
 function validResult(result, generation, family) {
@@ -44,6 +45,7 @@ async function managedRefresh(provider, oldToken, fn) {
   const owner = randomUUID();
   const db = managed.openRefreshStore(file);
   activeRefreshOperations++;
+  const done = managed.beginWork('refresh');
   try {
     db.exec("BEGIN IMMEDIATE");
     let claimed;
@@ -122,7 +124,7 @@ async function managedRefresh(provider, oldToken, fn) {
       try { db.prepare("UPDATE refresh_flights SET state='uncertain' WHERE key=? AND owner=? AND state='pending'").run(key, owner); } catch {}
       throw new Error("Uncertain refresh requires maintenance recovery");
     }
-  } finally { activeRefreshOperations--; db.close(); }
+  } finally { activeRefreshOperations--; done(); db.close(); }
 }
 
 const REFRESH_RESULT_TTL_MS = 10_000;

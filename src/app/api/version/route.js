@@ -53,6 +53,10 @@ async function getLatestVersionCached() {
 }
 
 export async function GET() {
+  if (process.env.NINEROUTER_MANAGED_WORKER === '1') {
+    const { initializeApp } = await import('@/shared/services/initializeApp');
+    await initializeApp();
+  }
   const latestVersion = await getLatestVersionCached();
   const currentVersion = pkg.version;
   const hasUpdate = latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false;

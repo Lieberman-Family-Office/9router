@@ -5,6 +5,16 @@ const crypto = require("crypto");
 const { pathToFileURL } = require("url");
 
 const origCreate = http.createServer.bind(http);
+const managed = process.env.NINEROUTER_MANAGED_WORKER === "1"
+  ? require("./src/lib/db/managed.cjs") : null;
+if (managed && process.send) {
+  process.on("message", (message) => {
+    if (message?.type !== "9router-managed" || !Number.isSafeInteger(message.id)) return;
+    if (message.op === "drain") managed.workState().draining = true;
+    if (message.op === "resume") managed.workState().draining = false;
+    process.send({ type: "9router-managed", id: message.id, work: { ...managed.workState() } }, () => {});
+  });
+}
 
 // Per-process secret proving x-9r-real-ip was stamped below rather than sent by the client.
 // A bare `next start` / `next dev` never loads this file, so it cannot produce a matching
@@ -17,6 +27,8 @@ let backgroundRefreshStarted = false;
 let responsesWsStarted = false;
 
 function startBackgroundTokenRefreshFromCustomServer() {
+  // Managed initialization validates settings before either gated scheduler starts.
+  if (managed) return;
   if (backgroundRefreshStarted) return;
   // Unit tests require() this module without wanting the scheduler open-handle.
   if (process.env.NINEROUTER_SKIP_BACKGROUND_REFRESH === "1") return;
@@ -70,6 +82,7 @@ function startResponsesWsFromCustomServer(server) {
   const tryAttach = async () => {
     let lastErr = null;
     for (const modPath of candidates) {
+      if (managed && modPath.includes(path.join('.9router', 'lib'))) continue;
       if (!fs.existsSync(modPath)) continue;
       try {
         const m = await import(pathToFileURL(modPath).href);
@@ -101,6 +114,11 @@ http.createServer = (...args) => {
   const rest = args.filter((a) => typeof a !== "function");
   if (!handler) return origCreate(...args);
   const wrapped = (req, res) => {
+    if (managed) {
+      const responseDone = managed.beginWork("responses");
+      res.once("finish", responseDone);
+      res.once("close", responseDone);
+    }
     const socketIp = req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : "";
     const xff = req.headers["x-forwarded-for"];
     const xRealIp = req.headers["x-real-ip"];
@@ -117,7 +135,18 @@ http.createServer = (...args) => {
     req.headers["x-9r-real-ip"] = ip;
     req.headers["x-9r-peer-token"] = PEER_TOKEN;
     if (viaProxy) req.headers["x-9r-via-proxy"] = "1";
-    return handler(req, res);
+    if (!managed) return handler(req, res);
+    const done = managed.beginWork("handlers");
+    try {
+      const result = handler(req, res);
+      // A void handler exposes no post-close completion contract. Retire only if known.
+      if (!result || typeof result.then !== "function") {
+        managed.workState().unknown = true;
+        done();
+        return result;
+      }
+      return Promise.resolve(result).finally(done);
+    } catch (error) { done(); throw error; }
   };
   const server = origCreate(...rest, wrapped);
   server.once("listening", () => {
@@ -130,6 +159,10 @@ http.createServer = (...args) => {
   // and are handled by attachResponsesWebSocket listeners.
   server.emit = function (event, ...eventArgs) {
     const [req, socket, head] = eventArgs;
+    if (event === "upgrade" && managed) {
+      const done = managed.beginWork("upgrades");
+      socket.once("close", done);
+    }
     if (event !== "upgrade" || String(req.headers.upgrade || "").toLowerCase() !== "h2c") {
       return origEmit.call(this, event, ...eventArgs);
     }

@@ -227,6 +227,10 @@ async function buildCliPackage() {
     console.error("   so the packaged CLI would demand an API key for its own dashboard and /v1.");
     process.exit(1);
   }
+  // Managed IPC shares a process-global registry with the bundled application.
+  fs.mkdirSync(path.join(cliAppDir, 'src/lib/db'), { recursive: true });
+  fs.copyFileSync(path.join(appDir, 'src/lib/db/managed.cjs'), path.join(cliAppDir, 'src/lib/db/managed.cjs'));
+
   // Step 3a2: Ship mid-turn steering beside custom-server.js; its loader checks handlers/responsesWs.
   // Without this the published CLI only attaches it from a hot-patched ~/.9router/lib copy.
   const responsesWsSrc = path.join(appDir, "open-sse", "handlers", "responsesWs");
@@ -235,6 +239,9 @@ async function buildCliPackage() {
     process.exit(1);
   }
   copyRecursive(responsesWsSrc, path.join(cliAppDir, "handlers", "responsesWs"));
+  // The copied WS module's source-relative registry path resolves here.
+  fs.mkdirSync(path.join(cliDir, 'src/lib/db'), { recursive: true });
+  fs.copyFileSync(path.join(appDir, 'src/lib/db/managed.cjs'), path.join(cliDir, 'src/lib/db/managed.cjs'));
   console.log("✅ Copied handlers/responsesWs\n");
 
   // Step 3b: Ensure sql.js (pure JS fallback) bundled in app/cli/app/node_modules.

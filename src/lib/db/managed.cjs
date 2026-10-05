@@ -176,5 +176,44 @@ function nextRefreshGeneration(db) {
   return value + 1;
 }
 
+// One process-wide registry, also shared with Next's bundled copies of this module.
+function workState() {
+  return globalThis[Symbol.for('9router.managed.work')] ??= {
+    initialized: false, unknown: false, draining: false,
+    responses: 0, handlers: 0, upgrades: 0, cleanup: 0, persistence: 0,
+    refresh: 0, background: 0, quota: 0, websocket: 0,
+  };
+}
+function beginWork(kind) {
+  if (process.env.NINEROUTER_MANAGED_WORKER !== '1') return () => {};
+  const state = workState();
+  if (!Object.hasOwn(state, kind) || typeof state[kind] !== 'number') throw new Error('Unknown managed work kind');
+  state[kind]++;
+  let done = false;
+  return () => { if (!done) { done = true; state[kind]--; } };
+}
+function trackWork(kind, fn) {
+  if (process.env.NINEROUTER_MANAGED_WORKER !== '1') return fn();
+  const done = beginWork(kind);
+  let result;
+  try { result = fn(); } catch (error) { done(); throw error; }
+  return Promise.resolve(result).finally(done);
+}
+function isActiveSlot() {
+  if (process.env.NINEROUTER_MANAGED_WORKER !== '1') return true;
+  if (workState().draining) return false;
+  try {
+    const runtime = process.env.NINEROUTER_HOTSWAP_RUNTIME;
+    const slot = process.env.NINEROUTER_SLOT;
+    if (!['a', 'b'].includes(slot)) return false;
+    privateDirectory(runtime);
+    const active = path.join(runtime, 'active.sock');
+    const stat = fs.lstatSync(active);
+    if (!stat.isSymbolicLink() || stat.uid !== process.getuid()) return false;
+    const target = path.resolve(runtime, fs.readlinkSync(active));
+    return target === path.join(runtime, `${slot}.sock`) && fs.lstatSync(target).isSocket();
+  } catch { return false; }
+}
+
 module.exports = { privateDirectory, privateFile, openRefreshStore, enrollRefreshStore, nextRefreshGeneration,
-  createManifest, readManifest, verifyManagedDatabase, schemaLayout };
+  createManifest, readManifest, verifyManagedDatabase, schemaLayout, workState, beginWork, trackWork, isActiveSlot };

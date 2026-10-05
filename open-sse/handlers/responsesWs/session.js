@@ -6,6 +6,10 @@
  */
 
 import { SteerConnectionState, STEER_FAIL } from "./steerState.js";
+import { createRequire } from 'node:module';
+// Unmanaged hot-patch copies need no source-tree dependency.
+const managed = process.env.NINEROUTER_MANAGED_WORKER === '1'
+  ? createRequire(import.meta.url)('../../../src/lib/db/managed.cjs') : null;
 import { buildSteerContinuationCreate } from "./continuation.js";
 import { modelSupportsSteering, steerUpstreamMode } from "./models.js";
 import { encodeTextFrame, encodeCloseFrame, WsFrameReader } from "./wsFrames.js";
@@ -298,7 +302,7 @@ export function createResponsesWsSession({ socket, req, fetchLocalResponses, res
         });
         continue;
       }
-      Promise.resolve(handleClientEvent(event)).catch((err) => {
+      (managed ? managed.trackWork('websocket', () => handleClientEvent(event)) : Promise.resolve(handleClientEvent(event))).catch((err) => {
         send({
           type: "error",
           status: 500,

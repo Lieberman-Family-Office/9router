@@ -219,6 +219,8 @@ git commit -m "test(mac): prove stream-safe proxy route switching"
 
 ### Task 2: Add pinned workers with fail-closed draining
 
+**Complete cleanup scope:** Includes minimal promise retention in `open-sse/utils/streamHandler.js`, `open-sse/handlers/chatCore/streamingHandler.js`, `open-sse/handlers/chatCore/requestDetail.js`, `open-sse/utils/stream.js`, and `open-sse/handlers/responsesWs/session.js`; quota ownership includes `src/shared/services/quotaAutoPing.js`. The scoped census also requires tracking non-streaming success callbacks, usage/detail repository persistence (including buffered flushes), and eager project-ID completion. These are completion-accounting changes only. The private version readiness path explicitly awaits managed initialization; no updater/controller/enrollment is included.
+
 **Files:** Create `scripts/mac/9router_worker.cjs`, both launchd templates. Extend `tests/mac/9router_hotswap.check.cjs`. Modify `src/shared/services/initializeApp.js`, `src/sse/services/backgroundTokenRefresh.js`, and `cli/scripts/build-cli.js`.
 
 **Interfaces:** Worker invocation `node 9router_worker.cjs <slot.json>`. Slot configuration supplies concrete `release`, `version`, `port`, `runtime`, `dataDir`, and shared secret environment loaded by its launcher. Expose the control protocol above. Never use `9router/cli.js`.

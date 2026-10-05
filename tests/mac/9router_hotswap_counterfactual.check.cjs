@@ -5,7 +5,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const files = ['tests/mac/9router_hotswap.check.cjs', 'scripts/mac/templates/9router.Caddyfile'];
+const files = ['tests/mac/9router_hotswap.check.cjs', 'scripts/mac/templates/9router.Caddyfile',
+  'tests/mac/9router_worker.check.cjs', 'scripts/mac/9router_worker.cjs', 'custom-server.js', 'src/lib/db/managed.cjs'];
 const checkout = path.resolve(__dirname, '../..');
 const originals = files.map((file) => fs.readFileSync(path.join(checkout, file)));
 const mirror = fs.mkdtempSync(path.join(os.tmpdir(), '9r-counterfactual-'));

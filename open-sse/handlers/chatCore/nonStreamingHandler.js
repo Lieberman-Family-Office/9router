@@ -1,4 +1,5 @@
 import { FORMATS } from "../../translator/formats.js";
+import managed from "../../../src/lib/db/managed.cjs";
 import { needsTranslation } from "../../translator/index.js";
 import { fromOpenAIFinish } from "../../translator/concerns/finishReason.js";
 import { ollamaBodyToOpenAI } from "../../translator/response/ollama-to-openai.js";
@@ -316,8 +317,7 @@ export async function handleNonStreamingResponse({ providerResponse, provider, m
 
   reqLogger.logProviderResponse(providerResponse.status, providerResponse.statusText, providerResponse.headers, responseBody);
   if (onRequestSuccess) {
-    Promise.resolve()
-      .then(onRequestSuccess)
+    managed.trackWork('persistence', () => Promise.resolve().then(onRequestSuccess))
       .catch(err => {
         console.error("[ChatCore] onRequestSuccess failed:", err?.message || err);
       });
