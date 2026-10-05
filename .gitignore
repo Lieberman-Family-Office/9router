@@ -51,6 +51,11 @@ source/*
 .cursor/*
 docs/*
 !docs/ARCHITECTURE.md
+!docs/superpowers/
+docs/superpowers/*
+!docs/superpowers/plans/
+docs/superpowers/plans/*
+!docs/superpowers/plans/2026-10-05-9router-hot-swap.md
 test/*
 open-sse/test/*
 RM.vn.md

@@ -12,7 +12,8 @@
 
 - User request, 2026-10-05: "I want hot swap capability built so that releases moving forward dont require downtime /writing-plans".
 - This turn selected `unbounded` for session preservation and `reuse` for the existing Caddy/Unix-socket design.
-- Those selections authorize plan reuse only. They do NOT authorize implementation, production enrollment, or Namespace activation.
+- The subsequent execution selection is `subagents`: implement the remaining tasks through task-scoped subagents.
+- Production enrollment and Namespace activation are NOT authorized by that execution selection.
 - Older operator-answer claims in the reused document are historical, unconfirmed in this turn, and not authorization.
 - Never terminate accepted requests or WebSocket sessions because a release drain took too long.
 - Keep exactly two release slots. Refuse another deployment while the inactive slot still drains.

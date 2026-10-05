@@ -148,7 +148,14 @@ function assertRequiredApiArtifacts(cliAppDir) {
   }
 }
 
-function buildCliPackage() {
+async function emitCompatibilityManifest(source, destination) {
+  const { createManifest } = require("../../src/lib/db/managed.cjs");
+  const manifest = await createManifest(source);
+  fs.writeFileSync(path.join(destination, "hotswap-manifest.json"), JSON.stringify(manifest) + "\n", { mode: 0o600 });
+  return manifest;
+}
+
+async function buildCliPackage() {
   console.log("📦 Building 9Router CLI package with Next.js...\n");
 
   fs.mkdirSync(buildHomeDir, { recursive: true });
@@ -340,6 +347,7 @@ function buildCliPackage() {
     process.exit(1);
   }
 
+  await emitCompatibilityManifest(appDir, cliAppDir);
   console.log("✨ CLI package build completed!");
   console.log(`📁 Output: ${cliAppDir}`);
 
@@ -353,11 +361,12 @@ function buildCliPackage() {
 }
 
 module.exports = {
+  emitCompatibilityManifest,
   assertRequiredApiArtifacts,
   copyStandaloneBuild,
   mergeServerArtifacts,
 };
 
 if (require.main === module) {
-  buildCliPackage();
+  buildCliPackage().catch(() => { console.error("CLI compatibility build failed"); process.exitCode = 1; });
 }

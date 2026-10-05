@@ -99,6 +99,7 @@ const buildOAuthResolver = ({ refreshFn, fetchFn, parseFn, errorLabel }) => asyn
       const refreshed = await refreshFn(connection);
       if (refreshed?.accessToken) {
         await updateProviderCredentials(connection.id, {
+          refreshGenerations: refreshed.refreshGenerations,
           accessToken: refreshed.accessToken,
           refreshToken: refreshed.refreshToken || refreshToken,
           expiresIn: refreshed.expiresIn,
@@ -419,7 +420,8 @@ const PROVIDER_MODELS_CONFIG = {
           onCredentialsRefreshed: async (refreshed) => {
             if (refreshed?.accessToken) {
               await updateProviderCredentials(connection.id, {
-                accessToken: refreshed.accessToken,
+                refreshGenerations: refreshed.refreshGenerations,
+          accessToken: refreshed.accessToken,
                 refreshToken: refreshed.refreshToken || connection.refreshToken,
                 expiresIn: refreshed.expiresIn,
               });

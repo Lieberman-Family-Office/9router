@@ -1,4 +1,5 @@
 import { ensureDirs, DATA_FILE } from "./paths.js";
+import managed from "./managed.cjs";
 
 // Use global to survive Next.js dev hot-reload (module state resets on reload)
 if (!global._dbAdapter) global._dbAdapter = { instance: null, initPromise: null, logged: false };
@@ -57,6 +58,14 @@ async function trySqlJs() {
 }
 
 async function initAdapter() {
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+    managed.verifyManagedDatabase(DATA_FILE, process.env.NINEROUTER_HOTSWAP_MANIFEST,
+      process.env.NINEROUTER_HOTSWAP_ENROLLED_MANIFEST, process.env.NINEROUTER_HOTSWAP_REFRESH_DB);
+    const { createNodeSqliteAdapter } = await import("./adapters/nodeSqliteAdapter.js");
+    const mask = process.umask(0o077);
+    try { return await createNodeSqliteAdapter(DATA_FILE); }
+    finally { process.umask(mask); }
+  }
   ensureDirs();
   // Order per runtime:
   //   Bun:  bun:sqlite → sql.js
