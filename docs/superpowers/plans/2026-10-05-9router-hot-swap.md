@@ -30,8 +30,28 @@
 - Enrollment starts with a newly built, qualified protocol-1 release containing ALL managed-mode protections. A legacy `.7` or `.8` package does not become safe for overlap merely by changing its environment.
 - Do not implement host-failure high availability. This feature prevents release-induced downtime, not failures of the host, provider, proxy, or operating system.
 - Do not create tests or credentials in the real home directory. Use isolated temporary directories.
+- User request, 2026-10-05: "I want to make sure this plan incorporates using namespace for all testing".
+- Run ALL executable tests and release validation in Namespace guests, not on the laptop or generic GitHub-hosted runners.
+- Historical local results below are provenance only. Re-run them in Namespace before accepting any task or release.
 
 ---
+
+## Namespace-only test execution contract
+
+This contract overrides every test command's location below, including historical "from this worktree" and "local" wording. Commands run from a checked-out source tree INSIDE an isolated Namespace macOS ARM64 guest. Local source edits, commits, read-only inspections, and host orchestration are allowed; local test processes are not. Subagents use the same boundary. Never fall back to laptop tests when Namespace is unavailable; report the unrun checks and withhold the task/release verdict.
+
+- Run Tasks 1/2/3 baseline revalidation, every RED/GREEN and mirror counterfactual, Vitest, pytest, native Node assertions, worker/Caddy integration, deployment/recovery fault injection, watchdog tests, cleanup tests, and exact-tarball qualification in Namespace. Include syntax/lint/format, build/package checks, and required pre-push scans there. A test skip or unavailable scan is not evidence of a pass.
+- Use a macOS ARM64 guest for launchd, Unix sockets, native SQLite, Caddy, and the packaged runtime. Match and record the release's Node, Caddy, macOS, Python, and locked dependency versions. Install test dependencies inside the guest using the repository's pinned manifests; never resolve modules from the laptop's `$HOME/dev/9router` or copy host `node_modules`/native binaries.
+- For historical `NINEROUTER_TEST_PACKAGES=$HOME/dev/9router` commands, set that variable to the guest's dependency-bearing checkout instead. Generate any alias-only Vitest config in a guest temporary directory. Existing dependencies/configuration must be present before running; missing dependencies refuse the run, not silently skip tests or invoke an unpinned `npx` download.
+- Transfer the exact source revision, any explicitly enumerated uncommitted patch, and runtime bundle to the guest. Record commit ID, patch SHA-256 when present, runtime hashes, and package digest. Recompute these identities in the guest; a mismatch refuses testing. Final release qualification uses the exact produced tarball, not a guest rebuild substituted for it.
+- Keep all fixtures, fake credentials, temporary database mirrors, and test launchd jobs inside isolated guest paths. No test uses the live production database or launchd labels. Deterministic checks use fake providers; only the separately labeled authenticated qualification probes use approved real credentials.
+- Collect exit codes, named check populations, RED assertion identities, stdout/stderr with secrets excluded, devbox ID, instance ID, guest/runtime versions, and artifact hashes. Export evidence to the implementing worktree before stopping compute. Missing execution identity, zero subjects, incomplete logs, or missing checks withhold the verdict. Bind the Namespace evidence to the qualification receipt; no historical local GREEN can fill a missing guest result.
+- CI test jobs must dispatch to Namespace and wait for the guest's actual result. If current CI runs a required hot-swap check outside Namespace, update only that check's execution path and preserve its context/name and fail-closed behavior. Merely downloading prior Namespace logs into a generic runner is not a fresh test run. Do not claim all-testing compliance until the relevant required CI checks also run there.
+- The laptop may run the existing qualification orchestrator solely to stage inputs, trigger guest execution, collect evidence, and stop compute. All fixture/test subprocesses execute in Namespace. Host cleanup verification is a lifecycle observation, not an exception allowing host unit/integration tests.
+- Namespace activation remains a separate current-turn authorization boundary. This plan edit starts no compute. After authorized activation, keep one owner for the devbox lifecycle and prevent parallel test workers from resetting shared guest state. Reuse the guest during a test batch; stop it at batch close or on failure, timeout, or interruption.
+- Lifecycle ownership starts before activation. Cover provisioning, dependency setup, tests, evidence export, and qualification with the outermost cleanup `finally`. Close owned SSH/exec/forwarding sessions before stop; do not kill unrelated clients. Run `devbox stop <exact-name> --force`, then verify `state: stopped` with no instance ID immediately and again after 60 seconds using non-activating metadata reads. Never verify via SSH, exec, session listing, or dashboard connection. A restart or unreadable state makes cleanup incomplete and blocks success. Retain storage; do not delete the devbox or revoke credentials automatically.
+
+Task 5 owns Namespace orchestration and receipt/cleanup tests. Its tests must prove setup failure, test failure, timeout, interruption, export failure, stop failure, unreadable metadata, and reactivation cannot yield a successful overall run. Re-run Tasks 1/2/3 inside Namespace before accepting them for this feature. Task 2 commit `baf26ca4f48a810bb6303615590443e3b3d40643` is verified by Git; its local test results are reported history, not accepted Namespace evidence. Re-run the report's native checks, 10-module/66-test selection, and route counterfactual against the final reviewed source bytes in the guest. The reported `tests/unit/custom-server-h2c.test.cjs` hang remains unresolved. Run that check with bounded execution in isolated guest checkouts of baseline `5fd82262218f5f00b4f987587318908e548ad65a` and the reviewed head. Record both exit statuses and logs; a timeout is not a pass. If the hang occurs only at the head, fix the regression before acceptance. If both hang, record baseline debt separately and retain the unproven h2c verdict. Task 6 is separately approved production rollout with operational health verification, not a second test environment; all test fixtures and fault injection remain in Namespace.
 
 ## Current-turn review and execution baseline
 
@@ -110,7 +130,7 @@ Do NOT modify `cli/app/` generated output by hand, production home files, live l
 
 Execute Task 1, Task 3, Task 2, Task 4, Task 4b, Task 5, then Task 6. Shared refresh/migration protections must exist before real packaged workers overlap. Task 2 may use fake workers to develop lifecycle tests before Task 3; it may not attach two unprotected app processes to the live database.
 
-Planning-branch proof command: `node tests/mac/9router_hotswap.check.cjs` (run from this worktree). GREEN in this turn. The check uses temporary fake applications, isolated Caddy state, and ephemeral ports. It does not start Namespace or production. Task 3 now supplies shared-state protections; worker/controller and enrollment tasks remain unimplemented. Existing proxy proof files are not deployment machinery.
+Historical planning-branch proof command: `node tests/mac/9router_hotswap.check.cjs`. The earlier session reported local GREEN with temporary fake applications, isolated Caddy state, and ephemeral ports. That result is not Namespace acceptance evidence. Re-run the check from the guest source checkout under the Namespace-only contract. Existing proxy proof files are not deployment machinery.
 
 ## Runtime contract
 
@@ -229,7 +249,9 @@ git commit -m "test(mac): prove stream-safe proxy route switching"
 
 **Stop ownership:** The controller owns launchd bootout. Worker `stop` is a prepare/retirement operation, not self-bootout. Close admission only after positive zero-work and route-away checks; reconfirm app quiescence after admission closes. Return `mode: stopped` only after the owned app exits and the bridge is closed. Keep control/wrapper alive so KeepAlive cannot recreate the app; the controller then bootouts that slot. A failed or unknown final count retains the app and refuses retirement. Standalone tests terminate the wrapper they created after this acknowledgement. Do NOT invoke launchctl from the worker.
 
-**Current baseline revalidation:** All seven isolated Task 1/3 checks exited 0 at `2fe136b84f9cad6b06c95d3f8ccdd82a0b655359`, including specific mirror counterfactuals. The dispatch census measured 596 files, 64 dispatches and 53 issuer paths. These checks do NOT establish packaged qualification.
+**Historical local baseline revalidation:** The Task 2 report records seven isolated Task 1/3 checks exiting 0 at `2fe136b84f9cad6b06c95d3f8ccdd82a0b655359`, including specific mirror counterfactuals. The reported dispatch census measured 596 files, 64 dispatches and 53 issuer paths. These local results do NOT establish Namespace acceptance or packaged qualification.
+
+**Task 2 acceptance status:** Git verifies implementation commit `baf26ca4f48a810bb6303615590443e3b3d40643`. The completion report records local native checks and 66 targeted unit tests passing; this session has not independently rerun them. Keep Task 2 unaccepted until independent specification/code review and revision-bound Namespace revalidation complete. The reported h2c timeout remains unproven; compare baseline and reviewed head in Namespace as specified above. Do not proceed to release acceptance or production enrollment using local results.
 
 - [ ] **Step 1: Write failing drain tests.**
 
@@ -582,7 +604,9 @@ git commit -m "fix(mac): refuse destructive dashboard updates in managed mode"
 
 **Files:** Modify `scripts/mac/9router_path_watchdog.py`, `scripts/mac/9router_vm_qualify.py`, `scripts/mac/9router_devbox_baseline.sh`, `scripts/mac/9router_devbox_restore.sh`, and their existing `tests/mac/` modules.
 
-**Interfaces:** Qualification receipt includes `protocol: 1`, exact tarball digest, deploy/controller/worker/template hashes, persistence digest, proxy version, per-check measured counts, and `result`. Host cleanup stops the named devbox and verifies stopped state via a non-activating metadata read.
+**Interfaces:** Qualification receipt includes `protocol: 1`, exact tarball digest, deploy/controller/worker/template hashes, persistence digest, proxy version, per-check measured counts, and `result`. Include Namespace devbox/instance identity, source commit/patch digest, guest/runtime versions, and each check's exit code and evidence digest. Host cleanup stops the named devbox and verifies stopped state via non-activating metadata reads immediately and after 60 seconds. Overall success requires complete guest evidence AND verified cleanup.
+
+**Additional files:** Modify only the existing CI test workflows that need Namespace dispatch; discover their exact paths before implementation. Preserve required check names and gates. Provision the guest test dependencies in the existing baseline/restore scripts. Do not add a parallel laptop test runner or a second qualification path.
 
 - [ ] **Step 1: Write qualification and watchdog refusal assertions.**
 
@@ -621,11 +645,13 @@ Receipt gates all named checks; a missing check is failure. Bind the exact tarba
 
 The persistent devbox layout remains on `/Volumes/devbox/9router`; regenerate short private socket paths after VM activation. Restore plists with concrete slot configs before starting the proxy. Do not delete a release directory while a worker references it. The harness stops/awaits isolated fixture sessions before guest baseline reset.
 
-At the host qualification boundary, put `devbox stop <exact-name> --force` in `finally` for success, failure, timeout, and interrupt. Independently read stopped state without SSH, session listing, exec, or any activating API. A stop failure is an infrastructure failure, not qualification success. Do not send support requests or revoke credentials automatically. This plan does not add audit attribution tooling.
+At the outermost host test/qualification boundary, establish cleanup ownership before activation and put `devbox stop <exact-name> --force` in `finally` for provisioning failure, setup failure, test failure, evidence-export failure, success, timeout, and interrupt. Close owned activating connections first. Independently verify stopped state and absent instance ID immediately and after 60 seconds without SSH, session listing, exec, or any activating API. Stop failure, unreadable state, or reactivation is an infrastructure failure, not overall success. Preserve the guest test outcome separately from cleanup outcome. Do not send support requests or revoke credentials automatically. This plan does not add audit attribution tooling.
 
 Watchdog continues probing stable `20128` and Tailscale/helper health. Enrolled mode targets the PROXY label only for a failed proxy, and the ACTIVE worker label for confirmed active-worker failure. It does not kickstart healthy workers merely because they are draining. Unknown control state alarms and does not grant drain-complete permission. Retain existing cooldown behavior. Do not restart external Tailscale for a candidate failure.
 
-- [ ] **Step 4: Run local deterministic tests, then qualification only after authorization.**
+- [ ] **Step 4: Run all deterministic tests and qualification in Namespace, only after activation authorization.**
+
+The following commands execute INSIDE the guest source checkout, never on the laptop. The host may invoke the orchestrator, but it must dispatch these processes to Namespace. Complete Tasks 1/3 revalidation and every new unit/integration check there before package qualification.
 
 ```bash
 python3 -m pytest tests/mac/test_9router_deploy.py tests/mac/test_9router_hotswap.py tests/mac/test_9router_vm_qualify.py tests/mac/test_9router_path_watchdog.py tests/mac/test_9router_devbox_restore.py -q
@@ -687,7 +713,9 @@ Record exact serving version, tarball/runtime hashes, proxy PID before/after, co
 - Crash reconciliation never guesses a route from stale state alone.
 - Existing API authentication, dashboard secrets, and client-IP trust boundaries remain intact.
 - Qualification receipt covers exact tarball and runtime bundle, with nonzero named subjects.
-- Qualification success, failure, and interruption all leave compute verifiably stopped or report an explicit cleanup failure.
+- Every executable test, counterfactual, lint/scan gate, package check, and required hot-swap CI test executes in Namespace with revision-bound evidence. Historical local results do not satisfy acceptance.
+- No laptop fallback, skipped guest check, zero-subject check, or unavailable scan can produce an accepted task/release verdict.
+- Setup, testing, export, qualification success, failure, timeout, and interruption all leave compute verifiably stopped immediately and after 60 seconds, or report an explicit cleanup failure that blocks overall success.
 
 ## Plan self-review
 
