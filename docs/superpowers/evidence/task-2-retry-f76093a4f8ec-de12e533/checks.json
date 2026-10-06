@@ -1,0 +1,1086 @@
+[
+  {
+    "name": "caddy-download",
+    "argv": [
+      "/usr/bin/curl",
+      "--fail",
+      "--location",
+      "--retry",
+      "2",
+      "--max-time",
+      "120",
+      "--output",
+      "/Volumes/devbox/qde12e533/caddy.tar.gz",
+      "https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_mac_arm64.tar.gz"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.294,
+    "population": {
+      "unit": "pinned guest runtime downloads",
+      "count": 1
+    }
+  },
+  {
+    "name": "caddy-extract",
+    "argv": [
+      "/usr/bin/tar",
+      "-xzf",
+      "/Volumes/devbox/qde12e533/caddy.tar.gz",
+      "-C",
+      "/Volumes/devbox/qde12e533/tools",
+      "caddy"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.082,
+    "population": {
+      "unit": "verified runtime extractions",
+      "count": 1
+    }
+  },
+  {
+    "name": "clone-head",
+    "argv": [
+      "git",
+      "clone",
+      "--no-checkout",
+      "/Volumes/devbox/qde12e533/source.bundle",
+      "/Volumes/devbox/qde12e533/head"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.687,
+    "population": {
+      "unit": "checkout",
+      "count": 1
+    }
+  },
+  {
+    "name": "checkout-head",
+    "argv": [
+      "git",
+      "checkout",
+      "--detach",
+      "f76093a4f8ecbf59d6b242c477293af897f02951"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 2.446,
+    "population": {
+      "unit": "revision",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-head-app",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 13.947,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-head-tests",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.574,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "clone-baseline",
+    "argv": [
+      "git",
+      "clone",
+      "--no-checkout",
+      "/Volumes/devbox/qde12e533/source.bundle",
+      "/Volumes/devbox/qde12e533/baseline"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.298,
+    "population": {
+      "unit": "checkout",
+      "count": 1
+    }
+  },
+  {
+    "name": "checkout-baseline",
+    "argv": [
+      "git",
+      "checkout",
+      "--detach",
+      "5fd82262218f5f00b4f987587318908e548ad65a"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.189,
+    "population": {
+      "unit": "revision",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-baseline-app",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 5.69,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-baseline-tests",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.356,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "worker",
+    "argv": [
+      "node",
+      "tests/mac/9router_worker.check.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 89.192,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "6af1afc8e8f30673f3e2a5a030fdbe3606d55cc52e3972713e41b3aa74e4ea2b",
+    "requiredMarkers": [
+      "PASS: real pinned workers"
+    ]
+  },
+  {
+    "name": "proxy",
+    "argv": [
+      "node",
+      "tests/mac/9router_hotswap.check.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 89.544,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "0e5429741b3c0e15f78dad9c85a05e9f6e57510986157b0664158dcf0e9513aa",
+    "requiredMarkers": [
+      "PASS"
+    ]
+  },
+  {
+    "name": "proxy-counterfactual",
+    "argv": [
+      "node",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 179.217,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "5e85f658274029129d599370e99bb40fa62fb134b2d3401115be4dcc20bb544b",
+    "requiredMarkers": [
+      "GREEN: unchanged byte-identical mirror",
+      "RED: removing only",
+      "PASS: routing counterfactual"
+    ]
+  },
+  {
+    "name": "cleanup",
+    "argv": [
+      "node",
+      "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
+      "tests/unit/managed-cleanup.check.mjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 1.223,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "45dda26e647374af0cb86a7b97eb77e85f0b6fe24456cfd5aa78b0fb58fce694",
+    "requiredMarkers": []
+  },
+  {
+    "name": "templates",
+    "argv": [
+      "python3",
+      "tests/mac/test_9router_worker_templates.py"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.049,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "d05353ee3286744b7bb0deb911f35ab2ac24a5b74402b22d0f5b369f59141e3b",
+    "requiredMarkers": []
+  },
+  {
+    "name": "dispatch",
+    "argv": [
+      "node",
+      "tests/unit/managed-dispatch.check.mjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.43,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "146105b033af6ecc44f33a612f865138209526a984f5af4896982906d76f4666",
+    "requiredMarkers": [
+      "GREEN: AST/import-aware census"
+    ]
+  },
+  {
+    "name": "state",
+    "argv": [
+      "node",
+      "tests/unit/managed-state.check.mjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.141,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "94b95cc4033c70380a79c0f773136428b9deeb9110a9716689d4c6e6c50d197e",
+    "requiredMarkers": []
+  },
+  {
+    "name": "refresh-cross-process",
+    "argv": [
+      "node",
+      "tests/unit/token-refresh-cross-process.check.mjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.837,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "928b800af31c8bdd9ed0693da0a913a72a4731d8cc291f4fe4705296d6cfcdab",
+    "requiredMarkers": []
+  },
+  {
+    "name": "cas-process",
+    "argv": [
+      "node",
+      "tests/unit/managed-cas-process.check.mjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 1.264,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "4d64ff9c6a3b48a210543d6beab072faf8685479617bb25fd480838a37f3bf78",
+    "requiredMarkers": []
+  },
+  {
+    "name": "task2-unit",
+    "argv": [
+      "node",
+      "tests/node_modules/vitest/vitest.mjs",
+      "run",
+      "--config",
+      "/Volumes/devbox/qde12e533/targeted.config.mjs",
+      "tests/unit/managed-buffer.test.js",
+      "tests/unit/managed-detached.test.js",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/background-token-refresh.test.js",
+      "tests/unit/quota-auto-ping.test.js",
+      "tests/unit/cli-build-artifacts.test.js",
+      "tests/unit/custom-server-peer-headers.test.js",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/request-details-metadata-mode.test.js",
+      "tests/unit/responses-mid-turn-steering.test.js",
+      "--reporter=json",
+      "--outputFile=/Volumes/devbox/qde12e533/evidence/task2-unit.json"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 1.853,
+    "population": {
+      "unit": "selected unit modules",
+      "count": 10
+    },
+    "testCount": 84,
+    "fileCount": 10,
+    "reportSha256": "a5b67742875c66e6acc358911525b0f71c7f4c4c0426ee76bd25d0589f350d96"
+  },
+  {
+    "name": "syntax-0",
+    "argv": [
+      "node",
+      "--check",
+      "scripts/mac/9router_worker.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.05,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-1",
+    "argv": [
+      "node",
+      "--check",
+      "custom-server.js"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.044,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-2",
+    "argv": [
+      "node",
+      "--check",
+      "src/lib/db/managed.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.052,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-3",
+    "argv": [
+      "node",
+      "--check",
+      "src/lib/db/repos/settingsRepo.js"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.052,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-4",
+    "argv": [
+      "node",
+      "--check",
+      "src/shared/services/initializeApp.js"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.048,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-5",
+    "argv": [
+      "node",
+      "--check",
+      "tests/mac/9router_worker.check.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.053,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-6",
+    "argv": [
+      "node",
+      "--check",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.052,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-7",
+    "argv": [
+      "node",
+      "--check",
+      "tests/unit/managed-worker.test.js"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.053,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-8",
+    "argv": [
+      "node",
+      "--check",
+      "tests/unit/managed-credentials.test.js"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.057,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-baseline",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 10.164,
+    "population": {
+      "unit": "original baseline h2c failing reproduction",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-diagnostic-baseline",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "/Volumes/devbox/qde12e533/baseline/tests/unit/h2c-diagnostic.cjs"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 10.148,
+    "population": {
+      "unit": "instrumented test mirrors; not acceptance",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-coalesced-baseline",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "/Volumes/devbox/qde12e533/baseline/tests/unit/h2c-diagnostic.cjs"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 10.119,
+    "population": {
+      "unit": "coalesced-body counterfactual; not acceptance",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-head",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.207,
+    "population": {
+      "unit": "h2c framing and upgrade regression cases",
+      "count": 5
+    },
+    "logSha256": "26e4b0edf5174838c98fc72d499865679d5caf67040b99ed1db796447c8b4cba",
+    "requiredMarkers": []
+  },
+  {
+    "name": "h2c-counterfactual",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 4.203,
+    "population": {
+      "unit": "new regression suite on pre-fix server mirror; expected failure",
+      "count": 5
+    }
+  },
+  {
+    "name": "h2c-managed",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c-managed.test.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.209,
+    "population": {
+      "unit": "managed h2c HTTP and IPC drain cases",
+      "count": 1
+    }
+  },
+  {
+    "name": "lint-venv",
+    "argv": [
+      "python3",
+      "-m",
+      "venv",
+      "/Volumes/devbox/qde12e533/lint-venv"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 1.791,
+    "population": {
+      "unit": "isolated lint environments",
+      "count": 1
+    }
+  },
+  {
+    "name": "ruff-install",
+    "argv": [
+      "/Volumes/devbox/qde12e533/lint-venv/bin/python",
+      "-m",
+      "pip",
+      "install",
+      "--disable-pip-version-check",
+      "ruff==0.15.18"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.582,
+    "population": {
+      "unit": "pinned lint tools",
+      "count": 1
+    }
+  },
+  {
+    "name": "ruff-check",
+    "argv": [
+      "/Volumes/devbox/qde12e533/lint-venv/bin/python",
+      "-m",
+      "ruff",
+      "check",
+      "--select=E,F,I",
+      "tests/mac/test_9router_worker_templates.py"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.051,
+    "population": {
+      "unit": "changed Python source files",
+      "count": 1
+    }
+  },
+  {
+    "name": "ruff-format",
+    "argv": [
+      "/Volumes/devbox/qde12e533/lint-venv/bin/python",
+      "-m",
+      "ruff",
+      "format",
+      "--check",
+      "tests/mac/test_9router_worker_templates.py"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.05,
+    "population": {
+      "unit": "changed Python source files",
+      "count": 1
+    }
+  },
+  {
+    "name": "s3776-self-check",
+    "argv": [
+      "/Volumes/devbox/qde12e533/lint-venv/bin/python",
+      "-c",
+      "import sys; sys.path.insert(0,'/Volumes/devbox/qde12e533'); import sonar_pr_issues as s; raise SystemExit(s.self_check(sys.argv[2:],base=sys.argv[1]))",
+      "a6e5f9e83737c77a9f06ad9f0c09672df327008a",
+      "tests/mac/test_9router_worker_templates.py"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.156,
+    "population": {
+      "unit": "changed Python source files",
+      "count": 1
+    }
+  },
+  {
+    "name": "eslint",
+    "argv": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "--no-warn-ignored",
+      "cli/scripts/build-cli.js",
+      "custom-server.js",
+      "open-sse/executors/antigravity.js",
+      "open-sse/executors/default.js",
+      "open-sse/executors/gemini-cli.js",
+      "open-sse/executors/github.js",
+      "open-sse/handlers/chatCore/nonStreamingHandler.js",
+      "open-sse/handlers/chatCore/requestDetail.js",
+      "open-sse/handlers/chatCore/streamingHandler.js",
+      "open-sse/handlers/responsesWs/session.js",
+      "open-sse/services/copilotModels.js",
+      "open-sse/services/oauthCredentialManager.js",
+      "open-sse/services/tokenRefresh/dedup.js",
+      "open-sse/services/tokenRefresh/providers.js",
+      "open-sse/utils/proxyFetch.js",
+      "open-sse/utils/stream.js",
+      "open-sse/utils/streamHandler.js",
+      "scripts/mac/9router_worker.cjs",
+      "src/app/api/providers/[id]/models/route.js",
+      "src/app/api/providers/[id]/route.js",
+      "src/app/api/providers/[id]/test/testUtils.js",
+      "src/app/api/translator/send/route.js",
+      "src/app/api/usage/[connectionId]/route.js",
+      "src/app/api/v1/models/route.js",
+      "src/app/api/version/route.js",
+      "src/lib/dataDir.js",
+      "src/lib/db/driver.js",
+      "src/lib/db/managed.cjs",
+      "src/lib/db/repos/connectionsRepo.js",
+      "src/lib/db/repos/requestDetailsRepo.js",
+      "src/lib/db/repos/settingsRepo.js",
+      "src/lib/db/repos/usageRepo.js",
+      "src/shared/services/initializeApp.js",
+      "src/shared/services/quotaAutoPing.js",
+      "src/sse/services/backgroundTokenRefresh.js",
+      "src/sse/services/tokenRefresh.js",
+      "tests/mac/9router_hotswap.check.cjs",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs",
+      "tests/mac/9router_worker.check.cjs",
+      "tests/unit/cli-build-artifacts.test.js",
+      "tests/unit/custom-server-h2c.test.cjs",
+      "tests/unit/managed-buffer.test.js",
+      "tests/unit/managed-cas-process.check.mjs",
+      "tests/unit/managed-cleanup.check.mjs",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/managed-detached.test.js",
+      "tests/unit/managed-dispatch.check.mjs",
+      "tests/unit/managed-imports.loader.mjs",
+      "tests/unit/managed-review-batch.test.js",
+      "tests/unit/managed-review-counterfactual.check.mjs",
+      "tests/unit/managed-state.check.mjs",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/token-refresh-cross-process.check.mjs",
+      "tests/unit/custom-server-h2c-managed.test.cjs"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 2.971,
+    "population": {
+      "unit": "changed JavaScript source and test files",
+      "count": 54
+    }
+  },
+  {
+    "name": "sonar-download",
+    "argv": [
+      "/usr/bin/curl",
+      "--fail",
+      "--location",
+      "--max-time",
+      "120",
+      "--output",
+      "/Volumes/devbox/qde12e533/tools/sonar",
+      "https://binaries.sonarsource.com/Distribution/sonarqube-cli/1.9.0.15656/macos/sonarqube-cli-1.9.0.15656-macos-arm64.bin"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.54,
+    "population": {
+      "unit": "pinned scanner downloads",
+      "count": 1
+    }
+  },
+  {
+    "name": "sonar-version",
+    "argv": [
+      "/Volumes/devbox/qde12e533/tools/sonar",
+      "--version"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.153,
+    "population": {
+      "unit": "pinned scanner versions",
+      "count": 1
+    }
+  },
+  {
+    "name": "sonar-secrets",
+    "argv": [
+      "/Volumes/devbox/qde12e533/tools/sonar",
+      "analyze",
+      "secrets",
+      ".gitignore",
+      "cli/scripts/build-cli.js",
+      "custom-server.js",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/archive-baseline.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/archive-head.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/bundle.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/evidence-sha256.json",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/export-evidence.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/final-metadata-after-60-seconds.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/final-metadata-immediate.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/final-stop-api.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/guest-battery.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/guest-isolated-directory.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/guest-runner.py",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/host-orchestrator.py",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-after-60-seconds.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-after-api.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-before.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-immediate.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-reader.mjs",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-running.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/orchestration.json",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/source-manifest.json",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/stop-api.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/stop-cli.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/summary.json",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/test-lock-input.json",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/test-provision-orchestrator.py",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-baseline.tar.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-expected-inputs.json.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-guest-runner.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-head.tar.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-source.bundle.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/upload-vitest.config.mjs.log",
+      "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/vitest-provision.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/alias-config.mjs",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/caddy-download.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/caddy-extract.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/checkout-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/checkout-head.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/checks.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/clone-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/clone-head.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/dependencies-baseline-app.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/dependencies-baseline-tests.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/dependencies-head-app.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/dependencies-head-tests.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/dependencies.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/guest-runner.py",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/h2c-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/h2c-coalesced-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/h2c-counterfactual.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/h2c-diagnostic-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/h2c-head.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/host.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/identity.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/manifest.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/orchestrator.mjs",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/runtime.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-7f73c805/tests-package-lock.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/alias-config.mjs",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/caddy-download.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/caddy-extract.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/cas-process.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/checkout-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/checkout-head.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/checks.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/cleanup.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/clone-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/clone-head.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/dependencies-baseline-app.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/dependencies-baseline-tests.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/dependencies-head-app.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/dependencies-head-tests.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/dependencies.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/dispatch.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/guest-runner.py",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/h2c-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/h2c-coalesced-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/h2c-counterfactual.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/h2c-diagnostic-baseline.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/h2c-head.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/host.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/identity.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/manifest.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/orchestrator.mjs",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/proxy-counterfactual.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/proxy.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/refresh-cross-process.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/runtime.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/state.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/syntax-0.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/syntax-1.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/syntax-2.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/syntax-3.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/syntax-4.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/syntax-5.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/syntax-6.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/syntax-7.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/syntax-8.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/task2-unit.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/task2-unit.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/templates.log",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/tests-package-lock.json",
+      "docs/superpowers/evidence/task-2-retry-1f8d2e5d7825-ea76e6c8/worker.log",
+      "docs/superpowers/plans/2026-10-05-9router-hot-swap.md",
+      "open-sse/executors/antigravity.js",
+      "open-sse/executors/default.js",
+      "open-sse/executors/gemini-cli.js",
+      "open-sse/executors/github.js",
+      "open-sse/handlers/chatCore/nonStreamingHandler.js",
+      "open-sse/handlers/chatCore/requestDetail.js",
+      "open-sse/handlers/chatCore/streamingHandler.js",
+      "open-sse/handlers/responsesWs/session.js",
+      "open-sse/services/copilotModels.js",
+      "open-sse/services/oauthCredentialManager.js",
+      "open-sse/services/tokenRefresh/dedup.js",
+      "open-sse/services/tokenRefresh/providers.js",
+      "open-sse/utils/proxyFetch.js",
+      "open-sse/utils/stream.js",
+      "open-sse/utils/streamHandler.js",
+      "scripts/mac/9router_worker.cjs",
+      "scripts/mac/templates/9router.Caddyfile",
+      "scripts/mac/templates/com.lfenergy.9router-proxy.plist",
+      "scripts/mac/templates/com.lfenergy.9router-worker.plist",
+      "src/app/api/providers/[id]/models/route.js",
+      "src/app/api/providers/[id]/route.js",
+      "src/app/api/providers/[id]/test/testUtils.js",
+      "src/app/api/translator/send/route.js",
+      "src/app/api/usage/[connectionId]/route.js",
+      "src/app/api/v1/models/route.js",
+      "src/app/api/version/route.js",
+      "src/lib/dataDir.js",
+      "src/lib/db/driver.js",
+      "src/lib/db/managed.cjs",
+      "src/lib/db/repos/connectionsRepo.js",
+      "src/lib/db/repos/requestDetailsRepo.js",
+      "src/lib/db/repos/settingsRepo.js",
+      "src/lib/db/repos/usageRepo.js",
+      "src/shared/services/initializeApp.js",
+      "src/shared/services/quotaAutoPing.js",
+      "src/sse/services/backgroundTokenRefresh.js",
+      "src/sse/services/tokenRefresh.js",
+      "tests/mac/9router_hotswap.check.cjs",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs",
+      "tests/mac/9router_worker.check.cjs",
+      "tests/mac/test_9router_worker_templates.py",
+      "tests/unit/cli-build-artifacts.test.js",
+      "tests/unit/custom-server-h2c.test.cjs",
+      "tests/unit/managed-buffer.test.js",
+      "tests/unit/managed-cas-process.check.mjs",
+      "tests/unit/managed-cleanup.check.mjs",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/managed-detached.test.js",
+      "tests/unit/managed-dispatch.check.mjs",
+      "tests/unit/managed-imports.loader.mjs",
+      "tests/unit/managed-review-batch.test.js",
+      "tests/unit/managed-review-counterfactual.check.mjs",
+      "tests/unit/managed-state.check.mjs",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/token-refresh-cross-process.check.mjs",
+      "tests/unit/custom-server-h2c-managed.test.cjs",
+      "tests/mac/test_9router_worker_templates.py"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 5.599,
+    "population": {
+      "unit": "changed branch files and enumerated test patches",
+      "count": 163
+    },
+    "logSha256": "f45eccbb0f176df38dd32b331e31ebe4e057a908413e3ae609b20e3d7fa64580",
+    "leg": "secrets only; not code analysis"
+  },
+  {
+    "name": "templates-patched",
+    "argv": [
+      "python3",
+      "tests/mac/test_9router_worker_templates.py"
+    ],
+    "revision": "f76093a4f8ecbf59d6b242c477293af897f02951",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.047,
+    "population": {
+      "unit": "patched template assertion commands",
+      "count": 1
+    },
+    "logSha256": "d05353ee3286744b7bb0deb911f35ab2ac24a5b74402b22d0f5b369f59141e3b",
+    "requiredMarkers": []
+  }
+]

@@ -1,0 +1,1 @@
+PASS: real pinned workers preserve SSE/WS/private self-fetch; late dials, cleanup, unknown work, quiet interval, resume, stop wrapper, crashes and invalid control/config

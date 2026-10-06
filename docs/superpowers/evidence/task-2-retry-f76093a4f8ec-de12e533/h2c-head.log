@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: serves split h2c POST requests as HTTP/1.1
+ok 1 - serves split h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 40.055208
+  type: 'test'
+  ...
+# Subtest: serves coalesced h2c POST requests as HTTP/1.1
+ok 2 - serves coalesced h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 2.710875
+  type: 'test'
+  ...
+# Subtest: serves chunked h2c POST requests as HTTP/1.1
+ok 3 - serves chunked h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 27.161958
+  type: 'test'
+  ...
+# Subtest: serves empty h2c POST requests as HTTP/1.1
+ok 4 - serves empty h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 1.254083
+  type: 'test'
+  ...
+# Subtest: preserves non-h2c upgrade selection
+ok 5 - preserves non-h2c upgrade selection
+  ---
+  duration_ms: 1.387292
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 129.092417

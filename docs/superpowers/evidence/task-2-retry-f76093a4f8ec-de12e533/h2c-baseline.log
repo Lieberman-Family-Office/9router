@@ -1,0 +1,20 @@
+TAP version 13
+# Subtest: serves h2c POST requests as HTTP/1.1
+not ok 1 - serves h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 10012.865542
+  type: 'test'
+  location: '/Volumes/devbox/qde12e533/baseline/tests/unit/custom-server-h2c.test.cjs:6:1'
+  failureType: 'testTimeoutFailure'
+  error: 'test timed out after 10000ms'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 0
+# cancelled 1
+# skipped 0
+# todo 0
+# duration_ms 10061.384167
