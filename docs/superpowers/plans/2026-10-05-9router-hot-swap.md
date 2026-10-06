@@ -607,7 +607,7 @@ git commit -m "feat(mac): transact hot-swap deployment and rollback"
 
 **Interfaces:** Preserve both existing `POST()` signatures. Managed calls return HTTP 409 with a deployment-controller instruction before any process mutation. Unmanaged behavior stays unchanged. The supported release entry remains `9router_deploy.py deploy <qualified-tarball>`; this task does not expose a shell-running dashboard deployment endpoint.
 
-- [ ] **Step 1: Add a dispatch-level regression test.**
+- [x] **Step 1: Add a dispatch-level regression test.**
 
 ```javascript
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -657,11 +657,11 @@ describe('managed release endpoints', () => {
 });
 ```
 
-- [ ] **Step 2: Run RED.**
+- [x] **Step 2: Run RED.**
 
 From `tests/`, run `npx vitest run unit/managed-update.test.js`. Expect managed status assertions to fail against the current 200 responses. Fake timers prevent the shutdown callback from terminating the test process.
 
-- [ ] **Step 3: Insert this guard at the start of EACH existing `POST()` body.**
+- [x] **Step 3: Insert this guard at the start of EACH existing `POST()` body.**
 
 ```javascript
 if (process.env.NINEROUTER_MANAGED_WORKER === '1') {
@@ -674,11 +674,13 @@ if (process.env.NINEROUTER_MANAGED_WORKER === '1') {
 
 The update guard precedes the production check. The shutdown guard precedes `killAppProcesses()`. Do NOT modify auth middleware or disable existing access controls.
 
-- [ ] **Step 4: Run GREEN.**
+- [x] **Step 4: Run GREEN.**
 
 From `tests/`, run `npx vitest run unit/managed-update.test.js`. Expect all three tests to pass. Test dashboard update and manual-shutdown refusal again through the packaged candidate during qualification.
 
-- [ ] **Step 5: Commit.**
+**Verified 2026-10-06:** Namespace run `task4b-94b4aa69ea24-eeb42f36`, devbox `2tc0b2eg4mveo`, instance `lem03ra182qcs`. The expanded dispatch suite passed 8/8 cases. Baseline RED failed exactly four managed cases; removing either guard failed exactly its two managed cases. Syntax, ESLint and the three-file secrets scan passed. Guest `cli:pack` produced SHA-256 `40d0ad8a153c93c0ad8ddcc7a7d7e22d7379e5a46564503445c3c3f086ae34b0`; authenticated packaged POSTs returned the exact 409 body and unauthenticated POSTs remained 401. Worker/app PIDs stayed 1030/1031 through all four checks. Metadata showed stopped/no instance at `18:35:45.218Z` and `18:36:45.296Z` (60.077 seconds apart). Ruff and the Python-only S3776 self-check did not run because this change is JavaScript-only; this receipt does not license a push. Sonar code analysis and Task 5 full hot-swap qualification did not run.
+
+- [x] **Step 5: Commit.**
 
 ```bash
 git add src/app/api/version/update/route.js src/app/api/version/shutdown/route.js tests/unit/managed-update.test.js
