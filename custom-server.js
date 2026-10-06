@@ -122,6 +122,12 @@ http.createServer = (...args) => {
   const rest = args.filter((a) => typeof a !== "function");
   if (!handler) return origCreate(...args);
   const wrapped = (req, res) => {
+    if (String(req.headers.upgrade || "").toLowerCase() === "h2c") {
+      delete req.headers.upgrade;
+      delete req.headers["http2-settings"];
+      req.headers.connection = "close";
+      res.shouldKeepAlive = false;
+    }
     if (managed) {
       const responseDone = managed.beginWork("responses");
       res.once("finish", responseDone);
@@ -157,6 +163,15 @@ http.createServer = (...args) => {
     } catch (error) { done(); throw error; }
   };
   const server = origCreate(...rest, wrapped);
+  // Keep h2c in the native HTTP parser: Node 26 separates request bodies from upgrade streams.
+  if (typeof server.shouldUpgradeCallback === "function") {
+    const shouldUpgrade = server.shouldUpgradeCallback;
+    server.shouldUpgradeCallback = function (req) {
+      return String(req.headers.upgrade || "").toLowerCase() !== "h2c"
+        && shouldUpgrade.call(this, req);
+    };
+  }
+  // ponytail: older Node runtimes lack upgrade selection; retain the legacy replay below until support ends.
   server.once("listening", () => {
     startBackgroundTokenRefreshFromCustomServer();
     startResponsesWsFromCustomServer(server);
