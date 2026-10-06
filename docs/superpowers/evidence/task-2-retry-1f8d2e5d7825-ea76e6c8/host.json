@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "runId": "1f8d2e5d7825-ea76e6c8",
+  "head": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+  "baseline": "5fd82262218f5f00b4f987587318908e548ad65a",
+  "counterfactualBaseline": "245de4a9df6e62a3134d67c30c017a2ef6b43376",
+  "authorization": {
+    "quote": "Yes—apply the targeted fix and validate in Namespace with verified shutdown (Recommended)",
+    "turnTime": "2026-10-05T21:50:00-04:00",
+    "provenance": "Actual operator response namespace_h2c=yes in this conversation. Validate h2c and related Task 2 checks only. Production is outside scope."
+  },
+  "testScope": "task2",
+  "runtime": {
+    "node": "v26.10.0",
+    "npm": "11.19.1",
+    "python": "observe",
+    "caddy": "2.11.4",
+    "macos": "observe"
+  },
+  "caddyArchiveSha256": "9efb0af2d6cf09cfb5053c0e51721b9b3d4956d346234f39368d943d25a3c9a7",
+  "runtimeFiles": {
+    "scripts/mac/9router_worker.cjs": "1490de1734cfb4d5a5e7ffd4f68ce67529111ad527aff603ae2f2113ed280a5d",
+    "custom-server.js": "c25cea6fb57ad639f4c93bd1cd31ee93074b3b0e1bd749285b97a0e3f91161ca",
+    "src/lib/db/managed.cjs": "68b465c56d8d1e7007814650d8b03aa4a83fd2d5a68d933a14c512a0d59256ab",
+    "scripts/mac/templates/9router.Caddyfile": "2c87d8b4264f10c543be10bed6eb7af5aab51ed58cecf04fc94b01fc218923d3",
+    "scripts/mac/templates/com.lfenergy.9router-worker.plist": "e54bc604ac404f6a1299bb92187c7b256e68ececa600d005434f677c735a57c5",
+    "scripts/mac/templates/com.lfenergy.9router-proxy.plist": "b2bf50f2b20f0ce462ca7d6087efd9bdf3e5c864735b3fde69fa96674c870003"
+  },
+  "lockHashes": {
+    "head": {
+      "package-lock.json": "f1d1aad476398e11e2cc3164c0802fb8ec8f76509f2042a98854b426d1e7aed8",
+      "tests/package-lock.json": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff"
+    },
+    "baseline": {
+      "package-lock.json": "f1d1aad476398e11e2cc3164c0802fb8ec8f76509f2042a98854b426d1e7aed8",
+      "tests/package-lock.json": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff"
+    }
+  },
+  "bundleSha256": "cf896673a2212463a0cc5eb8eb6639237f57b5d445b40717255161e0963410de",
+  "runnerSha256": "0813e49bdf0c121eb196545f8fb296d8ab9da95c75689481fc53bd249c17b462",
+  "orchestratorSha256": "803f54d3f089de11ce9d657d577a4d63be54292454fb8a394010dfc18297cd15",
+  "devboxId": "2tc0b2eg4mveo",
+  "lifecycle": [
+    {
+      "phase": "before",
+      "id": "2tc0b2eg4mveo",
+      "name": "9router-qualify-recovery",
+      "state": "stopped",
+      "instanceId": null,
+      "shape": {
+        "vCPUs": 6,
+        "memoryMB": 14336,
+        "architecture": "arm64",
+        "os": "macos"
+      },
+      "at": "2026-10-06T01:58:14.365Z"
+    },
+    {
+      "phase": "activated",
+      "id": "2tc0b2eg4mveo",
+      "name": "9router-qualify-recovery",
+      "state": "running",
+      "instanceId": "nqt4o237r2q3m",
+      "shape": {
+        "vCPUs": 6,
+        "memoryMB": 14336,
+        "architecture": "arm64",
+        "os": "macos"
+      },
+      "at": "2026-10-06T01:58:40.353Z"
+    },
+    {
+      "phase": "immediate",
+      "id": "2tc0b2eg4mveo",
+      "name": "9router-qualify-recovery",
+      "state": "stopped",
+      "instanceId": null,
+      "shape": {
+        "vCPUs": 6,
+        "memoryMB": 14336,
+        "architecture": "arm64",
+        "os": "macos"
+      },
+      "at": "2026-10-06T02:06:48.048Z"
+    },
+    {
+      "phase": "after-60-seconds",
+      "id": "2tc0b2eg4mveo",
+      "name": "9router-qualify-recovery",
+      "state": "stopped",
+      "instanceId": null,
+      "shape": {
+        "vCPUs": 6,
+        "memoryMB": 14336,
+        "architecture": "arm64",
+        "os": "macos"
+      },
+      "at": "2026-10-06T02:07:48.127Z"
+    }
+  ],
+  "result": "incomplete-or-failed",
+  "limitations": [
+    "Context7 confirms stop, detached exec, logs, download, and retained storage; non-activating SDK Fetch behavior is verified from installed SDK source, not the retrieved product docs.",
+    "SDK StopExec may be unsupported by the macOS agent; failure withholds success.",
+    "SDK stop manages its original process group, not detached descendants. Guest runner owns subprocess groups; compute shutdown is the final boundary.",
+    "SDK/CLI are not qualification evidence. No Task 5 fault-injection tests have run.",
+    "SIGKILL/power loss cannot run JavaScript finally; external supervised cleanup would be required for that ceiling."
+  ],
+  "instanceId": "nqt4o237r2q3m",
+  "stage": "guest-start",
+  "executionId": "exec_o9hi512rk81dhafvscetfug1j8",
+  "guestLogCompleted": true,
+  "guestSuccess": false,
+  "interrupted": false
+}

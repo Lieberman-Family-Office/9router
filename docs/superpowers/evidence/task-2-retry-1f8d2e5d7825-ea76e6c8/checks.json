@@ -1,0 +1,663 @@
+[
+  {
+    "name": "caddy-download",
+    "argv": [
+      "/usr/bin/curl",
+      "--fail",
+      "--location",
+      "--retry",
+      "2",
+      "--max-time",
+      "120",
+      "--output",
+      "/Volumes/devbox/qea76e6c8/caddy.tar.gz",
+      "https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_mac_arm64.tar.gz"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.533,
+    "population": {
+      "unit": "pinned guest runtime downloads",
+      "count": 1
+    }
+  },
+  {
+    "name": "caddy-extract",
+    "argv": [
+      "/usr/bin/tar",
+      "-xzf",
+      "/Volumes/devbox/qea76e6c8/caddy.tar.gz",
+      "-C",
+      "/Volumes/devbox/qea76e6c8/tools",
+      "caddy"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.079,
+    "population": {
+      "unit": "verified runtime extractions",
+      "count": 1
+    }
+  },
+  {
+    "name": "clone-head",
+    "argv": [
+      "git",
+      "clone",
+      "--no-checkout",
+      "/Volumes/devbox/qea76e6c8/source.bundle",
+      "/Volumes/devbox/qea76e6c8/head"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.299,
+    "population": {
+      "unit": "checkout",
+      "count": 1
+    }
+  },
+  {
+    "name": "checkout-head",
+    "argv": [
+      "git",
+      "checkout",
+      "--detach",
+      "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 5.65,
+    "population": {
+      "unit": "revision",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-head-app",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 15.706,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-head-tests",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.673,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "clone-baseline",
+    "argv": [
+      "git",
+      "clone",
+      "--no-checkout",
+      "/Volumes/devbox/qea76e6c8/source.bundle",
+      "/Volumes/devbox/qea76e6c8/baseline"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.248,
+    "population": {
+      "unit": "checkout",
+      "count": 1
+    }
+  },
+  {
+    "name": "checkout-baseline",
+    "argv": [
+      "git",
+      "checkout",
+      "--detach",
+      "5fd82262218f5f00b4f987587318908e548ad65a"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.298,
+    "population": {
+      "unit": "revision",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-baseline-app",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 5.462,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-baseline-tests",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.461,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "worker",
+    "argv": [
+      "node",
+      "tests/mac/9router_worker.check.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 89.239,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "6af1afc8e8f30673f3e2a5a030fdbe3606d55cc52e3972713e41b3aa74e4ea2b",
+    "requiredMarkers": [
+      "PASS: real pinned workers"
+    ]
+  },
+  {
+    "name": "proxy",
+    "argv": [
+      "node",
+      "tests/mac/9router_hotswap.check.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 89.593,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "0e5429741b3c0e15f78dad9c85a05e9f6e57510986157b0664158dcf0e9513aa",
+    "requiredMarkers": [
+      "PASS"
+    ]
+  },
+  {
+    "name": "proxy-counterfactual",
+    "argv": [
+      "node",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 179.634,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "54206165e06718fa8596bd9b188c7bc6592b322e3682c613dbf51bed0fd00e74",
+    "requiredMarkers": [
+      "GREEN: unchanged byte-identical mirror",
+      "RED: removing only",
+      "PASS: routing counterfactual"
+    ]
+  },
+  {
+    "name": "cleanup",
+    "argv": [
+      "node",
+      "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
+      "tests/unit/managed-cleanup.check.mjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 1.221,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "45dda26e647374af0cb86a7b97eb77e85f0b6fe24456cfd5aa78b0fb58fce694",
+    "requiredMarkers": []
+  },
+  {
+    "name": "templates",
+    "argv": [
+      "python3",
+      "tests/mac/test_9router_worker_templates.py"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.078,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "d05353ee3286744b7bb0deb911f35ab2ac24a5b74402b22d0f5b369f59141e3b",
+    "requiredMarkers": []
+  },
+  {
+    "name": "dispatch",
+    "argv": [
+      "node",
+      "tests/unit/managed-dispatch.check.mjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.452,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "146105b033af6ecc44f33a612f865138209526a984f5af4896982906d76f4666",
+    "requiredMarkers": [
+      "GREEN: AST/import-aware census"
+    ]
+  },
+  {
+    "name": "state",
+    "argv": [
+      "node",
+      "tests/unit/managed-state.check.mjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.279,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "64654880c4b68aea49d50d91aac7ab0ebe366d8f524d6d862df7c1a8649ba69b",
+    "requiredMarkers": []
+  },
+  {
+    "name": "refresh-cross-process",
+    "argv": [
+      "node",
+      "tests/unit/token-refresh-cross-process.check.mjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.812,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "928b800af31c8bdd9ed0693da0a913a72a4731d8cc291f4fe4705296d6cfcdab",
+    "requiredMarkers": []
+  },
+  {
+    "name": "cas-process",
+    "argv": [
+      "node",
+      "tests/unit/managed-cas-process.check.mjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 1.441,
+    "population": {
+      "unit": "named native proof commands",
+      "count": 1
+    },
+    "logSha256": "0a03bf8f99c0c779077f038bcc9998eb84a27a168c32387711cffc44571d0d00",
+    "requiredMarkers": []
+  },
+  {
+    "name": "task2-unit",
+    "argv": [
+      "node",
+      "tests/node_modules/vitest/vitest.mjs",
+      "run",
+      "--config",
+      "/Volumes/devbox/qea76e6c8/targeted.config.mjs",
+      "tests/unit/managed-buffer.test.js",
+      "tests/unit/managed-detached.test.js",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/background-token-refresh.test.js",
+      "tests/unit/quota-auto-ping.test.js",
+      "tests/unit/cli-build-artifacts.test.js",
+      "tests/unit/custom-server-peer-headers.test.js",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/request-details-metadata-mode.test.js",
+      "tests/unit/responses-mid-turn-steering.test.js",
+      "--reporter=json",
+      "--outputFile=/Volumes/devbox/qea76e6c8/evidence/task2-unit.json"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 2.157,
+    "population": {
+      "unit": "selected unit modules",
+      "count": 10
+    },
+    "testCount": 84,
+    "fileCount": 10,
+    "reportSha256": "fac9e16825965ac316f46a067c1294444ef24acff9d15d84cfb22542d3b5051f"
+  },
+  {
+    "name": "syntax-0",
+    "argv": [
+      "node",
+      "--check",
+      "scripts/mac/9router_worker.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.052,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-1",
+    "argv": [
+      "node",
+      "--check",
+      "custom-server.js"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.056,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-2",
+    "argv": [
+      "node",
+      "--check",
+      "src/lib/db/managed.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.053,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-3",
+    "argv": [
+      "node",
+      "--check",
+      "src/lib/db/repos/settingsRepo.js"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.057,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-4",
+    "argv": [
+      "node",
+      "--check",
+      "src/shared/services/initializeApp.js"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.052,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-5",
+    "argv": [
+      "node",
+      "--check",
+      "tests/mac/9router_worker.check.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.054,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-6",
+    "argv": [
+      "node",
+      "--check",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.05,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-7",
+    "argv": [
+      "node",
+      "--check",
+      "tests/unit/managed-worker.test.js"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.051,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "syntax-8",
+    "argv": [
+      "node",
+      "--check",
+      "tests/unit/managed-credentials.test.js"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.072,
+    "population": {
+      "unit": "syntax files",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-baseline",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 10.162,
+    "population": {
+      "unit": "original baseline h2c failing reproduction",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-diagnostic-baseline",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "/Volumes/devbox/qea76e6c8/baseline/tests/unit/h2c-diagnostic.cjs"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 10.155,
+    "population": {
+      "unit": "instrumented test mirrors; not acceptance",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-coalesced-baseline",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "/Volumes/devbox/qea76e6c8/baseline/tests/unit/h2c-diagnostic.cjs"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 10.161,
+    "population": {
+      "unit": "coalesced-body counterfactual; not acceptance",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-head",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.199,
+    "population": {
+      "unit": "h2c framing and upgrade regression cases",
+      "count": 5
+    },
+    "validationFailure": {
+      "type": "AssertionError",
+      "reason": "skipped native proof"
+    }
+  },
+  {
+    "name": "h2c-counterfactual",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 4.19,
+    "population": {
+      "unit": "new regression suite on pre-fix server mirror; expected failure",
+      "count": 5
+    }
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "versions": {
+    "node": "v26.10.0",
+    "npm": "11.19.1",
+    "caddy": "2.11.4",
+    "python": "3.14.7",
+    "macos": "26.6.2"
+  },
+  "binaries": {
+    "node": {
+      "path": "/opt/homebrew/bin/node",
+      "sha256": "4ca2a42d6d55a834b04d0892c5bc646a6869fcebec57f91c849dac0aa1031610"
+    },
+    "caddy": {
+      "path": "/Volumes/devbox/qea76e6c8/tools/caddy",
+      "sha256": "e9ebf99dfd4b72259debe1830c83e86c63fb89a88e28b4e7c5e78a35fa76c92d"
+    },
+    "python3": {
+      "path": "/opt/homebrew/bin/python3",
+      "sha256": "87d4df53fd91304be5bac391fb204643c36b7df2023c04a0953bcbc7d4fdf634"
+    },
+    "git": {
+      "path": "/opt/homebrew/bin/git",
+      "sha256": "5f0351f649aa1321345229d5256fc8043517778b134a3b4571ecdc3818f124b2"
+    }
+  }
+}

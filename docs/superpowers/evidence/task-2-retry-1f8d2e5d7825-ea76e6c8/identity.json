@@ -1,0 +1,36 @@
+{
+  "head": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+  "baseline": "5fd82262218f5f00b4f987587318908e548ad65a",
+  "counterfactualBaseline": "245de4a9df6e62a3134d67c30c017a2ef6b43376",
+  "bundleSha256": "cf896673a2212463a0cc5eb8eb6639237f57b5d445b40717255161e0963410de",
+  "runnerSha256": "0813e49bdf0c121eb196545f8fb296d8ab9da95c75689481fc53bd249c17b462",
+  "lockHashes": {
+    "head": {
+      "package-lock.json": "f1d1aad476398e11e2cc3164c0802fb8ec8f76509f2042a98854b426d1e7aed8",
+      "tests/package-lock.json": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff"
+    },
+    "baseline": {
+      "package-lock.json": "f1d1aad476398e11e2cc3164c0802fb8ec8f76509f2042a98854b426d1e7aed8",
+      "tests/package-lock.json": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff"
+    }
+  },
+  "authorization": {
+    "quote": "Yes\u2014apply the targeted fix and validate in Namespace with verified shutdown (Recommended)",
+    "turnTime": "2026-10-05T21:50:00-04:00",
+    "provenance": "Actual operator response namespace_h2c=yes in this conversation. Validate h2c and related Task 2 checks only. Production is outside scope."
+  },
+  "devboxId": "2tc0b2eg4mveo",
+  "instanceId": "nqt4o237r2q3m",
+  "success": false,
+  "interrupted": false,
+  "scope": "Task 2 deterministic source checks and routing prerequisites only; NOT packaging/launchd/production qualification",
+  "unrun": [
+    "lint/format",
+    "Sonar scans",
+    "build/package",
+    "native Caddy-to-real-worker",
+    "launchd",
+    "Task 4/5 lifecycle fault-injection proofs"
+  ],
+  "testScope": "task2"
+}
