@@ -1,0 +1,20 @@
+{
+  "before": {
+    "head": "959c577a870a6a598afe05745a8b649f6624f368",
+    "sourceHashes": {
+      "scripts/mac/9router_hotswap.py": "6bc5184ad5757d666b321658bc355786d2105f0d9882c1969f8bdbf0d5509ed6",
+      "scripts/mac/9router_deploy.py": "e18db6376575c2ece526db8800c6a0cd95ce4451a3dbb1c2d1776d850f2167a6",
+      "tests/mac/test_9router_hotswap.py": "aaa143244955f0021c15dcc3a682f2143cbf3913f4a9798db8e48ed3b8c76d43",
+      "tests/mac/test_9router_deploy.py": "85be223d38f2efa9d3098f0a73f4aa7483c84a38c89861d704703215eb7e66bf"
+    }
+  },
+  "after": {
+    "head": "959c577a870a6a598afe05745a8b649f6624f368",
+    "sourceHashes": {
+      "scripts/mac/9router_hotswap.py": "6bc5184ad5757d666b321658bc355786d2105f0d9882c1969f8bdbf0d5509ed6",
+      "scripts/mac/9router_deploy.py": "e18db6376575c2ece526db8800c6a0cd95ce4451a3dbb1c2d1776d850f2167a6",
+      "tests/mac/test_9router_hotswap.py": "aaa143244955f0021c15dcc3a682f2143cbf3913f4a9798db8e48ed3b8c76d43",
+      "tests/mac/test_9router_deploy.py": "85be223d38f2efa9d3098f0a73f4aa7483c84a38c89861d704703215eb7e66bf"
+    }
+  }
+}

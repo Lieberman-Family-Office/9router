@@ -1,0 +1,11 @@
+{
+  "devboxId": "2tc0b2eg4mveo",
+  "instanceId": "tjd6l6mg03ou2",
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "bootstrapPython": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+  "pythonExecutable": "/Volumes/devbox/r652526fc/venv/bin/python3",
+  "pythonSha256": "87d4df53fd91304be5bac391fb204643c36b7df2023c04a0953bcbc7d4fdf634",
+  "installedPytest": true,
+  "versionLogSha256": "6323ebd5190e0445191c577ff5d07a2821ee8fa7df81f6916bad1e600e4a9340"
+}

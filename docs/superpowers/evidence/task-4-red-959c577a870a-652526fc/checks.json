@@ -1,0 +1,208 @@
+[
+  {
+    "name": "extract",
+    "argv": [
+      "/usr/bin/tar",
+      "-xf",
+      "/Volumes/devbox/r652526fc/source.tar",
+      "-C",
+      "/Volumes/devbox/r652526fc/source"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "startedAt": 1791260393.308516,
+    "finishedAt": 1791260403.366966,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "pytest-probe-0",
+    "argv": [
+      "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "-c",
+      "import pytest; print(pytest.__version__)"
+    ],
+    "exitCode": 1,
+    "timeout": false,
+    "startedAt": 1791260403.368347,
+    "finishedAt": 1791260403.4100502,
+    "logSha256": "cb8fbb901b1683ce6b84df491cfaf5df04eb48f60dd6b17b22b3f60bcc8afabe"
+  },
+  {
+    "name": "pytest-probe-1",
+    "argv": [
+      "/opt/homebrew/bin/python3",
+      "-c",
+      "import pytest; print(pytest.__version__)"
+    ],
+    "exitCode": 1,
+    "timeout": false,
+    "startedAt": 1791260403.41058,
+    "finishedAt": 1791260403.452374,
+    "logSha256": "cb8fbb901b1683ce6b84df491cfaf5df04eb48f60dd6b17b22b3f60bcc8afabe"
+  },
+  {
+    "name": "pytest-probe-2",
+    "argv": [
+      "/usr/bin/python3",
+      "-c",
+      "import pytest; print(pytest.__version__)"
+    ],
+    "exitCode": 1,
+    "timeout": false,
+    "startedAt": 1791260403.45264,
+    "finishedAt": 1791260404.886515,
+    "logSha256": "c87267d74d6f6b880a502e9ecfe756819ae9beb898bfbe8ab5100bdfa79c2dcf"
+  },
+  {
+    "name": "venv",
+    "argv": [
+      "/opt/homebrew/opt/python@3.14/bin/python3.14",
+      "-m",
+      "venv",
+      "/Volumes/devbox/r652526fc/venv"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "startedAt": 1791260404.886821,
+    "finishedAt": 1791260409.979193,
+    "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "pytest-install",
+    "argv": [
+      "/Volumes/devbox/r652526fc/venv/bin/python3",
+      "-m",
+      "pip",
+      "install",
+      "--disable-pip-version-check",
+      "pytest==8.4.2"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "startedAt": 1791260409.979872,
+    "finishedAt": 1791260413.774372,
+    "logSha256": "798d8c1b8216799b92ad37fface3ef80fc6c05172a7ad52d82d1e0f4f5029632"
+  },
+  {
+    "name": "runtime",
+    "argv": [
+      "/Volumes/devbox/r652526fc/venv/bin/python3",
+      "-c",
+      "import sys,pytest,importlib.metadata,json;print(json.dumps({\"python\":sys.version,\"pytest\":pytest.__version__,\"packages\":{d.metadata[\"Name\"]:d.version for d in importlib.metadata.distributions()}},indent=2))"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "startedAt": 1791260413.789099,
+    "finishedAt": 1791260413.930874,
+    "logSha256": "6323ebd5190e0445191c577ff5d07a2821ee8fa7df81f6916bad1e600e4a9340"
+  },
+  {
+    "name": "test_9router_hotswap",
+    "argv": [
+      "/Volumes/devbox/r652526fc/venv/bin/python3",
+      "-m",
+      "pytest",
+      "tests/mac/test_9router_hotswap.py",
+      "-q"
+    ],
+    "exitCode": 1,
+    "timeout": false,
+    "startedAt": 1791260413.9313989,
+    "finishedAt": 1791260414.3445928,
+    "logSha256": "dbff597475e2c732a3054b21ac6f188c7eab9cad7829bbd075d5aadc49a0d0df",
+    "collected": 49,
+    "passed": 0,
+    "failed": 0,
+    "errors": 49,
+    "skipped": 0,
+    "failedIdentities": [
+      "tests/mac/test_9router_hotswap.py::test_failed_candidate_never_changes_route",
+      "tests/mac/test_9router_hotswap.py::test_success_switches_only_after_verification",
+      "tests/mac/test_9router_hotswap.py::test_busy_inactive_slot_refuses_next_deploy",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[responses]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[handlers]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[upgrades]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[cleanup]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[persistence]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[refresh]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[background]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[quota]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[websocket]",
+      "tests/mac/test_9router_hotswap.py::test_missing_or_malformed_status_refuses_mutation[None]",
+      "tests/mac/test_9router_hotswap.py::test_missing_or_malformed_status_refuses_mutation[response1]",
+      "tests/mac/test_9router_hotswap.py::test_missing_or_malformed_status_refuses_mutation[response2]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[connections-True]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[connections--1]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[connections-None]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[appWork-None]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[version-foreign]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[slot-b]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[appPid-None]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[mode-failed]",
+      "tests/mac/test_9router_hotswap.py::test_controller_bootouts_only_after_worker_acknowledges_stopped",
+      "tests/mac/test_9router_hotswap.py::test_stop_refusal_preserves_slot_and_route",
+      "tests/mac/test_9router_hotswap.py::test_public_failure_resumes_old_slot_before_switching_back",
+      "tests/mac/test_9router_hotswap.py::test_failed_rollback_keeps_last_serving_route",
+      "tests/mac/test_9router_hotswap.py::test_manual_rollback_reuses_draining_worker_without_restart",
+      "tests/mac/test_9router_hotswap.py::test_flock_refuses_concurrent_deployment",
+      "tests/mac/test_9router_hotswap.py::test_lock_covers_retirement_and_every_route_mutation",
+      "tests/mac/test_9router_hotswap.py::test_corrupted_journal_refuses_without_worker_mutations",
+      "tests/mac/test_9router_hotswap.py::test_status_remains_diagnostic_when_worker_probe_fails",
+      "tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[prepared]",
+      "tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[verified]",
+      "tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[switched]",
+      "tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[committed]",
+      "tests/mac/test_9router_hotswap.py::test_crash_between_route_rename_and_state_commit_recovers_new_route",
+      "tests/mac/test_9router_hotswap.py::test_recovery_with_unknown_new_identity_preserves_workers",
+      "tests/mac/test_9router_hotswap.py::test_route_or_state_io_failure_never_bootouts_healthy_worker[replace_route]",
+      "tests/mac/test_9router_hotswap.py::test_route_or_state_io_failure_never_bootouts_healthy_worker[write_state]",
+      "tests/mac/test_9router_hotswap.py::test_real_validation_requires_receipt_even_in_guest",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[../escape]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[/absolute]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[v2/child]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[.]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[..]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_requires_explicit_maintenance_acknowledgement",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_acknowledgement_is_not_a_qualification_bypass"
+    ],
+    "reportSha256": "8cffab8d7da6be5ddbe36aaeb758eb125a919da0326be7f67591cfd2bef43a53",
+    "cause": "Task 4 controller is missing; fixture assertion before import"
+  },
+  {
+    "name": "test_9router_deploy",
+    "argv": [
+      "/Volumes/devbox/r652526fc/venv/bin/python3",
+      "-m",
+      "pytest",
+      "tests/mac/test_9router_deploy.py",
+      "-q"
+    ],
+    "exitCode": 1,
+    "timeout": false,
+    "startedAt": 1791260414.345572,
+    "finishedAt": 1791260414.640172,
+    "logSha256": "fc936dcb30a52e62c7774a26e7aea4c6306a077ce536ca1af2060b94940228fa",
+    "collected": 31,
+    "passed": 19,
+    "failed": 12,
+    "errors": 0,
+    "skipped": 0,
+    "failedIdentities": [
+      "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[deploy]",
+      "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[rollback]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[../escape]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[/absolute]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[v2/nested]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[.]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[..]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[]",
+      "tests/mac/test_9router_deploy.py::test_http_explicit_base_does_not_change_global",
+      "tests/mac/test_9router_deploy.py::test_stream_probe_propagates_private_base_without_mutating_global",
+      "tests/mac/test_9router_deploy.py::test_verify_propagates_private_base_to_all_probes",
+      "tests/mac/test_9router_deploy.py::test_stream_once_uses_explicit_private_base"
+    ],
+    "reportSha256": "b759674743f6b02e49df4a6c5e3f20d5ffdd09d311ce5f6726347a10e65f7585",
+    "cause": "Task 4 deploy contracts; inspect individually bound report and log"
+  }
+]

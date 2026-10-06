@@ -1,0 +1,12 @@
+{
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+  "pytest": "8.4.2",
+  "packages": {
+    "packaging": "26.3",
+    "iniconfig": "2.3.0",
+    "Pygments": "2.21.0",
+    "pip": "26.2.1",
+    "pytest": "8.4.2",
+    "pluggy": "1.6.0"
+  }
+}

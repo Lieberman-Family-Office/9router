@@ -1,0 +1,14 @@
+{
+  "head": "959c577a870a6a598afe05745a8b649f6624f368",
+  "sourceArchiveSha256": "e08dbceca940f98e8a0b1f4386928d88d132e29982e8d2c6c131dfef9acafba1",
+  "overlay": {
+    "tests/mac/test_9router_hotswap.py": "62cbd92c34b5eac1bc2799c86ff4872ae41f7a37576853bb2d66a7f9d1473a86",
+    "tests/mac/test_9router_deploy.py": "0a4c50976a9400636aeaf56c4eee353d32d4da3f701d0adeca4f4fe99d37c472"
+  },
+  "guestRunnerSha256": "31cde428c47d4cfa6d5e560449f296fd927aa24a032cebff50f1d0270112c0a0",
+  "pluginSha256": "1a1fac417bc595de3fe172cd82ac142cb10d6bbc9d9f0bed231f74a97c7f1632",
+  "devboxId": "2tc0b2eg4mveo",
+  "instanceId": "tjd6l6mg03ou2",
+  "completedRedRuns": true,
+  "scope": "Task 4 RED only; no controller implementation, lint, scans, or production qualification"
+}

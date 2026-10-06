@@ -529,7 +529,11 @@ Stage only direct refresh-dispatch files actually changed by this task, then `gi
 
 **Interfaces:** Controller `deploy_release(dest: Path, digest: str) -> int`, `rollback_release(version: str|None) -> int`, `status() -> dict`, `reconcile() -> int`. Private helpers `control(slot: str, op: str) -> dict`, `verify_at(base: str, version: str) -> str|None`, `replace_route(runtime: Path, slot: str) -> None`. All failures return nonzero with a scope-specific reason.
 
-- [ ] **Step 1: Add ordering and refusal tests.**
+**Task 4 source acceptance, 2026-10-06:** Final source bytes match `docs/superpowers/evidence/task-4-green-959c577a870a-8a365ef0/host.json`: base `959c577a870a6a598afe05745a8b649f6624f368` plus four hash-bound Python files. All 180 tests across the controller and legacy deploy modules passed without failures, errors, or skips, including 18 enrollment recovery boundaries. Ruff E/F/I and format each checked four files; four syntax checks and the four-file S3776 self-check exited 0. C901 remains explicitly advisory: two changed functions, one unchanged baseline function, and 33 findings without a readable baseline; this is not a clean C901 claim. Real pinned-worker, Caddy routing, and byte-identical-mirror counterfactual commands passed. Sonar evaluated four source files for secrets only; no Sonar code-analysis or CI verdict is claimed. Exported evidence hashes and all four current source hashes were independently rechecked before commit. The initial missing-controller RED checkpoint is preserved separately at `docs/superpowers/evidence/task-4-red-959c577a870a-652526fc/`; later recovery additions are covered by the final GREEN population, not that initial RED.
+
+The final guest was macOS ARM64, macOS `26.6.2`, Node `v26.10.0`, npm `11.19.1`, Python `3.14.7`, Caddy `2.11.4`, pytest `8.4.2`, and Ruff `0.15.18`. Devbox `2tc0b2eg4mveo`, instance `p4434ml40hdle`, execution `exec_bjiuojeoe0c76teqb3mvb6f3n4`: stopped with no instance immediately at `2026-10-06T15:18:49.119Z` and after 60 seconds at `2026-10-06T15:19:49.183Z`. A further metadata-only observation at `2026-10-06T16:37:58.894Z` also returned stopped/no instance. The actual operator selection was "Yes—run Task 4 tests and scans in Namespace; verify shutdown twice (Recommended)" in the 2026-10-06 00:46 EDT turn; the 02:16 EDT instruction was "finish task 4 /goal". No production enrollment, live deployment, build/package qualification, push, or PR occurred. Tasks 4b/5/6 remain pending; Task 4 acceptance is controller/source scope, not full zero-downtime release acceptance.
+
+- [x] **Step 1: Add ordering and refusal tests.**
 
 ```python
 def test_failed_candidate_never_changes_route(controller):
@@ -556,11 +560,11 @@ def test_busy_inactive_slot_refuses_next_deploy(controller):
 
 The `controller` fixture imports the actual module with temporary paths and fake launchd/control/probe implementations; events are collected at its side-effect boundary. Fake status must cover missing and malformed responses, not just zero and positive counts.
 
-- [ ] **Step 2: Run the new tests red.**
+- [x] **Step 2: Run the new tests red.**
 
 Run `python3 -m pytest tests/mac/test_9router_hotswap.py -q` using an interpreter with existing pytest. Expect missing controller functions.
 
-- [ ] **Step 3: Implement the state transaction.**
+- [x] **Step 3: Implement the state transaction.**
 
 Acquire `fcntl.flock(LOCK_EX | LOCK_NB)` over a private deployment file descriptor. Hold it through install, validation, candidate startup, switch, route verification, and state commit. Return an explicit busy refusal on contention. Reconcile at entry before consuming a slot. Use atomic JSON writes plus file and parent-directory fsync for durable journal checkpoints.
 
@@ -586,11 +590,11 @@ Refactor the existing HTTP helper to accept `base=BASE` explicitly and propagate
 
 Controller commands: `enroll`, `deploy`, `rollback`, `status`, `reconcile`. `enroll` refuses without an explicit maintenance acknowledgement flag. That flag is friction, not operator authorization. Runtime enroll execution still requires current-turn approval.
 
-- [ ] **Step 4: Prove failure paths.**
+- [x] **Step 4: Prove failure paths.**
 
 Run `python3 -m pytest tests/mac/test_9router_deploy.py tests/mac/test_9router_hotswap.py -q`. Include invalid version traversal, occupied port, simultaneous deployment, missing receipt, stale runtime hash, candidate auth failure, corrupted journal, failed symlink rename, failed state fsync, public verification failure, rollback failure, and unexpected worker disappearance. Run the native check to prove draining is real, not a mocked counter.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add scripts/mac/9router_hotswap.py scripts/mac/9router_deploy.py tests/mac/test_9router_hotswap.py tests/mac/test_9router_deploy.py

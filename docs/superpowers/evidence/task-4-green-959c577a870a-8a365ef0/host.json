@@ -1,0 +1,123 @@
+{
+  "schema": 2,
+  "runId": "green-959c577a870a-8a365ef0",
+  "head": "959c577a870a6a598afe05745a8b649f6624f368",
+  "phase": "green",
+  "authorization": {
+    "quote": "Yes—run Task 4 tests and scans in Namespace; verify shutdown twice (Recommended)",
+    "turn": "operator chat_selection at 2026-10-06 00:46 EDT; continued by finish task 4 /goal at 2026-10-06 02:16 EDT"
+  },
+  "sourceHashes": {
+    "scripts/mac/9router_hotswap.py": "6bc5184ad5757d666b321658bc355786d2105f0d9882c1969f8bdbf0d5509ed6",
+    "scripts/mac/9router_deploy.py": "e18db6376575c2ece526db8800c6a0cd95ce4451a3dbb1c2d1776d850f2167a6",
+    "tests/mac/test_9router_hotswap.py": "aaa143244955f0021c15dcc3a682f2143cbf3913f4a9798db8e48ed3b8c76d43",
+    "tests/mac/test_9router_deploy.py": "85be223d38f2efa9d3098f0a73f4aa7483c84a38c89861d704703215eb7e66bf"
+  },
+  "dependencyHashes": {
+    "package.json": "5784dd13ee10e2e3b74fd15e58d1b86900d0988e73c65b181058cd52ff02ce48",
+    "package-lock.json": "f1d1aad476398e11e2cc3164c0802fb8ec8f76509f2042a98854b426d1e7aed8",
+    "tests/package.json": "320deca1e8563b1f70a33bca22530c549069174c8b8f6c8cb08fcf5c0f9e3f9f"
+  },
+  "testLockSha256": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff",
+  "selfCheckSha256": "068a2513af4899539732b992a86320ec5ddae12db13a1978e9cb9afaa9d45ae8",
+  "ownerHelperSha256": "32adf39f856e03366f7ec957b87ba9508d61cd78265abe9c8097f1671350276c",
+  "archiveSha256": "e08dbceca940f98e8a0b1f4386928d88d132e29982e8d2c6c131dfef9acafba1",
+  "bundleSha256": "4547c9ce684fa5527daaef593565b82cadd0e643ec2fe38bb9a0d94c8f770e1e",
+  "orchestratorSha256": "086c2a0aaae38923d677de7374158d073d4695c5323712e162bd99490ddfb419",
+  "sourceBefore": {
+    "head": "959c577a870a6a598afe05745a8b649f6624f368",
+    "sourceHashes": {
+      "scripts/mac/9router_hotswap.py": "6bc5184ad5757d666b321658bc355786d2105f0d9882c1969f8bdbf0d5509ed6",
+      "scripts/mac/9router_deploy.py": "e18db6376575c2ece526db8800c6a0cd95ce4451a3dbb1c2d1776d850f2167a6",
+      "tests/mac/test_9router_hotswap.py": "aaa143244955f0021c15dcc3a682f2143cbf3913f4a9798db8e48ed3b8c76d43",
+      "tests/mac/test_9router_deploy.py": "85be223d38f2efa9d3098f0a73f4aa7483c84a38c89861d704703215eb7e66bf"
+    }
+  },
+  "requiredChecks": [
+    "venv",
+    "tools",
+    "tool-versions",
+    "dependencies-app",
+    "dependencies-tests",
+    "controller-tests",
+    "ruff-check",
+    "ruff-format",
+    "syntax-0",
+    "syntax-1",
+    "syntax-2",
+    "syntax-3",
+    "s3776",
+    "caddy-download",
+    "caddy-extract",
+    "worker",
+    "proxy",
+    "counterfactual",
+    "scanner-download",
+    "scanner-version",
+    "secrets"
+  ],
+  "devboxId": "2tc0b2eg4mveo",
+  "devboxName": "9router-qualify-recovery",
+  "lifecycle": [
+    {
+      "phase": "before",
+      "at": "2026-10-06T15:10:17.255Z",
+      "monotonicMs": 1496.540417,
+      "id": "2tc0b2eg4mveo",
+      "name": "9router-qualify-recovery",
+      "state": "stopped",
+      "instanceId": null
+    },
+    {
+      "phase": "activated",
+      "at": "2026-10-06T15:10:39.899Z",
+      "monotonicMs": 24140.38275,
+      "id": "2tc0b2eg4mveo",
+      "name": "9router-qualify-recovery",
+      "state": "running",
+      "instanceId": "p4434ml40hdle"
+    },
+    {
+      "phase": "immediate",
+      "at": "2026-10-06T15:18:49.119Z",
+      "monotonicMs": 513357.929375,
+      "id": "2tc0b2eg4mveo",
+      "name": "9router-qualify-recovery",
+      "state": "stopped",
+      "instanceId": null
+    },
+    {
+      "phase": "after-60-seconds",
+      "at": "2026-10-06T15:19:49.183Z",
+      "monotonicMs": 573421.61875,
+      "id": "2tc0b2eg4mveo",
+      "name": "9router-qualify-recovery",
+      "state": "stopped",
+      "instanceId": null
+    }
+  ],
+  "scope": "Task 4 green source checks only; no package/launchd/production acceptance; Sonar secrets is not code analysis",
+  "result": "source-checks-pass",
+  "runnerSha256": "6b6eb27689dd1c9cc97868e7f65394dad4cb43f232f9296f90fa0194ed236ca7",
+  "instanceId": "p4434ml40hdle",
+  "priorCredentialCleanup": true,
+  "executionId": "exec_bjiuojeoe0c76teqb3mvb6f3n4",
+  "hostCredentialCleanup": true,
+  "manifestSha256": "3b34c7ad4307066217ac24d60a6a97f6d2f725805f1f73321c9b4358b98bd75a",
+  "guestDiagnosticsExported": true,
+  "guestSuccess": true,
+  "guestCredentialCleanup": true,
+  "stopSucceeded": true,
+  "sourceAfter": {
+    "head": "959c577a870a6a598afe05745a8b649f6624f368",
+    "sourceHashes": {
+      "scripts/mac/9router_hotswap.py": "6bc5184ad5757d666b321658bc355786d2105f0d9882c1969f8bdbf0d5509ed6",
+      "scripts/mac/9router_deploy.py": "e18db6376575c2ece526db8800c6a0cd95ce4451a3dbb1c2d1776d850f2167a6",
+      "tests/mac/test_9router_hotswap.py": "aaa143244955f0021c15dcc3a682f2143cbf3913f4a9798db8e48ed3b8c76d43",
+      "tests/mac/test_9router_deploy.py": "85be223d38f2efa9d3098f0a73f4aa7483c84a38c89861d704703215eb7e66bf"
+    }
+  },
+  "interrupted": false,
+  "shutdownVerified": true,
+  "claimReleased": true
+}

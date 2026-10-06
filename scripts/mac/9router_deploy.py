@@ -3,22 +3,24 @@
 
 Layout:
   ~/.9router/releases/<version>/lib/node_modules/9router   one install per version
-  /opt/homebrew/lib/node_modules/9router -> <that dir>      the only live pointer
+  /opt/homebrew/lib/node_modules/9router -> <that dir>      legacy/convenience pointer
   ~/.9router/deploys.log                                    one JSON line per action
 
 Rules this enforces: on the host, a tarball deploys only if its exact bytes
 passed 9router_vm_qualify.py (~/.9router/qualified/<sha256>.json, result "pass");
 a version directory is never overwritten; every deploy is
-verified (version, /v1/models, one streamed completion to its end); a failed
-verify switches the pointer back and restarts. start.sh, the watchdog and the
-hotpatches keep using the /opt/homebrew path and follow the symlink.
+verified (version, /v1/models, one streamed completion to its end).
+Unenrolled deployments restart and restore the pointer on verification failure.
+Any enrollment directory, including a partial one, dispatches to the hot-swap
+controller instead. Its socket route is authoritative; the package symlink is
+only a convenience pointer. Managed rollback never restarts accepted sessions.
 
 ponytail: the runtime hotpatches in ~/.9router/apply-*.sh still mutate the live
 release in place, so a release dir is not byte-immutable until they are folded
 into source (one PR per patch).
 
 Usage:
-  9router_deploy.py adopt            # one-time: move the current real dir into releases/
+  9router_deploy.py adopt            # move the real dir into releases/ once
   9router_deploy.py deploy <tgz>
   9router_deploy.py rollback [version]
   9router_deploy.py status
@@ -31,8 +33,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -69,6 +73,10 @@ def log(**entry) -> None:
 
 
 def release_dir(version: str) -> Path:
+    if not isinstance(version, str) or not re.fullmatch(
+        r"[A-Za-z0-9][A-Za-z0-9._-]*", version
+    ):
+        raise ValueError("invalid release version")
     return RELEASES / version / "lib" / "node_modules" / "9router"
 
 
@@ -109,19 +117,19 @@ def api_key() -> str:
     return row[0]
 
 
-def http(path: str, body: dict | None = None, timeout: float = 10):
+def http(path: str, body: dict | None = None, timeout: float = 10, *, base: str = BASE):
     headers = {"Content-Type": "application/json"}
     if body is not None:
         headers["Authorization"] = f"Bearer {api_key()}"
     req = urllib.request.Request(
-        BASE + path,
+        base + path,
         data=json.dumps(body).encode() if body is not None else None,
         headers=headers,
     )
     return urllib.request.urlopen(req, timeout=timeout)
 
 
-def stream_probe(timeout: float = 90) -> str | None:
+def stream_probe(timeout: float = 90, *, base: str = BASE) -> str | None:
     """One streamed completion of PROBE_MODEL must terminate before the deadline.
 
     A timeout, 429 or 5xx is retried (PROBE_ATTEMPTS total, linear backoff): one
@@ -129,7 +137,9 @@ def stream_probe(timeout: float = 90) -> str | None:
     else fails at once. A wedged release still fails: every attempt times out.
     """
     for n in range(1, PROBE_ATTEMPTS + 1):
-        reason, transient = stream_once(timeout)
+        reason, transient = (
+            stream_once(timeout) if base == BASE else stream_once(timeout, base=base)
+        )
         if reason is None:
             return None
         if not transient or n == PROBE_ATTEMPTS:
@@ -138,7 +148,7 @@ def stream_probe(timeout: float = 90) -> str | None:
     return None  # unreachable: the loop always returns
 
 
-def stream_once(timeout: float) -> tuple[str | None, bool]:
+def stream_once(timeout: float, *, base: str = BASE) -> tuple[str | None, bool]:
     """(None, False) on a terminal chunk, else (reason, transient).
 
     Terminal = `data: [DONE]` or a chunk carrying a non-null finish_reason
@@ -152,8 +162,10 @@ def stream_once(timeout: float) -> tuple[str | None, bool]:
         "messages": [{"role": "user", "content": "Reply with: ok"}],
     }
     try:
-        with http("/v1/chat/completions", body, timeout=30) as resp:
+        with http("/v1/chat/completions", body, timeout=30, base=base) as resp:
             for raw in resp:
+                if is_stream_error(raw):
+                    return "stream: upstream error event", False
                 if is_terminal(raw):
                     return None, False
                 if time.monotonic() > deadline:
@@ -167,6 +179,23 @@ def stream_once(timeout: float) -> tuple[str | None, bool]:
     except (OSError, RuntimeError) as exc:
         return f"stream: {exc}", False
     return "stream: closed before a terminal chunk", False
+
+
+def is_stream_error(raw: bytes) -> bool:
+    field, separator, payload = raw.strip().partition(b":")
+    payload = payload.lstrip()
+    if field == b"event":
+        return payload in {b"error", b"response.failed", b"response.incomplete"}
+    if field != b"data" or not separator:
+        return False
+    try:
+        chunk = json.loads(payload)
+    except ValueError:
+        return False
+    return isinstance(chunk, dict) and (
+        "error" in chunk
+        or chunk.get("type") in ("error", "response.failed", "response.incomplete")
+    )
 
 
 def is_terminal(raw: bytes) -> bool:
@@ -183,13 +212,13 @@ def is_terminal(raw: bytes) -> bool:
     return any(c.get("finish_reason") for c in choices if isinstance(c, dict))
 
 
-def verify(version: str, ready_timeout: float = 120) -> str | None:
+def verify(version: str, ready_timeout: float = 120, *, base: str = BASE) -> str | None:
     """Return None when healthy, else the first failing check."""
     deadline = time.monotonic() + ready_timeout
     seen = None
     while time.monotonic() < deadline:
         try:
-            with http("/api/version") as resp:
+            with http("/api/version", base=base) as resp:
                 seen = json.load(resp).get("currentVersion")
             if seen == version:
                 break
@@ -199,12 +228,12 @@ def verify(version: str, ready_timeout: float = 120) -> str | None:
     else:
         return f"version: expected {version}, saw {seen}"
     try:
-        with http("/v1/models") as resp:
+        with http("/v1/models", base=base) as resp:
             if not json.load(resp).get("data"):
                 return "models: empty list"
     except (urllib.error.URLError, OSError, ValueError) as exc:
         return f"models: {exc}"
-    return stream_probe()
+    return stream_probe(base=base)
 
 
 def tgz_version(tgz: Path) -> str:
@@ -292,7 +321,23 @@ def unqualified(tgz: Path) -> str | None:
     return None
 
 
+def load_hotswap():
+    spec = importlib.util.spec_from_file_location(
+        "nine_router_hotswap", Path(__file__).with_name("9router_hotswap.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def enrolled() -> bool:
+    # Partial or corrupt enrollment must never fall back to a destructive restart.
+    return os.path.lexists(HOME / "hotswap")
+
+
 def cmd_deploy(args) -> int:
+    if enrolled():
+        return load_hotswap().deploy_tarball(Path(args.tgz).resolve())
     prev = live()
     if prev is None:
         print(f"refused: {LINK} is not a symlink; run `adopt` first")
@@ -344,6 +389,8 @@ def previous_version(current: str) -> str | None:
 
 
 def cmd_rollback(args) -> int:
+    if enrolled():
+        return load_hotswap().rollback_release(args.version)
     cur = live()
     if cur is None:
         print(f"refused: {LINK} is not a symlink")
@@ -351,7 +398,8 @@ def cmd_rollback(args) -> int:
     version = args.version or previous_version(pkg_version(cur))
     if version is None:
         print(
-            "refused: no successful deploy of the live version in the log; pass a version"
+            "refused: no successful deploy of the live version in the log; "
+            "pass a version"
         )
         return 1
     target = release_dir(version)

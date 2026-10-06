@@ -1,0 +1,429 @@
+[
+  {
+    "name": "venv",
+    "args": [
+      "python3",
+      "-m",
+      "venv",
+      "/Volumes/devbox/t48a365ef0/venv"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "guest environments",
+      "count": 1
+    },
+    "seconds": 4.355184166000001
+  },
+  {
+    "name": "tools",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-m",
+      "pip",
+      "install",
+      "--disable-pip-version-check",
+      "pytest==8.4.2",
+      "ruff==0.15.18"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "proven RED tools",
+      "count": 2
+    },
+    "seconds": 1.998187541
+  },
+  {
+    "name": "tool-versions",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-c",
+      "import importlib.metadata as m; assert m.version(\"pytest\")==\"8.4.2\"; assert m.version(\"ruff\")==\"0.15.18\"; print(\"pytest==8.4.2 ruff==0.15.18\")"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "pinned tools",
+      "count": 2
+    },
+    "seconds": 0.07809262499999647
+  },
+  {
+    "name": "dependencies-app",
+    "args": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "hash-bound locked guest installs",
+      "count": 1
+    },
+    "seconds": 18.135370082999998
+  },
+  {
+    "name": "dependencies-tests",
+    "args": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "hash-bound locked guest installs",
+      "count": 1
+    },
+    "seconds": 0.6515298329999979
+  },
+  {
+    "name": "controller-tests",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-m",
+      "pytest",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_deploy.py",
+      "-vv",
+      "--maxfail=1",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t48a365ef0/evidence/pytest.xml"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "Task 4 and legacy deploy unit modules",
+      "count": 2
+    },
+    "seconds": 2.9740165000000047,
+    "testCount": 180,
+    "moduleCount": 2
+  },
+  {
+    "name": "ruff-check",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-m",
+      "ruff",
+      "check",
+      "--select=E,F,I",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_deploy.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_deploy.py"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact Task 4 Python files",
+      "count": 4
+    },
+    "seconds": 0.0867792499999922
+  },
+  {
+    "name": "ruff-format",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-m",
+      "ruff",
+      "format",
+      "--check",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_deploy.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_deploy.py"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact Task 4 Python files",
+      "count": 4
+    },
+    "seconds": 0.0755368749999974
+  },
+  {
+    "name": "syntax-0",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-m",
+      "py_compile",
+      "scripts/mac/9router_hotswap.py"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "Task 4 Python files",
+      "count": 1
+    },
+    "seconds": 0.07664537499999824
+  },
+  {
+    "name": "syntax-1",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-m",
+      "py_compile",
+      "scripts/mac/9router_deploy.py"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "Task 4 Python files",
+      "count": 1
+    },
+    "seconds": 0.0793073330000027
+  },
+  {
+    "name": "syntax-2",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-m",
+      "py_compile",
+      "tests/mac/test_9router_hotswap.py"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "Task 4 Python files",
+      "count": 1
+    },
+    "seconds": 0.06871316599999489
+  },
+  {
+    "name": "syntax-3",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-m",
+      "py_compile",
+      "tests/mac/test_9router_deploy.py"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "Task 4 Python files",
+      "count": 1
+    },
+    "seconds": 0.07069504100000756
+  },
+  {
+    "name": "s3776",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/venv/bin/python",
+      "-c",
+      "import sys;sys.path.insert(0,'/Volumes/devbox/t48a365ef0');import sonar_pr_issues as s; p=sys.argv[2:]; assert len(p)==4; print(\"task4-self-check-population: 4 file(s)\",flush=True); raise SystemExit(s.self_check(p,base=sys.argv[1]))",
+      "959c577a870a6a598afe05745a8b649f6624f368",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_deploy.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_deploy.py"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact Task 4 Python files",
+      "count": 4
+    },
+    "seconds": 0.3350705000000005,
+    "fileCount": 4,
+    "leg": "S3776 self-check heuristic; not Sonar code analysis"
+  },
+  {
+    "name": "caddy-download",
+    "args": [
+      "curl",
+      "--fail",
+      "--location",
+      "--max-time",
+      "120",
+      "--output",
+      "/Volumes/devbox/t48a365ef0/caddy.tgz",
+      "https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_mac_arm64.tar.gz"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "pinned guest runtime downloads",
+      "count": 1
+    },
+    "seconds": 0.5544357090000034
+  },
+  {
+    "name": "caddy-extract",
+    "args": [
+      "tar",
+      "-xzf",
+      "/Volumes/devbox/t48a365ef0/caddy.tgz",
+      "-C",
+      "/Volumes/devbox/t48a365ef0/tools",
+      "caddy"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "hash-verified runtime extractions",
+      "count": 1
+    },
+    "seconds": 0.12399712500000248
+  },
+  {
+    "name": "worker",
+    "args": [
+      "node",
+      "tests/mac/9router_worker.check.cjs"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "native assertion commands",
+      "count": 1
+    },
+    "seconds": 89.31667508399998,
+    "requiredMarkers": [
+      "PASS: real pinned workers"
+    ]
+  },
+  {
+    "name": "proxy",
+    "args": [
+      "node",
+      "tests/mac/9router_hotswap.check.cjs"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "native assertion commands",
+      "count": 1
+    },
+    "seconds": 89.793050166,
+    "requiredMarkers": [
+      "PASS"
+    ]
+  },
+  {
+    "name": "counterfactual",
+    "args": [
+      "node",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "native assertion commands",
+      "count": 1
+    },
+    "seconds": 179.30318729200002,
+    "requiredMarkers": [
+      "GREEN: unchanged byte-identical mirror",
+      "RED: removing only",
+      "PASS: routing counterfactual"
+    ]
+  },
+  {
+    "name": "scanner-download",
+    "args": [
+      "curl",
+      "--fail",
+      "--location",
+      "--max-time",
+      "120",
+      "--output",
+      "/Volumes/devbox/t48a365ef0/tools/sonar",
+      "https://binaries.sonarsource.com/Distribution/sonarqube-cli/1.9.0.15656/macos/sonarqube-cli-1.9.0.15656-macos-arm64.bin"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "pinned guest scanners",
+      "count": 1
+    },
+    "seconds": 0.5443033750000268
+  },
+  {
+    "name": "scanner-version",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/tools/sonar",
+      "--version"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "pinned scanners",
+      "count": 1
+    },
+    "seconds": 0.12704966699999432
+  },
+  {
+    "name": "secrets",
+    "args": [
+      "/Volumes/devbox/t48a365ef0/tools/sonar",
+      "analyze",
+      "secrets",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_deploy.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_deploy.py"
+    ],
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact Task 4 source files",
+      "count": 4
+    },
+    "seconds": 2.68442883299997,
+    "leg": "secrets only; not code analysis"
+  }
+]

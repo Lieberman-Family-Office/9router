@@ -78,39 +78,6 @@ def test_stream_terminal_detection(dep):
     assert not dep.is_terminal(b"data: {not json\n")
 
 
-@pytest.mark.parametrize(
-    "frame",
-    [
-        b"event: error\n",
-        b'data: {"error":{"message":"failed"}}\n',
-        b'data: {"type":"error","error":null}\n',
-        b"event: response.failed\n",
-        b'data: {"type":"response.incomplete"}\n',
-    ],
-)
-def test_stream_once_rejects_error_before_done_without_retry(dep, monkeypatch, frame):
-    calls = []
-
-    def http(*args, **kwargs):
-        calls.append((args, kwargs))
-        return io.BytesIO(frame + b"\ndata: [DONE]\n\n")
-
-    monkeypatch.setattr(dep, "http", http)
-    assert dep.stream_probe(5) == "stream: upstream error event"
-    assert len(calls) == 1
-
-
-def test_stream_once_accepts_successful_sse(dep, monkeypatch):
-    monkeypatch.setattr(
-        dep,
-        "http",
-        lambda *args, **kwargs: io.BytesIO(
-            b'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n'
-        ),
-    )
-    assert dep.stream_once(5) == (None, False)
-
-
 def scripted_probe(dep, monkeypatch, outcomes):
     calls = iter(outcomes)
     monkeypatch.setattr(dep, "stream_once", lambda timeout: next(calls))
@@ -247,22 +214,12 @@ def test_rollback_targets_what_live_version_replaced(dep, monkeypatch):
 
 
 @pytest.mark.parametrize("operation", ["deploy", "rollback"])
-def test_enrolled_dispatch_never_enters_legacy_mutation(
-    dep, tmp_path, monkeypatch, operation
-):
+def test_enrolled_dispatch_never_enters_legacy_mutation(dep, tmp_path, monkeypatch, operation):
     calls = []
-    fake = type(
-        "Controller",
-        (),
-        {
-            "deploy_tarball": staticmethod(
-                lambda tgz: calls.append(("deploy", tgz)) or 17
-            ),
-            "rollback_release": staticmethod(
-                lambda version: calls.append(("rollback", version)) or 19
-            ),
-        },
-    )
+    fake = type("Controller", (), {
+        "deploy_tarball": staticmethod(lambda tgz: calls.append(("deploy", tgz)) or 17),
+        "rollback_release": staticmethod(lambda version: calls.append(("rollback", version)) or 19),
+    })
     (dep.HOME / "hotswap").mkdir()
     (dep.HOME / "hotswap/state.json").write_text("{corrupted-but-enrolled")
     monkeypatch.setattr(dep, "load_hotswap", lambda: fake)
@@ -282,40 +239,16 @@ def test_enrolled_dispatch_never_enters_legacy_mutation(
         assert calls == [("rollback", "v1")]
 
 
-@pytest.mark.parametrize(
-    "version", ["../escape", "/absolute", "v2/nested", ".", "..", ""]
-)
+@pytest.mark.parametrize("version", ["../escape", "/absolute", "v2/nested", ".", "..", ""])
 def test_release_path_rejects_invalid_version_before_join(dep, version):
     with pytest.raises(ValueError):
         dep.release_dir(version)
 
 
-def test_partial_enrollment_never_falls_back_to_legacy_deploy(dep, monkeypatch):
-    (dep.HOME / "hotswap").mkdir()
-    calls = []
-    fake = type(
-        "Controller",
-        (),
-        {
-            "deploy_tarball": staticmethod(lambda tgz: calls.append(tgz) or 1),
-        },
-    )
-    monkeypatch.setattr(dep, "load_hotswap", lambda: fake)
-
-    def prohibited(*args, **kwargs):
-        pytest.fail("Partial enrollment entered legacy deployment")
-
-    monkeypatch.setattr(dep, "live", prohibited)
-    assert dep.cmd_deploy(deploy_args(dep.HOME / "candidate.tgz")) == 1
-    assert calls == [(dep.HOME / "candidate.tgz").resolve()]
-
-
 def test_http_explicit_base_does_not_change_global(dep, monkeypatch):
     seen = []
     original_base = dep.BASE
-    monkeypatch.setattr(
-        dep.urllib.request, "urlopen", lambda req, timeout: seen.append(req.full_url)
-    )
+    monkeypatch.setattr(dep.urllib.request, "urlopen", lambda req, timeout: seen.append(req.full_url))
     dep.http("/api/version", base="http://127.0.0.1:21130")
     assert seen == ["http://127.0.0.1:21130/api/version"]
     assert dep.BASE == original_base
@@ -349,11 +282,9 @@ def test_verify_propagates_private_base_to_all_probes(dep, monkeypatch):
     monkeypatch.setattr(dep, "http", http)
     monkeypatch.setattr(dep, "stream_probe", stream_probe)
     assert dep.verify("v2", base="http://127.0.0.1:21130") is None
-    assert seen == [
-        ("/api/version", "http://127.0.0.1:21130"),
-        ("/v1/models", "http://127.0.0.1:21130"),
-        ("stream", "http://127.0.0.1:21130"),
-    ]
+    assert seen == [("/api/version", "http://127.0.0.1:21130"),
+                    ("/v1/models", "http://127.0.0.1:21130"),
+                    ("stream", "http://127.0.0.1:21130")]
 
 
 def test_stream_once_uses_explicit_private_base(dep, monkeypatch):

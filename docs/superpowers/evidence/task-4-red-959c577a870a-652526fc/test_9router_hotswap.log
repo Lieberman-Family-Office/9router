@@ -1,0 +1,886 @@
+EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE                        [100%]
+==================================== ERRORS ====================================
+_________ ERROR at setup of test_failed_candidate_never_changes_route __________
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_failed_candidate_never_ch0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093742b0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_______ ERROR at setup of test_success_switches_only_after_verification ________
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_success_switches_only_aft0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108de3a80>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+________ ERROR at setup of test_busy_inactive_slot_refuses_next_deploy _________
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_busy_inactive_slot_refuse0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108e3b650>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_positive_app_work_preserves_inactive_worker[responses] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_positive_app_work_preserv0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093909e0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_positive_app_work_preserves_inactive_worker[handlers] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_positive_app_work_preserv1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109390490>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_positive_app_work_preserves_inactive_worker[upgrades] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_positive_app_work_preserv2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10938ab50>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_positive_app_work_preserves_inactive_worker[cleanup] __
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_positive_app_work_preserv3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109348350>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_positive_app_work_preserves_inactive_worker[persistence] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_positive_app_work_preserv4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109312030>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_positive_app_work_preserves_inactive_worker[refresh] __
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_positive_app_work_preserv5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109312b70>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_positive_app_work_preserves_inactive_worker[background] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_positive_app_work_preserv6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109380210>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+__ ERROR at setup of test_positive_app_work_preserves_inactive_worker[quota] ___
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_positive_app_work_preserv7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109380750>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_positive_app_work_preserves_inactive_worker[websocket] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_positive_app_work_preserv8')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10939b110>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+__ ERROR at setup of test_missing_or_malformed_status_refuses_mutation[None] ___
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_missing_or_malformed_stat0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109324350>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_missing_or_malformed_status_refuses_mutation[response1] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_missing_or_malformed_stat1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109324050>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_missing_or_malformed_status_refuses_mutation[response2] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_missing_or_malformed_stat2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108e9b330>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_unknown_worker_identity_preserves_both_workers[connections-True] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_unknown_worker_identity_p0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108e9b540>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_unknown_worker_identity_preserves_both_workers[connections--1] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_unknown_worker_identity_p1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10933a210>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_unknown_worker_identity_preserves_both_workers[connections-None] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_unknown_worker_identity_p2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093382d0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_unknown_worker_identity_preserves_both_workers[appWork-None] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_unknown_worker_identity_p3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108c72720>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_unknown_worker_identity_preserves_both_workers[version-foreign] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_unknown_worker_identity_p4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108e97b50>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_unknown_worker_identity_preserves_both_workers[slot-b] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_unknown_worker_identity_p5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108e95250>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_unknown_worker_identity_preserves_both_workers[appPid-None] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_unknown_worker_identity_p6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093717f0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_unknown_worker_identity_preserves_both_workers[mode-failed] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_unknown_worker_identity_p7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109371940>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_controller_bootouts_only_after_worker_acknowledges_stopped _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_controller_bootouts_only_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109373070>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_________ ERROR at setup of test_stop_refusal_preserves_slot_and_route _________
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_stop_refusal_preserves_sl0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109371a20>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_public_failure_resumes_old_slot_before_switching_back _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_public_failure_resumes_ol0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109373700>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_______ ERROR at setup of test_failed_rollback_keeps_last_serving_route ________
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_failed_rollback_keeps_las0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109373c40>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_manual_rollback_reuses_draining_worker_without_restart _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_manual_rollback_reuses_dr0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093725f0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+__________ ERROR at setup of test_flock_refuses_concurrent_deployment __________
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_flock_refuses_concurrent_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109372ba0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+____ ERROR at setup of test_lock_covers_retirement_and_every_route_mutation ____
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_lock_covers_retirement_an0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093737e0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+__ ERROR at setup of test_corrupted_journal_refuses_without_worker_mutations ___
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_corrupted_journal_refuses0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093717f0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+___ ERROR at setup of test_status_remains_diagnostic_when_worker_probe_fails ___
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_status_remains_diagnostic0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109372820>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_crash_recovery_uses_socket_route_authority[prepared] __
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_crash_recovery_uses_socke0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093724a0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_crash_recovery_uses_socket_route_authority[verified] __
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_crash_recovery_uses_socke1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109371470>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_crash_recovery_uses_socket_route_authority[switched] __
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_crash_recovery_uses_socke2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109371780>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_crash_recovery_uses_socket_route_authority[committed] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_crash_recovery_uses_socke3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109373380>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_crash_between_route_rename_and_state_commit_recovers_new_route _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_crash_between_route_renam0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109372890>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_recovery_with_unknown_new_identity_preserves_workers __
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_recovery_with_unknown_new0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109372b30>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_route_or_state_io_failure_never_bootouts_healthy_worker[replace_route] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_route_or_state_io_failure0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109372270>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_route_or_state_io_failure_never_bootouts_healthy_worker[write_state] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_route_or_state_io_failure1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109372510>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+____ ERROR at setup of test_real_validation_requires_receipt_even_in_guest _____
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_real_validation_requires_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109371b70>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_invalid_versions_refuse_before_side_effects[../escape] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_invalid_versions_refuse_b0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109371940>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_invalid_versions_refuse_before_side_effects[/absolute] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_invalid_versions_refuse_b1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109372d60>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_invalid_versions_refuse_before_side_effects[v2/child] _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_invalid_versions_refuse_b2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093724a0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_____ ERROR at setup of test_invalid_versions_refuse_before_side_effects[] _____
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_invalid_versions_refuse_b3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109371fd0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+____ ERROR at setup of test_invalid_versions_refuse_before_side_effects[.] _____
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_invalid_versions_refuse_b4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093734d0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+____ ERROR at setup of test_invalid_versions_refuse_before_side_effects[..] ____
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_invalid_versions_refuse_b5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109205940>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_enrollment_requires_explicit_maintenance_acknowledgement _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_enrollment_requires_expli0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1092058d0>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+_ ERROR at setup of test_enrollment_acknowledgement_is_not_a_qualification_bypass _
+
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_hotswap/tmp/pytest-of-runner/pytest-0/test_enrollment_acknowledgemen0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x109205b00>
+
+    @pytest.fixture
+    def hs(tmp_path, monkeypatch):
+>       assert SCRIPT.is_file(), "Task 4 controller is missing"
+E       AssertionError: Task 4 controller is missing
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+
+tests/mac/test_9router_hotswap.py:30: AssertionError
+=========================== short test summary info ============================
+ERROR tests/mac/test_9router_hotswap.py::test_failed_candidate_never_changes_route - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_success_switches_only_after_verification - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_busy_inactive_slot_refuses_next_deploy - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[responses] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[handlers] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[upgrades] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[cleanup] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[persistence] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[refresh] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[background] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[quota] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[websocket] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_missing_or_malformed_status_refuses_mutation[None] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_missing_or_malformed_status_refuses_mutation[response1] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_missing_or_malformed_status_refuses_mutation[response2] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[connections-True] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[connections--1] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[connections-None] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[appWork-None] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[version-foreign] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[slot-b] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[appPid-None] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[mode-failed] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_controller_bootouts_only_after_worker_acknowledges_stopped - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_stop_refusal_preserves_slot_and_route - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_public_failure_resumes_old_slot_before_switching_back - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_failed_rollback_keeps_last_serving_route - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_manual_rollback_reuses_draining_worker_without_restart - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_flock_refuses_concurrent_deployment - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_lock_covers_retirement_and_every_route_mutation - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_corrupted_journal_refuses_without_worker_mutations - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_status_remains_diagnostic_when_worker_probe_fails - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[prepared] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[verified] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[switched] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[committed] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_crash_between_route_rename_and_state_commit_recovers_new_route - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_recovery_with_unknown_new_identity_preserves_workers - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_route_or_state_io_failure_never_bootouts_healthy_worker[replace_route] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_route_or_state_io_failure_never_bootouts_healthy_worker[write_state] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_real_validation_requires_receipt_even_in_guest - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[../escape] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[/absolute] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[v2/child] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[.] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[..] - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_enrollment_requires_explicit_maintenance_acknowledgement - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+ERROR tests/mac/test_9router_hotswap.py::test_enrollment_acknowledgement_is_not_a_qualification_bypass - AssertionError: Task 4 controller is missing
+assert False
+ +  where False = is_file()
+ +    where is_file = PosixPath('/Volumes/devbox/r652526fc/source/scripts/mac/9router_hotswap.py').is_file
+49 errors in 0.20s
