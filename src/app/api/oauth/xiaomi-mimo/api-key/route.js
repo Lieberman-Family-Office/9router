@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createProviderConnection } from "@/models";
-
 /**
  * POST /api/oauth/xiaomi-mimo/api-key
  * Import a Xiaomi MiMo API key manually (or from auto-import).
@@ -10,7 +9,7 @@ import { createProviderConnection } from "@/models";
  */
 export async function POST(request) {
   try {
-    const { apiKey, uid, baseUrl, mimoPassToken, mimoUserId, mimoCUserId, region } = await request.json();
+    const { apiKey, uid, baseUrl, mimoPassToken, mimoUserId, mimoCUserId, region, reauthorizationProof } = await request.json();
 
     const key = typeof apiKey === "string" ? apiKey.trim() : "";
     const sessionOnly = !key && !!mimoPassToken;
@@ -73,7 +72,25 @@ export async function POST(request) {
     );
     if (existing) {
       if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
-        return NextResponse.json({ error: "Credential edits require reauthorization" }, { status: 409 });
+        const { getDashboardAuthSession } = await import("@/lib/auth/dashboardSession");
+        const { createHash } = await import("node:crypto");
+        const proof = await getDashboardAuthSession(reauthorizationProof);
+        if (!sessionOnly || typeof mimoPassToken !== "string" || !proof || proof.purpose !== "xiaomi-reauthorization"
+            || !Number.isFinite(proof.reauthorizationExpiresAt) || proof.reauthorizationExpiresAt <= Date.now()
+            || proof.userId !== mimoUserId || proof.userId !== uid || proof.region !== normRegion
+            || proof.credentialSha256 !== createHash("sha256").update(mimoPassToken).digest("hex")
+            || existing.authType !== "oauth" || existing.email !== `${proof.userId}@xiaomi`) {
+          return NextResponse.json({ error: "Credential edits require verified reauthorization" }, { status: 409 });
+        }
+        const connection = await createProviderConnection({
+          provider: "xiaomi-mimo", authType: "oauth", email: existing.email,
+          displayName: existing.displayName, accessToken: existing.accessToken, refreshToken: null,
+          providerSpecificData: { ...existing.providerSpecificData, mimoPassToken, mimoUserId, mimoCUserId,
+            region: normRegion, authMethod: "session" },
+          testStatus: "active",
+        });
+        return NextResponse.json({ success: true, validated: true, updated: true,
+          connection: { id: connection.id, provider: connection.provider, email: connection.email, displayName: connection.displayName } });
       }
       const updated = await updateProviderConnection(existing.id, {
         accessToken: key || existing.accessToken,

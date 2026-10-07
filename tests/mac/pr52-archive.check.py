@@ -6,9 +6,21 @@ import importlib.util
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+
+
+def confined_file(directory, name):
+    root = directory.resolve()
+    candidate = (root / name).resolve()
+    if Path(name).is_absolute() or not candidate.is_relative_to(root):
+        raise ValueError("Evidence locator escapes its directory")
+    if not candidate.is_file():
+        raise ValueError("Evidence locator is not a file")
+    return candidate
+
 
 ROOT = Path(__file__).resolve().parents[2]
 if len(sys.argv) == 2:
@@ -19,9 +31,10 @@ if len(sys.argv) == 2:
     )
     original = Path(sys.argv[1])
     for name, expected in receipt["rawEvidenceHashes"].items():
-        assert hashlib.sha256((original / name).read_bytes()).hexdigest() == expected, (
-            name
-        )
+        assert (
+            hashlib.sha256(confined_file(original, name).read_bytes()).hexdigest()
+            == expected
+        ), name
     print("PASS: seven original Task 4b raw artifact digests; log contents withheld")
 EVIDENCE = ROOT / "docs/superpowers/evidence"
 manifests = list(EVIDENCE.rglob("manifest.json")) + [
@@ -35,10 +48,36 @@ for manifest in manifests:
         if isinstance(digest, str) and len(digest) == 64:
             entries += 1
             assert (
-                hashlib.sha256((manifest.parent / name).read_bytes()).hexdigest()
+                hashlib.sha256(
+                    confined_file(manifest.parent, name).read_bytes()
+                ).hexdigest()
                 == digest
             )
 assert entries > 100, "Archive integrity population is incomplete"
+for locator in (
+    "../pr52-quality-reconciliation.json",
+    str(ROOT / "pr52-quality-reconciliation.json"),
+):
+    try:
+        confined_file(EVIDENCE, locator)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("External evidence locator was accepted")
+with tempfile.TemporaryDirectory() as temporary:
+    sandbox = Path(temporary)
+    fence = sandbox / "evidence"
+    fence.mkdir()
+    outside = sandbox / "outside"
+    outside.write_text("unrelated")
+    (fence / "link").symlink_to(outside)
+    for locator in ("../outside", str(outside), "link"):
+        try:
+            confined_file(fence, locator)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Outside traversal, absolute path or symlink accepted")
 plugin_path = EVIDENCE / "task-4-red-959c577a870a-652526fc/checkpoint_plugin.py"
 spec = importlib.util.spec_from_file_location("checkpoint", plugin_path)
 plugin = importlib.util.module_from_spec(spec)

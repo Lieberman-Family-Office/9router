@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { sessionFromRequest, readSessionIdentity, attachSessionCookie } from "@/lib/mimoLoginSession";
+import { sessionFromRequest, readSessionIdentity, attachSessionCookie, ensureServiceSession } from "@/lib/mimoLoginSession";
+import { createDashboardAuthToken } from "@/lib/auth/dashboardSession";
+import { createHash } from "node:crypto";
 
 /**
  * GET /api/oauth/xiaomi-mimo/login/status?state=...
@@ -37,7 +39,18 @@ export async function GET(request) {
     );
   }
 
-  const payload = { status: "done", region: sess.region, ...id };
+  let reauthorizationProof;
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+    if (!id.userId || !(await ensureServiceSession(sess))) {
+      return NextResponse.json({ status: "error", error: "Provider reauthorization could not be verified" }, { status: 400 });
+    }
+    reauthorizationProof = await createDashboardAuthToken({
+      purpose: "xiaomi-reauthorization", userId: id.userId, region: sess.region,
+      credentialSha256: createHash("sha256").update(id.passToken).digest("hex"),
+      reauthorizationExpiresAt: Date.now() + 60000,
+    });
+  }
+  const payload = { status: "done", region: sess.region, ...id, ...(reauthorizationProof ? { reauthorizationProof } : {}) };
   // One-shot: don't let the identity linger past the client reading it.
   const res = NextResponse.json(payload);
   res.cookies.set("9r_mimo_login", "", { path: "/", httpOnly: true, maxAge: 0 });

@@ -524,14 +524,23 @@ finally {
       immutable();
     } catch (e) { complete = false; record.exportFailure = safeError(e); }
     // Never act by name on an unverified replacement instance.
-    const cleanupInstance = await metadata.devboxes.get(args['devbox-id'], { timeoutMs: 15000 });
-    matches(cleanupInstance);
-    if (!record.instanceId || cleanupInstance.info.instanceId !== record.instanceId) {
+    let cleanupOwned = false;
+    for (let attempt = 0; attempt < 2 && !cleanupOwned; attempt++) {
+      try {
+        const cleanupInstance = await metadata.devboxes.get(args['devbox-id'], { timeoutMs: 15000 });
+        matches(cleanupInstance);
+        cleanupOwned = !!record.instanceId && cleanupInstance.info.instanceId === record.instanceId;
+        if (!cleanupOwned) break;
+      } catch (error) {
+        record.cleanupMetadataFailure = safeError(error); save();
+      }
+    }
+    if (!cleanupOwned) {
       complete = false;
       record.cleanupOwnershipFailure = 'Owned instance identity unavailable or changed; external recovery required';
       save();
-      throw new Error(record.cleanupOwnershipFailure);
     }
+    if (cleanupOwned) {
     // Release the uploaded scanner credential even when setup or export fails.
     try { cliRun(['exec', args['devbox-name'], '--', '/opt/homebrew/bin/python3', '-c', 'import pathlib; pathlib.Path('+JSON.stringify(remote+'/scanner-credential')+').unlink(missing_ok=True)'],30000); }
     catch (e) { complete = false; record.credentialCleanupFailure = safeError(e); }
@@ -558,6 +567,7 @@ finally {
         record[phase + '-restop'] = { exitCode: retry.status, error: retry.error ? safeError(retry.error) : null };
       }
       save();
+    }
     }
   }
   try { client?.close(); metadata?.close(); }

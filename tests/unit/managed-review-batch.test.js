@@ -180,6 +180,32 @@ it('provider actual PUT preserves noncredential edits and refuses stale credenti
   expect(row.providerSpecificData.usage).toBe(8);
 });
 
+it('signed Xiaomi reauthorization uses real issuance generation and rejects a tampered proof', async () => {
+  db.prepare('UPDATE providerConnections SET provider=?,email=?,data=? WHERE id=?')
+    .run('xiaomi-mimo', 'fixture@xiaomi', JSON.stringify({ providerSpecificData: { mimoPassToken: 'fake-before', usage: 7 } }), 'fake-id');
+  vi.doMock('@/models', () => ({
+    getProviderConnections: async () => (await import('@/lib/db/repos/connectionsRepo.js')).getProviderConnections(),
+    createProviderConnection: async (...args) => (await import('@/lib/db/repos/connectionsRepo.js')).createProviderConnection(...args),
+    updateProviderConnection: async (...args) => (await import('@/lib/db/repos/connectionsRepo.js')).updateProviderConnection(...args),
+  }));
+  try {
+    const { createHash } = await import('node:crypto');
+    const { createDashboardAuthToken } = await import('@/lib/auth/dashboardSession');
+    const proof = await createDashboardAuthToken({ purpose: 'xiaomi-reauthorization', userId: 'fixture', region: 'sgp',
+      reauthorizationExpiresAt: Date.now() + 60000, credentialSha256: createHash('sha256').update('fake-after').digest('hex') });
+    const { POST } = await import('@/app/api/oauth/xiaomi-mimo/api-key/route.js');
+    const call = reauthorizationProof => POST(new Request('http://localhost/api/oauth/xiaomi-mimo/api-key', { method: 'POST',
+      body: JSON.stringify({ uid: 'fixture', mimoUserId: 'fixture', mimoPassToken: 'fake-after', region: 'sgp', reauthorizationProof }) }));
+    expect((await call(proof + 'tampered')).status).toBe(409);
+    expect((await call(proof)).status).toBe(200);
+    const { getProviderConnectionById } = await import('@/lib/db/repos/connectionsRepo.js');
+    const row = await getProviderConnectionById('fake-id');
+    expect(row.providerSpecificData.mimoPassToken).toBe('fake-after');
+    expect(row.providerSpecificData.usage).toBe(7);
+    expect(row.refreshGenerations.oauth).toBeGreaterThan(0);
+  } finally { vi.doUnmock('@/models'); }
+});
+
 it('provider-node metadata update does not replay credential snapshots', async () => {
   vi.doMock('@/models', () => ({
     getProviderNodeById: async () => ({ type: 'openai-compatible' }),

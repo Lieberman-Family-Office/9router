@@ -5,8 +5,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
-import {setTimeout as delay} from 'node:timers/promises';
-import {createDevboxClient} from '@namespacelabs/sdk';
 const tree=process.argv[2];
 assert(tree && path.isAbsolute(tree), 'Supply the owned absolute worktree');
 const head='959c577a870a6a598afe05745a8b649f6624f368', id='2tc0b2eg4mveo', name='9router-qualify-recovery';
@@ -158,6 +156,8 @@ for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,onSignal);
 save();fs.writeFileSync(path.join(evidence,'guest-runner.py'),guest);fs.writeFileSync(path.join(evidence,'checkpoint_plugin.py'),plugin);fs.writeFileSync(path.join(evidence,'orchestrator.mjs'),fs.readFileSync(new URL(import.meta.url)));
 try{
     immutable();git('archive','--format=tar','--output='+path.join(staging,'source.tar'),head);record.sourceArchiveSha256=sha(fs.readFileSync(path.join(staging,'source.tar')));save();
+    const {createDevboxClient}=await import('@namespacelabs/sdk');
+    const {setTimeout:delay}=await import('node:timers/promises');
     metadata=createDevboxClient({connectionTimeoutMs:20000});
     try{claim=fs.openSync(claimPath,'wx',0o600);}catch(e){
         if(e.code!=='EEXIST')throw e;
@@ -192,7 +192,7 @@ finally{
     if(owns){
         try{cliRun('stop',['stop',name,'--force'],120000);}catch(e){complete=false;record.stopFailure=error(e);save();}
         for(const phase of ['immediate','after-60-seconds']){
-            if(phase==='after-60-seconds')await delay(61000);
+            if(phase==='after-60-seconds')await new Promise(resolve=>setTimeout(resolve,61000));
             try{const s=await observe(phase);assert(s.state==='stopped'&&!s.instanceId,'Shutdown verification failed');}catch(e){complete=false;record[phase+'Failure']=error(e);save();}
         }
     }

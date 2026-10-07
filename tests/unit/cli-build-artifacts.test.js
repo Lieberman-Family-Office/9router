@@ -108,7 +108,6 @@ describe("CLI build server artifacts", () => {
     for (const name of fs.readdirSync(wsSource)) {
       writeFixture(source, `open-sse/handlers/responsesWs/${name}`, fs.readFileSync(new URL(name, wsSource)));
     }
-    writeFixture(source, "open-sse/handlers/responsesWs/session.js", sessionSource);
     writeFixture(source, "src/lib/db/managed.cjs", "module.exports = { isolatedRegistry: true };\n");
 
     copyResponsesWsArtifacts(source, output);

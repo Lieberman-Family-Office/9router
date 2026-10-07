@@ -1,4 +1,5 @@
-import { afterEach, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+import { createHash } from 'node:crypto';
 import { DefaultExecutor } from '../../open-sse/executors/default.js';
 import { GeminiCLIExecutor } from '../../open-sse/executors/gemini-cli.js';
 import { mergeRefreshedCredentials, refreshProviderCredentials } from '../../open-sse/services/oauthCredentialManager.js';
@@ -9,15 +10,23 @@ vi.mock('@/lib/localDb', () => ({
 vi.mock('@/lib/network/connectionProxy', () => ({ resolveConnectionProxyConfig: async () => ({}) }));
 vi.mock('@/mitm/manager', () => ({ initDbHooks() {}, getCachedPassword() {}, loadEncryptedPassword() {} }));
 const xiaomiWrite = vi.hoisted(() => vi.fn());
+const reauth = vi.hoisted(() => ({ proof: null }));
+vi.mock('@/lib/auth/dashboardSession', () => ({ getDashboardAuthSession: async () => reauth.proof }));
 vi.mock('@/models', () => ({
   createProviderConnection: xiaomiWrite, updateProviderConnection: xiaomiWrite,
-  getProviderConnections: async () => [{ id: 'fixture-xiaomi', provider: 'xiaomi-mimo', email: 'fixture@xiaomi' }],
+  getProviderConnections: async () => [{ id: 'fixture-xiaomi', provider: 'xiaomi-mimo', authType: 'oauth', email: 'fixture@xiaomi' }],
 }));
 vi.mock('next/server', () => ({ NextResponse: { json: (body, init) => Response.json(body, init) } }));
 
 vi.mock('open-sse/services/oauthCredentialManager.js', async original => ({
   ...await original(), refreshProviderCredentials: vi.fn(async () => ({ accessToken: 'fixture-new' })),
 }));
+beforeEach(() => {
+  vi.resetAllMocks();
+  refreshProviderCredentials.mockResolvedValue({ accessToken: 'fixture-new' });
+  reauth.proof = null;
+  xiaomiWrite.mockResolvedValue({ id: 'fixture-xiaomi', provider: 'xiaomi-mimo', email: 'fixture@xiaomi' });
+});
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it('managed Xiaomi credential edits refuse before persistence', async () => {
@@ -29,6 +38,22 @@ it('managed Xiaomi credential edits refuse before persistence', async () => {
   }));
   expect(response.status).toBe(409);
   expect(xiaomiWrite).not.toHaveBeenCalled();
+});
+
+it('managed Xiaomi verified reauthorization enters issuance while edited or expired proof refuses', async () => {
+  vi.stubEnv('NINEROUTER_MANAGED_WORKER', '1');
+  reauth.proof = { purpose: 'xiaomi-reauthorization', userId: 'fixture', region: 'sgp',
+    reauthorizationExpiresAt: Date.now() + 60000, credentialSha256: createHash('sha256').update('fixture-pass').digest('hex') };
+  const { POST } = await import('@/app/api/oauth/xiaomi-mimo/api-key/route.js');
+  const call = mimoPassToken => POST(new Request('http://localhost/api/oauth/xiaomi-mimo/api-key', { method: 'POST',
+    body: JSON.stringify({ uid: 'fixture', mimoUserId: 'fixture', mimoPassToken, region: 'sgp', reauthorizationProof: 'fixture-signed' }) }));
+  expect((await call('fixture-pass')).status).toBe(200);
+  expect(xiaomiWrite).toHaveBeenCalledOnce();
+  expect(xiaomiWrite.mock.calls[0][0]).toMatchObject({ authType: 'oauth', email: 'fixture@xiaomi', providerSpecificData: { mimoPassToken: 'fixture-pass' } });
+  expect((await call('fixture-edited')).status).toBe(409);
+  reauth.proof.reauthorizationExpiresAt = Date.now() - 1;
+  expect((await call('fixture-pass')).status).toBe(409);
+  expect(xiaomiWrite).toHaveBeenCalledOnce();
 });
 
 it('managed connection test does not mark a refresh error as active', async () => {
@@ -65,6 +90,15 @@ it('managed Kiro retry retains configuration omitted from partial refresh', () =
   const next = mergeRefreshedCredentials('kiro', current,
     { accessToken: 'fixture-new', providerSpecificData: { profileArn: 'fixture-arn' }, refreshGenerations: { oauth: 1 } });
   expect(next.providerSpecificData).toEqual({ ...current.providerSpecificData, profileArn: 'fixture-arn' });
+});
+
+it('managed merge strips sensitive uncoordinated refresh patches', () => {
+  vi.stubEnv('NINEROUTER_MANAGED_WORKER', '1');
+  const next = mergeRefreshedCredentials('kiro', { refreshToken: 'fixture-old' },
+    { accessToken: 'fixture-new', refreshToken: 'fixture-rotate', apiKey: 'fixture-key', expiresAt: '2030-01-01',
+      providerSpecificData: { profileArn: 'fixture-arn' } });
+  for (const field of ['accessToken', 'refreshToken', 'apiKey', 'expiresAt', 'lastRefreshAt']) expect(Object.hasOwn(next, field)).toBe(false);
+  expect(next.providerSpecificData.profileArn).toBe('fixture-arn');
 });
 
 it('managed Gemini refresh keeps the current project when the patch omits it', async () => {

@@ -49,7 +49,9 @@ test('managed h2c drain IPC retains responses and deferred persistence', { timeo
         if (message.fixture === 'end-response') endResponse();
         if (message.fixture === 'end-persistence') endPersistence();
       });
-      server.listen(Number(process.env.PORT), '127.0.0.1', async () => {
+      // Native ephemeral binding has no release/rebind window. Publish PORT before ingress accounting.
+      server.prependOnceListener('listening', () => { process.env.PORT = String(server.address().port); });
+      server.listen(0, '127.0.0.1', async () => {
         await earlyReadiness;
         await new Promise(resolve => auxiliary.listen(0, '127.0.0.1', resolve));
         await (await fetch('http://127.0.0.1:' + auxiliary.address().port)).text();
@@ -58,13 +60,9 @@ test('managed h2c drain IPC retains responses and deferred persistence', { timeo
         process.send({ fixture: 'ready', port: server.address().port });
       });
     `;
-    const reservation = net.createServer();
-    await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
-    const port = reservation.address().port;
-    await new Promise(resolve => reservation.close(resolve));
     child = spawn(process.execPath, ['-e', program], {
       cwd: root,
-      env: { ...process.env, PORT: String(port), NINEROUTER_MANAGED_WORKER: '1' },
+      env: { ...process.env, NINEROUTER_MANAGED_WORKER: '1' },
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     });
     let output = '';
