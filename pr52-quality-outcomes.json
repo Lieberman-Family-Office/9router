@@ -3,6 +3,14 @@
   "population": "All 120 unique Cubic root findings from the two b2c59fd0 review submissions; indices refer to the unchanged complete initial API ordering, not a count limit.",
   "sourceHead": "b2c59fd00ab9c218950d2c8ac01e0e35ebe5d7f4",
   "status": "Original 120 outcomes were published at e7658388 and verified resolved in actual threads. The completed exact-head review raised seven new Cubic findings and two new GitHub code-quality comments; their batched fix/proof outcomes are separate below. Historical artifacts are not final-head acceptance.",
+  "reviewRoundSix": {
+    "findingHead":"d74afa863227c2cb7c9c08dba1341650838f0d1a",
+    "cubicOpen":0,
+    "github":[
+      {"rootComment":4210165586,"status":"resolved","evidence":"GREEN historical authorization metadata initialization moved after unchanged execution refusal; quote/turn content preserved verbatim and cannot license new execution."},
+      {"rootComment":4210165598,"status":"resolved","evidence":"RED claimPath initialization moved after unchanged refusal; later exact claim operations remain bound, and updated hash verifies corrected archive bytes."}
+    ]
+  },
   "reviewRoundFive": {
     "findingHead":"b29f58c2c63af6e64da458799baee592d714a6b8",
     "provenance":"The following are local fixes after findingHead; published fix SHA is recorded in each actual thread after this batch. Historical bytes are not rewritten.",

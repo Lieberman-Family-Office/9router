@@ -16,7 +16,6 @@ const runId=head.slice(0,12)+'-'+randomUUID().slice(0,8);
 const evidence=path.join(tree,'docs/superpowers/evidence','task-4-red-'+runId);
 const relative=path.relative(tree,evidence);
 let staging, remote;
-const claimPath='/tmp/namespace-owner-2tc0b2eg4mveo.lock';
 assert.equal(git('rev-parse','HEAD').toString().trim(),head);
 const indexPath=git('rev-parse','--path-format=absolute','--git-path','index').toString().trim();
 const priorStatus=git('status','--porcelain=v1','-z','--untracked-files=all');
@@ -28,6 +27,7 @@ const immutable=()=>{assert.equal(git('rev-parse','HEAD').toString().trim(),head
 const transcript=process.argv[3];
 assert(transcript && path.isAbsolute(transcript), 'Supply the authorization source');
 throw new Error('Historical transcript is evidence, not current execution authorization. Prepare a newly bound runner.');
+const claimPath='/tmp/namespace-owner-2tc0b2eg4mveo.lock';
 staging=fs.mkdtempSync('/tmp/9router-task4-red-');
 remote='/Volumes/devbox/r'+runId.slice(-8);
 const transcriptLines=fs.readFileSync(transcript,'utf8').split('\n');
