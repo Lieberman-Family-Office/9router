@@ -562,9 +562,15 @@ finally {
         assert.equal(observation.info.state, 'stopped'); assert(!observation.info.instanceId);
       } catch (e) {
         complete = false; record[phase + '-failure'] = safeError(e);
-        // Reactivation is a cleanup failure, but still stop the same owned compute immediately.
-        const retry = spawnSync(cli, ['stop', args['devbox-name'], '--force'], { timeout: 120000, encoding: 'utf8' });
-        record[phase + '-restop'] = { exitCode: retry.status, error: retry.error ? safeError(retry.error) : null };
+        // A transient/mismatched observation never grants authority over replacement compute.
+        try {
+          const current = await metadata.devboxes.get(args['devbox-id'], { timeoutMs: 15000 });
+          matches(current);
+          if (current.info.instanceId === record.instanceId) {
+            const retry = spawnSync(cli, ['stop', args['devbox-name'], '--force'], { timeout: 120000, encoding: 'utf8' });
+            record[phase + '-restop'] = { exitCode: retry.status, error: retry.error ? safeError(retry.error) : null };
+          } else record.cleanupOwnershipFailure = 'Replacement or unknown instance; name-based restop refused';
+        } catch (ownershipError) { record.cleanupOwnershipFailure = safeError(ownershipError); }
       }
       save();
     }
@@ -581,7 +587,7 @@ finally {
     // Retain a failed cleanup claim. Do not let another batch inherit uncertain compute ownership.
     const verified = record.lifecycle.filter(x => ['immediate', 'after-60-seconds'].includes(x.phase));
     if (!owns || (verified.length === 2 && verified.every(x => x.state === 'stopped' && !x.instanceId)
-      && !record.stopFailure && !record['immediate-failure'] && !record['after-60-seconds-failure'])) fs.unlinkSync(claimPath);
+      && !record.cleanupOwnershipFailure && !record.stopFailure && !record['immediate-failure'] && !record['after-60-seconds-failure'])) fs.unlinkSync(claimPath);
   }
   console.log(JSON.stringify({ evidence, result: record.result, scope: 'Task 2 source checks only; no release or production verdict' }));
   process.exitCode = record.result === 'source-checks-pass' ? 0 : 2;

@@ -9,16 +9,17 @@ const block = source.slice(start, end);
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const run = new AsyncFunction('metadata', 'record', 'matches', 'safeError', 'save', 'cliRun', 'spawnSync', 'client', 'delay', 'args', 'remote', 'cli',
   `let complete=true; const assert=()=>{}; assert.equal=(a,b)=>{if(a!==b)throw new Error('assertion mismatch')}; const snapshot=box=>({state:box.info.state,instanceId:box.info.instanceId}); { ${block} return {complete,record};`);
-for (const mode of ['retry-success', 'unavailable', 'replacement']) {
+for (const mode of ['retry-success', 'unavailable', 'replacement', 'replaced-after-stop']) {
   let lookups=0, effects=0;
   const record={instanceId:'owned',lifecycle:[]};
   const metadata={devboxes:{get:async()=>{
     lookups++;
     if (mode==='unavailable' || (mode==='retry-success' && lookups===1)) throw new Error('isolated transport');
-    return {id:'box',info:{instanceId: mode==='replacement' ? 'other' : lookups<=2 ? 'owned' : null,state:lookups<=2?'running':'stopped'}};
+    return {id:'box',info:{instanceId: mode==='replacement' || (mode==='replaced-after-stop' && lookups>1) ? 'other' : lookups<=2 ? 'owned' : null,state:lookups<=2?'running':'stopped'}};
   }},close(){}};
   const result=await run(metadata,record,box=>assert.equal(box.id,'box'),error=>({message:error.message}),()=>{},()=>{effects++;},()=>{effects++;return {status:0};},{close(){}},async()=>{}, {'devbox-id':'box','devbox-name':'fixture'},'/isolated','fixture-cli');
   if(mode==='retry-success') {assert.ok(effects>=2);assert.equal(result.complete,true);}
+  else if(mode==='replaced-after-stop') {assert.equal(effects,2);assert.equal(result.complete,false);assert.ok(result.record.cleanupOwnershipFailure);}
   else {assert.equal(effects,0);assert.equal(result.complete,false);assert.ok(result.record.cleanupOwnershipFailure);}
 }
 console.log('PASS: bounded cleanup metadata retry recovers transport failure; unavailable/replacement ownership has zero guest effects and preserves failure receipt');
