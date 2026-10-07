@@ -1,5 +1,5 @@
 {
-  "source": "/Users/jasonlieberman/dev/9router/tests/package-lock.json",
+  "source": "docs/superpowers/evidence/task-2-retry-f76093a4f8ec-de12e533/tests-package-lock.json",
   "sha256": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff",
   "provenance": "Existing ignored local lock, read-only inspection; extra hashed dependency input, not source commit",
   "vitestVersion": "4.1.11",

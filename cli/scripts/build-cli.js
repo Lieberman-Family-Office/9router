@@ -169,6 +169,9 @@ function copyResponsesWsArtifacts(source, destination) {
 }
 
 async function buildCliPackage() {
+  // Build-only requirement; the unmanaged CLI keeps its published runtime floor.
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  if (major < 22 || (major === 22 && minor < 5)) throw new Error('CLI packaging requires Node >=22.5 for the compatibility manifest');
   console.log("📦 Building 9Router CLI package with Next.js...\n");
 
   fs.mkdirSync(buildHomeDir, { recursive: true });
@@ -381,5 +384,5 @@ module.exports = {
 };
 
 if (require.main === module) {
-  buildCliPackage().catch(() => { console.error("CLI compatibility build failed"); process.exitCode = 1; });
+  buildCliPackage().catch(error => { console.error("CLI compatibility build failed", error); process.exitCode = 1; });
 }

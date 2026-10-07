@@ -82,6 +82,7 @@ if (process.argv[2] === 'child') {
           clearTimeout(deadline);
           if (output.includes('fake-ungated') || output.includes('fake-invalid')) return reject(new Error('Credential output forbidden'));
           if (expectFailure ? code === 0 : code !== 0) return reject(new Error(`CAS child failed (exit ${code}): ${output.replace(/fake-[\w-]+/g, '[redacted]')}`));
+          if (expectFailure && !output.includes('Enrolled database layout mismatch')) return reject(new Error('CAS child did not refuse the mutated layout'));
           resolve();
         });
       });
@@ -114,7 +115,7 @@ if (process.argv[2] === 'child') {
     let announce;
     const pending = new Promise(resolve => { announce = resolve; });
     const delayed = child(-2, false, 'oauth', announce);
-    const oldWorker = await pending;
+    const oldWorker = await Promise.race([pending, delayed.then(() => { throw new Error('CAS child exited without pending announcement'); })]);
     await child(-1);
     oldWorker.send({ op: 'finish' });
     await delayed;

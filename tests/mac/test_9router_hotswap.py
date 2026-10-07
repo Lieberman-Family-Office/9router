@@ -123,6 +123,11 @@ def controller(hs, monkeypatch):
         },
     )
     hs.LINK.symlink_to(releases["v1"])
+    sockets = {}
+    for slot in ("a",):
+        listener = socket.socket(socket.AF_UNIX)
+        listener.bind(str(hs.RUNTIME / f"{slot}.sock"))
+        sockets[slot] = listener
     (hs.RUNTIME / "active.sock").symlink_to("a.sock")
     live = {
         "a": {
@@ -153,6 +158,10 @@ def controller(hs, monkeypatch):
         return fixture_control(hs, events, live, failures, slot, op)
 
     def start_worker(slot, entry):
+        if slot not in sockets:
+            listener = socket.socket(socket.AF_UNIX)
+            listener.bind(str(hs.RUNTIME / f"{slot}.sock"))
+            sockets[slot] = listener
         events.append(f"start:{slot}")
         live[slot] = {
             "slot": slot,
@@ -202,6 +211,8 @@ def controller(hs, monkeypatch):
             "Controller must receive stopped acknowledgement before bootout"
         )
         events.append(f"bootout:{slot}")
+        sockets.pop(slot).close()
+        (hs.RUNTIME / f"{slot}.sock").unlink()
         del live[slot]
 
     lifecycle = {
@@ -230,7 +241,7 @@ def controller(hs, monkeypatch):
     )
     monkeypatch.setattr(hs, "snapshot_db", lambda dest: events.append("snapshot"))
     monkeypatch.setattr(hs, "stage_assets", lambda dest: events.append("assets"))
-    return SimpleNamespace(
+    yield SimpleNamespace(
         mod=hs,
         events=events,
         releases=releases,
@@ -239,6 +250,8 @@ def controller(hs, monkeypatch):
         lifecycle=lifecycle,
         managed_probe=managed_probe,
     )
+    for listener in sockets.values():
+        listener.close()
 
 
 def test_shared_environment_enrollment_preserves_literal_values(hs):
@@ -819,8 +832,9 @@ def test_real_validation_requires_receipt_even_in_guest(hs, tmp_path):
     release = hs.RELEASES / "v2/lib/node_modules/9router"
     release.mkdir(parents=True)
     private_json(release / "package.json", {"version": "v2"})
-    with pytest.raises((ValueError, OSError, RuntimeError)):
-        hs.validate_release(release, "b" * 64)
+    with pytest.raises(FileNotFoundError) as missing:
+        hs.qualification("b" * 64)
+    assert Path(missing.value.filename) == hs.QUALIFIED / f"{'b' * 64}.json"
     assert not hs.STATE_FILE.exists()
 
 

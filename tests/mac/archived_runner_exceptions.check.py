@@ -23,6 +23,7 @@ for path in PATHS:
     for handler in (
         node for node in ast.walk(tree) if isinstance(node, ast.ExceptHandler)
     ):
+        assert handler.type is not None, f"Bare handler: {path}:{handler.lineno}"
         assert not any(
             isinstance(node, ast.Name) and node.id == "BaseException"
             for node in ast.walk(handler.type)
@@ -44,8 +45,8 @@ for path in PATHS:
         propagated = False
         try:
             exec(code, {"error": error, "events": events})
-        except (KeyboardInterrupt, SystemExit) as caught:
-            assert caught is error, f"Changed control exception: {path}"
+        except (RuntimeError, KeyboardInterrupt, SystemExit) as caught:
+            assert caught is error, f"Changed subject exception: {path}"
             propagated = True
         assert propagated == isinstance(error, (KeyboardInterrupt, SystemExit)), path
         assert events.count("cleanup") == 1, f"Cleanup did not run once: {path}"

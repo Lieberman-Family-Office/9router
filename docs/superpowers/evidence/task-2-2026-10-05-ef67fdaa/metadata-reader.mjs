@@ -1,5 +1,6 @@
 import {loadUserToken} from '@namespacelabs/sdk/auth';
 import {createDevboxClient} from '@namespacelabs/sdk/devbox';
+if (process.argv.length > 3 || ![undefined, 'stop', 'verify'].includes(process.argv[2])) throw new Error('Unsupported metadata mode');
 const client=createDevboxClient({tokenSource:loadUserToken});
 const box=await client.devboxes.get('2tc0b2eg4mveo',{timeoutMs:20000});
 if(box.info.id!=='2tc0b2eg4mveo'||box.info.name!=='9router-qualify-recovery')throw new Error('Devbox identity mismatch');

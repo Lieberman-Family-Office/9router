@@ -104,12 +104,16 @@ describe("CLI build server artifacts", () => {
     const sessionSource = fs.readFileSync(new URL("../../open-sse/handlers/responsesWs/session.js", import.meta.url), "utf8");
     const registryImport = sessionSource.match(/createRequire\(import\.meta\.url\)\('([^']+)'\)/);
     assert.ok(registryImport, "actual session registry import must be found");
-    writeFixture(source, "open-sse/handlers/responsesWs/index.js", "module.exports = {};");
+    const wsSource = new URL('../../open-sse/handlers/responsesWs/', import.meta.url);
+    for (const name of fs.readdirSync(wsSource)) {
+      writeFixture(source, `open-sse/handlers/responsesWs/${name}`, fs.readFileSync(new URL(name, wsSource)));
+    }
     writeFixture(source, "open-sse/handlers/responsesWs/session.js", sessionSource);
     writeFixture(source, "src/lib/db/managed.cjs", "module.exports = { isolatedRegistry: true };\n");
 
     copyResponsesWsArtifacts(source, output);
 
+    assert.deepEqual(fs.readdirSync(path.join(output, 'handlers/responsesWs')).sort(), fs.readdirSync(wsSource).sort());
     const packagedSession = path.join(output, "handlers/responsesWs/session.js");
     assert.equal(fs.readFileSync(packagedSession, "utf8"), sessionSource);
     assert.deepEqual(createRequire(packagedSession)(registryImport[1]), { isolatedRegistry: true });

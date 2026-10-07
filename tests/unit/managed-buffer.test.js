@@ -47,7 +47,6 @@ it('refuses clean retirement when observability settings reject', async () => {
   await expect(saveRequestDetail({ id: 'settings-failed' })).rejects.toThrow('isolated settings failure');
   expect(state.persistence).toBe(0);
   expect(state.unknown).toBe(true);
-  expect(state.initialized && state.unknown === false && state.persistence === 0).toBe(false);
   expect(fixture.writes).toBe(0);
 });
 it('permits explicitly disabled observability without unknown work', async () => {

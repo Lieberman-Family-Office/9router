@@ -21,7 +21,7 @@ spec.loader.exec_module(qualify)
 
 
 class RestoreTest(unittest.TestCase):
-    def test_restore_and_baseline_leave_referenced_releases_and_database_untouched(
+    def test_restore_and_baseline_refusal_leave_referenced_state_untouched(
         self,
     ):
         with tempfile.TemporaryDirectory() as directory:

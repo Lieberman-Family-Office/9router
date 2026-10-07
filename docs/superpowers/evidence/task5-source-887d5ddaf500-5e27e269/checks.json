@@ -10,11 +10,8 @@
     "expectedExitCode": 0,
     "timeout": false,
     "cleanupFailure": null,
-    "validated": true,
-    "population": {
-      "unit": "independently reconstructed runtime file hashes",
-      "count": 1748
-    },
+    "validated": false,
+    "provenanceCorrection": "The recorded command only prints a message. This entry does not independently prove source reconstruction or hash verification.",
     "seconds": 0.052330707999999504
   },
   {

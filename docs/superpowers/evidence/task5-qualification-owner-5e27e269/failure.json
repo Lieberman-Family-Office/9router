@@ -1,1 +1,11 @@
-{"blocker": "guest execution failed", "diagnostic": "guest command exited 2: (node:3331) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Volumes/devbox/9router/qualification/qualify-7edc2d29677c4c6ba70f5140f1c6c583/source/src/lib/db/schema.js is not specified and it doesn't parse as CommonJS.\nReparsing as ES module because module syntax was detected. This incurs a performance overhead.\nTo eliminate this warning, add \"type\": \"module\" to /Volumes/devbox/9router/qualification/qualify-7edc2d29677c4c6ba70f5140f1c6c583/source/package.json.\n(Use `node --trace-warnings ...` to show where the warning was created)\n{\"provider\":\"deterministic-guest-fixture\",\"transitions\":1,\"new_authenticated_http_completed\":0,\"success\":false}\n", "type": "GuestCheckFailure"}
+{
+  "blocker": "guest execution failed",
+  "type": "GuestCheckFailure",
+  "diagnostic": "Packaged continuity failed: Old WebSocket truncated; SSE DONE marker missing. The MODULE_TYPELESS_PACKAGE_JSON warning is not the failure cause.",
+  "failureEvidence": "packaged-result.json",
+  "failures": [
+    { "phase": "fixture", "type": "Error", "reason": "Old WebSocket truncated" },
+    { "phase": "session-cleanup", "reason": "SSE DONE marker missing\n\n2 !== 1\n" }
+  ],
+  "provenanceCorrection": "Failure details copied from the preserved packaged-result.json. No new qualification was run."
+}
