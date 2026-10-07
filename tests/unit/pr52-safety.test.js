@@ -8,11 +8,28 @@ vi.mock('@/lib/localDb', () => ({
 }));
 vi.mock('@/lib/network/connectionProxy', () => ({ resolveConnectionProxyConfig: async () => ({}) }));
 vi.mock('@/mitm/manager', () => ({ initDbHooks() {}, getCachedPassword() {}, loadEncryptedPassword() {} }));
+const xiaomiWrite = vi.hoisted(() => vi.fn());
+vi.mock('@/models', () => ({
+  createProviderConnection: xiaomiWrite, updateProviderConnection: xiaomiWrite,
+  getProviderConnections: async () => [{ id: 'fixture-xiaomi', provider: 'xiaomi-mimo', email: 'fixture@xiaomi' }],
+}));
+vi.mock('next/server', () => ({ NextResponse: { json: (body, init) => Response.json(body, init) } }));
 
 vi.mock('open-sse/services/oauthCredentialManager.js', async original => ({
   ...await original(), refreshProviderCredentials: vi.fn(async () => ({ accessToken: 'fixture-new' })),
 }));
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+it('managed Xiaomi credential edits refuse before persistence', async () => {
+  vi.stubEnv('NINEROUTER_MANAGED_WORKER', '1');
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ data: [] })));
+  const { POST } = await import('@/app/api/oauth/xiaomi-mimo/api-key/route.js');
+  const response = await POST(new Request('http://localhost/api/oauth/xiaomi-mimo/api-key', {
+    method: 'POST', body: JSON.stringify({ apiKey: 'sk-fixture-key', uid: 'fixture' }),
+  }));
+  expect(response.status).toBe(409);
+  expect(xiaomiWrite).not.toHaveBeenCalled();
+});
 
 it('managed connection test does not mark a refresh error as active', async () => {
   vi.stubEnv('NINEROUTER_MANAGED_WORKER', '1');
