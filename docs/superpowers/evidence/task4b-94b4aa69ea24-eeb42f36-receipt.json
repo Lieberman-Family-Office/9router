@@ -3,7 +3,9 @@
   "provenance": "Condensed from the exported guest manifest, checks, packaged report and host lifecycle record; source checks ran exclusively in Namespace.",
   "runId": "task4b-94b4aa69ea24-eeb42f36",
   "head": "94b4aa69ea24f98b55fd66f80c3043a94f204c0c",
-  "result": "task4b-pass-packaged-endpoints-only",
+  "result": "historical-condensed-record-unverified-raw-evidence",
+  "sourceTreeBinding": "887d5ddaf5006d0721f3a9572de8f4e99b21f2d2",
+  "provenanceCorrection": "sourceHashes match the committed Task 4b overlay at sourceTreeBinding; head is the historical pre-overlay base. Raw artifacts listed below are not available in this repository, so their hashes and reported execution are not independently verified here. This receipt cannot grant acceptance.",
   "scope": "Task 4b managed update/shutdown dispatch and packaged endpoint refusals; not full hot-swap release qualification or a push license.",
   "authorization": {
     "quote": "Yes—run Task 4b validation in Namespace and verify both shutdown confirmations (Recommended)",

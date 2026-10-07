@@ -3,6 +3,8 @@
   "runId": "green-959c577a870a-8a365ef0",
   "head": "959c577a870a6a598afe05745a8b649f6624f368",
   "phase": "green",
+  "sourceTreeBinding": "94b4aa69ea24f98b55fd66f80c3043a94f204c0c",
+  "sourceTreeBindingExplanation": "The historical head is the pre-overlay base. sourceHashes match the later committed overlay tree, not that base and not the final PR head. This archive is not final-head acceptance.",
   "authorization": {
     "quote": "Yes\u2014run Task 4 tests and scans in Namespace; verify shutdown twice (Recommended)",
     "turn": "operator chat_selection at 2026-10-06 00:46 EDT; continued by finish task 4 /goal at 2026-10-06 02:16 EDT"
