@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "pullRequest": "https://github.com/Lieberman-Family-Office/9router/pull/52",
+  "fixedBase": "82d69847cc8f76189c7a765fe98a22381dc735f9",
+  "remoteHeadObserved": "b2c59fd00ab9c218950d2c8ac01e0e35ebe5d7f4",
+  "inventorySource": "Cubic get_pr_issues, freshly queried after replacement isolation; all 120 issue IDs match the earlier inventory",
+  "populations": {
+    "cubicOpen": 120,
+    "cubicHistoricalRootComments": 120,
+    "cubicReviewSubmissions": [60, 60],
+    "githubRootThreads": 141,
+    "githubPreviouslyResolvedCodeQualityThreads": 21,
+    "githubUnresolvedCubicThreads": 120,
+    "separateCubicScanIssues": 0,
+    "exactBodyDuplicates": 0
+  },
+  "dispositionState": "Incomplete. No issue is claimed fixed merely from the local diff or thread absence. No batched push or merge is licensed.",
+  "independentlyVerifiedFalsePositiveCandidates": [
+    { "issueId": "d354e7d5-33f3-4412-a24a-22efbdbb8f1e", "evidence": "Installed Vite alias predicate matches equality or pattern plus slash; @ does not match @xyflow/react. Anchored alias cleanup is retained." },
+    { "issueId": "d8438615-45bf-4ee8-a73f-230c0cc6f9a4", "evidence": "Installed Vite alias predicate matches equality or pattern plus slash, not arbitrary scoped-package prefixes." },
+    { "issueId": "2ffc40fb-3109-4407-b54c-7ce3ca37b665", "evidence": "A stock Vitest JSON run emitted 3 total suites with one file result. Archived report contains ten file results plus ten describe suites and 84 assertions; the suite counter is not a file counter." },
+    { "issueId": "a370c9f7-dfad-40ce-93ae-9e94ef27705c", "evidence": "Same independently reproduced Vitest suite-versus-file distinction; do not falsify historical suite counts." },
+    { "issueId": "fe9366ac-c3a3-4dbe-8e33-dc77f25fe9ad", "evidence": "REFRESH_HANDLERS covers gemini-cli, antigravity, claude, kiro and cline. The import-aware census runs through current handlers." },
+    { "issueId": "ed7d82ff-243a-4104-af26-2aa5b2930ce9", "evidence": "Actual Kiro refresh regression returns refreshGenerations.oauth; dedup family mapping is provider==copilot ? copilot : oauth." }
+  ],
+  "unresolvedEvidenceBlocker": {
+    "issueId": "fa60ab76-17cd-475c-a5b9-a9ec48155fb7",
+    "runId": "task4b-94b4aa69ea24-eeb42f36",
+    "requiredArtifacts": ["manifest.json", "checks.json", "identity.json", "source-binding.json", "green.json", "packaged-endpoints.json", "secrets.log"],
+    "discovery": "Tracked evidence-tree discovery and digest comparison of 120 candidate files under /tmp/9r-* found no matching raw hashes.",
+    "producer": "No retained-location URI or exact export/reproduction command is documented in the condensed receipt or its plan entry. This missing locator is itself the finding. The original run owner must provide the retained location/export; a new run cannot prove historical hashes.",
+    "threadAction": "Cubic status kept open; one evidence-bearing reply queued. No duplicate reply or false resolution.",
+    "safety": "No Namespace activation, credential release, deployment or service restart was attempted."
+  },
+  "verifiedChecks": {
+    "focusedPythonTests": 257,
+    "focusedVitestTestsLatestCombined": 69,
+    "additionalSafetyModuleLatest": 6,
+    "nativeHttpAndPackagingTests": 11,
+    "worker": "Passed in replacement tree, including post-reservation competing listener, active SSE/WS preservation and idle keepalive drain",
+    "credentialCasProcess": "Passed",
+    "cleanup": "Passed",
+    "managedState": "Passed",
+    "counterfactual": "Unchanged mirror passed; eight named baseline mechanisms failed; pending/uncertain safety passed",
+    "dispatchCensus": "647 files, 86 dispatches, 80 coordinated issuer paths; health allow-side and indirect/body-builder RED controls passed",
+    "archiveIntegrityEntries": 232,
+    "archiveHandlerCases": 21,
+    "changedJavaScriptSyntaxFiles": 44,
+    "changedPythonLintFiles": 19,
+    "primaryPythonFormatFiles": 10
+  },
+  "nextRequiredWork": [
+    "Obtain or deliberately retire the unverified Task 4b receipt claim through an operator-supported evidence decision; do not dismiss the open finding silently.",
+    "Finish explicit one-to-one fix/proof accounting for every remaining issue ID and run final scoped JavaScript lint and complete changed-Python format checks.",
+    "Only when all findings and local checks are complete, make one forward push to the actual PR source branch and verify live/local SHA equality.",
+    "Record justified outcomes in actual threads, then require clean exact-final-head Cubic review and all applicable checks before merge."
+  ],
+  "oldTreePolicy": "The contested original tree and its claims/lock were not modified during replacement isolation.",
+  "closeout": "Replacement lock and claims remain held; parent manages shared checkout sync. No broad reap."
+}
