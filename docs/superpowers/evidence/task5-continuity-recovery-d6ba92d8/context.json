@@ -1,0 +1,16 @@
+{
+  "scope": "Task5 exact-source packaged continuity reproduction and repair; not Task6 or production approval",
+  "owner": "1c7bce1a-1309-45c3-a156-cf5623c06fda",
+  "base_commit": "c0ceebc70d892398870f93dba9af522f870ccc08",
+  "worktree": "9router-task5-continuity-recovery-d6ba92d8",
+  "branch": "fix/task5-continuity-recovery-d6ba92d8",
+  "authorization_quote": "Namespace activation needs your explicit approval - EXPLICIT APPROVAL GRANTED",
+  "authorization_turn": "2026-10-07 15:09 EDT",
+  "devbox": {"id": "2tc0b2eg4mveo", "name": "9router-qualify-recovery", "observed_state": "stopped", "instance_id": null, "os": "macos", "architecture": "arm64", "creator": "user_01m3qah2gszqynzkqthj9g07c0"},
+  "source_blobs": {"fixture": "e0d3ef0e5a84b9fc6b95e23b85bcbcfee8d33aa1", "qualifier": "50a080fa2bad39285291a8e9ec6ea4d24d75d9ae", "controller": "207126c74c47bd51e65f29f69b9a75041d47ef75"},
+  "historical_result": {"scope": "Archived source 887d5dda plus patch; not reproduction of current merged source", "success": false, "transitions": 1, "positive_open_sse": 0, "positive_open_ws": 0, "http_completed": 0, "failure": "Old WebSocket truncated", "cleanup_failure": "SSE DONE marker missing: 2 !== 1"},
+  "diagnosis": "Unproven. Historical failure occurs before positive-open barriers and does not establish route-cutover causation.",
+  "tests_executed": [],
+  "production_touched": false,
+  "foreign_worktrees_touched": false
+}
