@@ -1,4 +1,4 @@
-"""Task 2 templates are parsed and rendered with plistlib, never XML substitution."""
+"""Parse evidence-only plist fixtures; production enrollment is covered by hotswap tests."""
 
 import pathlib
 import plistlib
