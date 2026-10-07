@@ -5,12 +5,14 @@
   "remoteHeadObserved": "b2c59fd00ab9c218950d2c8ac01e0e35ebe5d7f4",
   "inventorySource": "Cubic get_pr_issues, freshly queried after replacement isolation; all 120 issue IDs match the earlier inventory",
   "populations": {
-    "cubicOpen": 120,
+    "cubicOpenAtIsolation": 120,
+    "cubicOpenAfterProvedDispositions": 114,
     "cubicHistoricalRootComments": 120,
     "cubicReviewSubmissions": [60, 60],
     "githubRootThreads": 141,
     "githubPreviouslyResolvedCodeQualityThreads": 21,
-    "githubUnresolvedCubicThreads": 120,
+    "githubUnresolvedCubicThreadsAtIsolation": 120,
+    "cubicThreadDispositionsVerifiedViaApi": 6,
     "separateCubicScanIssues": 0,
     "exactBodyDuplicates": 0
   },
