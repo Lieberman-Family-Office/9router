@@ -80,7 +80,7 @@ const cliRun = (args, timeout = 120000) => {
   assert(!p.error && p.status === 0, 'Devbox ' + args[0] + ' failed: ' + clean(p.error || p.stderr));
   return p.stdout + '\n' + p.stderr;
 };
-const guest = String.raw`
+const archivedGuest = String.raw`
 import hashlib,json,os,pathlib,re,signal,subprocess,sys,time,xml.etree.ElementTree as ET
 root=pathlib.Path(sys.argv[1]);m=json.loads((root/'input.json').read_text());out=root/'evidence';out.mkdir(mode=0o700)
 head=root/'head';results=[];active=None;success=False;aborted=False;before=None;after=None;tracked={};credential_clean=False
@@ -246,6 +246,7 @@ finally:
 print(json.dumps({'phase':'evidence-complete','success':success}),flush=True)
 sys.exit(0 if success else 2)
 `;
+const guest = fs.readFileSync(new URL('./guest-runner.py', import.meta.url), 'utf8');
 record.runnerSha256 = sha(Buffer.from(guest));
 fs.writeFileSync(path.join(evidence, 'guest-runner.py'), guest, { mode: 0o600 });
 fs.writeFileSync(path.join(evidence, 'orchestrator.mjs'), regular(new URL(import.meta.url)), { mode: 0o600 });

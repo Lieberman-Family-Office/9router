@@ -1,5 +1,5 @@
-# Archived diagnostic copy, not the executable guest string used by orchestrator.mjs.
-# This file grants no run identity or acceptance; original bytes remain in Git history.
+# Canonical archived runner input. The host hashes and uploads this file.
+# Historical execution bytes remain in Git; reruns still require new authorization.
 import hashlib
 import json
 import os
@@ -32,6 +32,11 @@ def digest(p):
 
 
 def clean(s):
+    s = re.sub(
+        r"""(?i)(authorization\s*[:=]\s*(?:bearer\s+)?|(?:access_token|refresh_token|api[_-]?key|password|client_secret|session_secret)\s*["\x27]?\s*[:=]\s*["\x27]?)[^\s,"\x27}]+""",
+        r"\1[REDACTED]",
+        s.replace(secret, "[REDACTED]"),
+    )
     return re.sub(
         r"(?:nsct_|ghp_|github_pat_|sk-)[A-Za-z0-9_.-]+",
         "[REDACTED]",
