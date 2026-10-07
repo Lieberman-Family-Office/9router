@@ -1,0 +1,19 @@
+{
+  "authorization": {"operator_quote":"Yes—raise only the per-user limit to 2, preserve the old guest, and retry (Recommended)","operator_turn":"2026-10-07 18:24 EDT namespace_per_user_limit answer","approved_change":"effective devbox maximum_count_per_user 1 to2 only","workspace_maximum_preserved":3},
+  "installed_sdk_version":"1.4.0",
+  "policy_read": {"method":"TenantService.DescribePolicies","revision":"3","policy_population":1,"policies":[{"id":"","policy":"namespace.cloud.compute.v1beta.UsagePolicy","value":"{}"}],"repeat_read_revision":"3"},
+  "effective_quota": {"method":"DevBoxService.GetUsage","maximumCount":3,"maximumCountPerUser":1},
+  "supported_generic_write": {"method":"TenantService.UpdatePolicies","request_fields":["tenantId","policies","revision"],"concurrency_binding":"Only update if revision matches","schema_requirement":"partner token or admin-scoped tenant token","attempted":false},
+  "target_capability_gap": {"canonical_per_user_field":"maximum_count_per_user / maximumCountPerUser","installed_source_occurrence":"GetUsageResponse output only","live_app_policy":"Not present among the one DescribePolicies response","UsagePolicy_schema":"compute concurrency CPU/memory/max_instance_count and billing-period/platform limits; not per-user non-expired devbox count","DevboxDefaults_schema":"shape/image/checkout/access/integrations/features/volumeSizeGb/networkPolicy; not count quota","CLI":"devbox --help exposes no quota-policy action"},
+  "write_refusal_reason":"No authoritative target policy identifier/schema or supported app-specific setter was exposed. A generic arbitrary-string UpdatePolicies is not authority to invent an undocumented policy value.",
+  "vendor_guidance": {"installed_TenantPolicy_doc":"More policies are available. Consult with the Namespace team on additional controls that can be applied per tenant.","source":"installed SDK src/proto/namespace/cloud/iam/v1beta/tenants_pb.ts TenantPolicy","public_docs_url":"https://namespace.so/docs/security/permissions","public_docs":"tenant/policies documents get only; Context7 does not establish per-user devbox update procedure"},
+  "next_action":"Obtain Namespace's supported devbox app quota setter or have the workspace/vendor administrator set maximum_count_per_user to2 only. Preserve maximum_count3, storage default300 and every unrelated value. Then verify GetUsage returns3/2 before same-name stopped creation.",
+  "falsifier":"A documented app-specific policy type/setter with canonical maximum_count_per_user and revision semantics, or live GetUsage already returning>=2, permits continuation without guessing.",
+  "before_after": {"quota_before":[3,1],"quota_after":[3,1],"revision_before":"3","revision_after":"3","quota_write_performed":false,"unrelated_policy_changes":false},
+  "fresh_guest": {"name":"9router-task5-fresh300-d6ba92d8-20261007","exact_name_NOT_FOUND":true,"id":null,"creation_retried_after_quota_discovery":false},
+  "old_guest": {"id":"2tc0b2eg4mveo","activeInstanceId":null,"preserved":true},
+  "compute_activated":false,
+  "new_token_or_privilege_requested":false,
+  "external_post_or_browser_automation":false,
+  "production_touched":false
+}
