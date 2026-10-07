@@ -152,7 +152,7 @@ def unit_summary(p, minimum, files):
     def validate(text):
         j=json.loads(p.read_text())
         assert len(j['testResults'])==files and j['numTotalTests']>=minimum, 'zero/incomplete unit population'
-        assert j['numPendingTests']==0 and j['numFailedTests']==0 and j['success'] is True, 'failed/skipped unit tests'
+        assert j['numPendingTests']==0 and j.get('numTodoTests',0)==0 and all(r['status']=='passed' for s in j['testResults'] for r in s['assertionResults']) and j['numFailedTests']==0 and j['success'] is True, 'failed/skipped unit tests'
         assert all(x['status']=='passed' for x in j['testResults']), 'unrun unit module'
         return {'testCount':j['numTotalTests'],'fileCount':len(j['testResults']),'reportSha256':digest(p)}
     return validate
@@ -218,10 +218,10 @@ try:
     def native_summary(name):
         def validate(text):
             assert text.strip(), 'empty native proof log'
-            assert not re.search(r'(?i)\b(?:skipped|todo)\b',text), 'skipped native proof'
+            if name!='h2c-head': assert not re.search(r'(?i)\b(?:skipped|todo)\b',text), 'skipped native proof'
             for marker in markers.get(name,[]): assert marker in text, 'missing native assertion identity'
             if name=='h2c-head':
-                assert re.search(r'^# tests 5$',text,re.M) and re.search(r'^# pass 5$',text,re.M) and re.search(r'^# fail 0$',text,re.M) and re.search(r'^# cancelled 0$',text,re.M), 'incomplete h2c population'
+                assert re.search(r'^# tests 5$',text,re.M) and re.search(r'^# pass 5$',text,re.M) and re.search(r'^# fail 0$',text,re.M) and re.search(r'^# cancelled 0$',text,re.M) and re.search(r'^# skipped 0$',text,re.M) and re.search(r'^# todo 0$',text,re.M), 'incomplete h2c population'
             return {'logSha256':digest(out/(name+'.log')),'requiredMarkers':markers.get(name,[])}
         return validate
     for name,argv,limit in checks if m['testScope']=='task2' else []:
