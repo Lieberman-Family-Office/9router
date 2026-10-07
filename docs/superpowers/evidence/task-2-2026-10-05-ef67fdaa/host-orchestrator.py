@@ -139,7 +139,7 @@ try:
             "devbox",
             "upload",
             BOX,
-            "/tmp/task2-guest-ef67fdaa.py",
+            str(Path(__file__).with_name("guest-runner.py")),
             REMOTE + "/runner.py",
         ],
         120,

@@ -874,6 +874,25 @@ def test_invalid_versions_refuse_before_side_effects(hs, version):
     assert not hs.STATE_FILE.exists()
 
 
+def test_successful_restore_preserves_the_actual_provider_database(
+    controller, monkeypatch
+):
+    c = controller
+    c.mod.DB.write_bytes(b"original-provider-credentials")
+    state = c.mod.read_state()
+    state["enrollment"] = "complete"
+    c.mod.write_state(state)
+    monkeypatch.setattr(c.mod, "QUALIFICATION_SCOPE", {"phase": "qualification"})
+    monkeypatch.setattr(
+        c.mod, "concrete_release", lambda destination: destination.parents[2].name
+    )
+    monkeypatch.setattr(c.mod, "restore_qualification_runtime", lambda: None)
+    monkeypatch.setattr(c.mod, "proxy_enrollment", lambda: None)
+    monkeypatch.setattr(c.mod, "require_probe", lambda *args: None)
+    assert c.mod.restore_qualification() == 0
+    assert c.mod.DB.read_bytes() == b"original-provider-credentials"
+
+
 def test_managed_install_uses_exact_private_copy_without_package_hooks(
     controller, monkeypatch
 ):

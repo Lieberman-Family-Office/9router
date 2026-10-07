@@ -26,12 +26,14 @@
     { "issueId": "fe9366ac-c3a3-4dbe-8e33-dc77f25fe9ad", "evidence": "REFRESH_HANDLERS covers gemini-cli, antigravity, claude, kiro and cline. The import-aware census runs through current handlers." },
     { "issueId": "ed7d82ff-243a-4104-af26-2aa5b2930ce9", "evidence": "Actual Kiro refresh regression returns refreshGenerations.oauth; dedup family mapping is provider==copilot ? copilot : oauth." }
   ],
-  "unresolvedEvidenceBlocker": {
+  "recoveredHistoricalArtifacts": {
     "issueId": "fa60ab76-17cd-475c-a5b9-a9ec48155fb7",
     "runId": "task4b-94b4aa69ea24-eeb42f36",
     "requiredArtifacts": ["manifest.json", "checks.json", "identity.json", "source-binding.json", "green.json", "packaged-endpoints.json", "secrets.log"],
-    "discovery": "Tracked evidence-tree discovery and digest comparison of 120 candidate files under /tmp/9r-* found no matching raw hashes.",
-    "producer": "No retained-location URI or exact export/reproduction command is documented in the condensed receipt or its plan entry. This missing locator is itself the finding. The original run owner must provide the retained location/export; a new run cannot prove historical hashes.",
+    "discovery": "The previous /tmp sample was incomplete. Original runner task4b-approved.mjs writes to Node os.tmpdir(), which resolves to the macOS /var/folders temporary root. Filename discovery found two 9r-task4b-* directories there and zero under /private/tmp. The original matching run is 9r-task4b-TTHa2H/evidence, containing 51 artifact files.",
+    "producer": "Original owner session ef67fdaa-3d82-4a60-8a11-ccd6c0628733; prepared by 85d642d0 and 09dde35b. Actual transcript tool records and retained runner established os.tmpdir()/9r-task4b- output. Guest export root was /Volumes/devbox/t4beeb42f36/evidence.",
+    "allSevenDigestsVerified": true,
+    "verification": "python3 tests/mac/pr52-archive.check.py <original-evidence-directory>; seven digest comparisons pass. secrets.log contents withheld. No remote access or new run was used.",
     "threadAction": "Cubic status kept open; one evidence-bearing reply verified on GitHub, comment 4208700329 replying to root 4206957210. No duplicate reply or false resolution.",
     "threadReply": "https://github.com/Lieberman-Family-Office/9router/pull/52#discussion_r4208700329",
     "safety": "No Namespace activation, credential release, deployment or service restart was attempted."
@@ -57,7 +59,7 @@
     "changedJavaScriptLintWarnings": 4
   },
   "nextRequiredWork": [
-    "Obtain or deliberately retire the unverified Task 4b receipt claim through an operator-supported evidence decision; do not dismiss the open finding silently.",
+    "Original Task 4b bytes are recovered and verified. Restore the historical claim's correct scope; record the actual locator and verification in its finding thread after the complete batched push.",
     "Finish explicit one-to-one fix/proof accounting for every remaining issue ID. Changed-file JavaScript lint and complete changed-Python lint/format checks passed.",
     "Only when all findings and local checks are complete, make one forward push to the actual PR source branch and verify live/local SHA equality.",
     "Record justified outcomes in actual threads, then require clean exact-final-head Cubic review and all applicable checks before merge."
