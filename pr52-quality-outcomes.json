@@ -3,6 +3,18 @@
   "population": "All 120 unique Cubic root findings from the two b2c59fd0 review submissions; indices refer to the unchanged complete initial API ordering, not a count limit.",
   "sourceHead": "b2c59fd00ab9c218950d2c8ac01e0e35ebe5d7f4",
   "status": "Original 120 outcomes were published at e7658388 and verified resolved in actual threads. The completed exact-head review raised seven new Cubic findings and two new GitHub code-quality comments; their batched fix/proof outcomes are separate below. Historical artifacts are not final-head acceptance.",
+  "reviewRoundThree": {
+    "reviewedHead":"7dbafead02e9841403f1ff21a519d4efd63ed535",
+    "cubic":[
+      {"issueId":"ea694a07-305f-4b6b-84a8-423ad939d283","status":"resolved","evidence":"Reauthorization passes only new session fields to transactional issuance, not stale accessToken/displayName/provider metadata. Real DB race regression changes usage/accessToken after route snapshot and verifies both current values survive."},
+      {"issueId":"f5c4a6ef-54ad-461b-977c-25185669a0ae","status":"resolved","evidence":"Response fixture serializes cookie options; status proof asserts HttpOnly, SameSite=strict, exact API-key path and 60-second Max-Age on emitted Set-Cookie."},
+      {"issueId":"07f18cfa-346c-4a1a-8c45-82283b28f41c","status":"resolved","evidence":"Provider-verification failure captures response and independently asserts no reauthorization proof cookie exists; success remains separately verified."}
+    ],
+    "github":[
+      {"rootComment":4209801789,"status":"resolved","evidence":"Removed dead top-level randomUUID import binding, with historical use confined to dynamic module expression after unchanged execution refusal."},
+      {"rootComment":4209801812,"status":"resolved","evidence":"Removed dead top-level os import; preserved archive resolves it dynamically only after unchanged refusal. No stale authorization or live lifecycle action."}
+    ]
+  },
   "reviewRoundTwo": {
     "reviewedHead": "e76583886fc87542a1f7802fb76189549b30c058",
     "cubic": [
