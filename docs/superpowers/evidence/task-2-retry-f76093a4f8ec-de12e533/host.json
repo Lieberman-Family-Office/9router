@@ -4,6 +4,7 @@
   "head": "f76093a4f8ecbf59d6b242c477293af897f02951",
   "baseline": "5fd82262218f5f00b4f987587318908e548ad65a",
   "counterfactualBaseline": "245de4a9df6e62a3134d67c30c017a2ef6b43376",
+  "h2cCounterfactualBaseline": "e08fa1a43d89caeefa880a612db445c68d578d01",
   "authorization": {
     "quote": "Yes—run Task 2 checks and scans in Namespace; verify shutdown twice; leave production untouched (Recommended)",
     "provenance": "Current AskQuestion response namespace_task2_validation selected authorize. The question specifies immediate and 60+ second stopped/no-instance verification. No production authorization."
