@@ -70,6 +70,24 @@ for mutate in (
         pass
     else:
         raise AssertionError("Incomplete assertion population was accepted")
+redactor_path = EVIDENCE / "task-4-green-959c577a870a-8a365ef0/guest-runner.py"
+redactor_tree = ast.parse(redactor_path.read_text())
+clean = next(
+    n
+    for n in redactor_tree.body
+    if isinstance(n, ast.FunctionDef) and n.name == "clean"
+)
+redactor = {"re": __import__("re"), "secret": "fixture-secret"}
+exec(
+    compile(ast.Module(body=[clean], type_ignores=[]), str(redactor_path), "exec"),
+    redactor,
+)
+for credential in (
+    "Authorization: Bearer leaked-value",
+    "password=leaked-value",
+    "api_key=leaked-value",
+):
+    assert "leaked-value" not in redactor["clean"](credential)
 print(
     "PASS: plugin resets subjects and refuses missing output; "
     "validator rejects todo and skipped assertions"
