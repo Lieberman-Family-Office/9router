@@ -112,6 +112,7 @@ try:
             ROOT / "baseline.tar",
             ROOT / "source.bundle",
             ROOT / "vitest.config.mjs",
+            ROOT / "tests-package-lock.json",
         )
     }
     (OUT / "inputs.json").write_text(
@@ -154,7 +155,7 @@ try:
                 "-c",
                 (
                     "git rev-parse HEAD && git diff --exit-code"
-                    " && test -z \"$(git status --porcelain)\" && shasum -a 256 "
+                    ' && test -z "$(git status --porcelain)" && shasum -a 256 '
                     "package.json package-lock.json cli/packa"
                     "ge-lock.json"
                 ),
@@ -186,6 +187,26 @@ try:
         base,
         300,
     )
+    lock = json.loads((ROOT / "tests-package-lock.json").read_text())
+    test_manifest = json.loads((head / "tests/package.json").read_text())
+    if lock["packages"][""]["devDependencies"] != test_manifest["devDependencies"]:
+        raise RuntimeError("test lock root mismatch")
+    shutil.copyfile(ROOT / "tests-package-lock.json", head / "tests/package-lock.json")
+    if run(
+        "locked-test-dependencies",
+        [
+            "npm",
+            "ci",
+            "--prefix",
+            "tests",
+            "--ignore-scripts",
+            "--no-audit",
+            "--no-fund",
+        ],
+        head,
+        300,
+    ):
+        raise RuntimeError("test dependency provision failed")
     shutil.copyfile(ROOT / "vitest.config.mjs", ROOT / "alias.config.mjs")
     cfg = (
         (ROOT / "alias.config.mjs")
@@ -385,4 +406,8 @@ finally:
         digest(ROOT / "evidence.tar"),
         flush=True,
     )
-sys.exit(2 if failed or any(r["exit"] != 0 and r["name"] != "h2c-baseline" for r in results) else 0)
+sys.exit(
+    2
+    if failed or any(r["exit"] != 0 and r["name"] != "h2c-baseline" for r in results)
+    else 0
+)

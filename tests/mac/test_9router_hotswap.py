@@ -828,6 +828,33 @@ def test_snapshot_refuses_low_space_before_creating_file(hs, monkeypatch):
     assert not target.exists()
 
 
+def test_snapshot_sqlite_failure_is_a_controlled_refusal(hs, monkeypatch):
+    hs.DB.write_bytes(b"database")
+    monkeypatch.setattr(
+        hs.shutil, "disk_usage", lambda *args: SimpleNamespace(free=10**9)
+    )
+
+    def fail_snapshot(_destination):
+        raise hs.sqlite3.OperationalError("fixture unreadable source")
+
+    monkeypatch.setattr(
+        hs, "deployer", lambda: SimpleNamespace(snapshot_db=fail_snapshot)
+    )
+    with pytest.raises(ValueError, match="database snapshot refused"):
+        hs.snapshot_db(hs.STATE_DIR / "failed.sqlite")
+    assert hs.DB.read_bytes() == b"database"
+
+
+def test_route_slot_refuses_dangling_and_nonsocket_targets(hs):
+    route = hs.RUNTIME / "active.sock"
+    route.symlink_to("a.sock")
+    with pytest.raises(FileNotFoundError):
+        hs.route_slot()
+    (hs.RUNTIME / "a.sock").write_bytes(b"not a socket")
+    with pytest.raises(ValueError, match="serving bridge identity"):
+        hs.route_slot()
+
+
 def test_real_validation_requires_receipt_even_in_guest(hs, tmp_path):
     release = hs.RELEASES / "v2/lib/node_modules/9router"
     release.mkdir(parents=True)

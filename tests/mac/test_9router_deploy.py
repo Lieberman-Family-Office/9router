@@ -75,6 +75,18 @@ def test_release_build_metadata_stays_confined(dep):
     )
 
 
+def test_status_skips_invalid_release_entries(dep, monkeypatch, capsys):
+    release = make_release(dep, "v1")
+    dep.LINK.symlink_to(release)
+    (dep.RELEASES / "invalid entry").mkdir()
+    (dep.RELEASES / "v2").write_text("partial metadata")
+    monkeypatch.setattr(dep, "http", lambda *args, **kwargs: io.BytesIO(b"{}"))
+    dep.cmd_status(None)
+    output = capsys.readouterr().out
+    assert "v1" in output
+    assert "invalid entry" not in output
+
+
 def test_stream_terminal_detection(dep):
     assert dep.is_terminal(b"data: [DONE]\n")
     assert dep.is_terminal(b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n')

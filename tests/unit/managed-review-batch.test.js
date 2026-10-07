@@ -215,6 +215,30 @@ it('reauth fences pending old refresh and its delayed callback without blocking 
   expect((await getProviderConnectionById('fake-id')).accessToken).toBe('fake-next');
 });
 
+it('managed persistence ignores undefined credential fields but keeps intentional empty strings', async () => {
+  const { updateProviderCredentials } = await import('@/sse/services/tokenRefresh.js');
+  const { getProviderConnectionById } = await import('@/lib/db/repos/connectionsRepo.js');
+  await updateProviderCredentials('fake-id', { token: undefined, scope: '', refreshGenerations: { oauth: 1 } });
+  const row = await getProviderConnectionById('fake-id');
+  expect(row.accessToken).toBe('fake-old-access');
+  expect(row.token).toBeUndefined();
+  expect(row.scope).toBe('');
+});
+
+it('corrupt durable OAuth expiry is refused even without expiresIn', async () => {
+  const { dedupRefresh } = await import('../../open-sse/services/tokenRefresh/dedup.js');
+  await dedupRefresh('github', 'fake-corrupt', async () => ({ accessToken: 'fake-token' }));
+  const store = managed.openRefreshStore(process.env.NINEROUTER_HOTSWAP_REFRESH_DB);
+  try {
+    const row = store.prepare("SELECT key,result FROM refresh_flights WHERE state='done'").get();
+    const result = { ...JSON.parse(row.result), expiresAt: 'not-an-expiry' };
+    store.prepare('UPDATE refresh_flights SET result=? WHERE key=?').run(JSON.stringify(result), row.key);
+  } finally { store.close(); }
+  const issuer = vi.fn();
+  await expect(dedupRefresh('github', 'fake-corrupt', issuer)).rejects.toThrow('Invalid durable refresh result');
+  expect(issuer).not.toHaveBeenCalled();
+});
+
 it('durable completion fixes expiry before delayed persistence and replay', async () => {
   const { dedupRefresh } = await import('../../open-sse/services/tokenRefresh/dedup.js');
   const { updateProviderCredentials } = await import('@/sse/services/tokenRefresh.js');

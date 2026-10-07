@@ -324,7 +324,29 @@ async function main() {
   process.kill((await command('b', 'status')).appPid, 'SIGKILL');
   await wait(() => candidate.exitCode !== null);
   assert.notEqual(candidate.exitCode, 0, 'failed candidate must not silently stay ready');
-  // An unrelated listener may claim the released reservation, but cannot prove the child owns it.
+  // Inject the competing listener after reservation closes, not before preflight.
+  const racePreload = path.join(root, 'port-race.cjs');
+  const foreignListener = path.join(root, 'foreign-listener.cjs');
+  fs.writeFileSync(foreignListener, `const http=require('node:http'); http.createServer((_req,res)=>res.end(JSON.stringify({currentVersion:'b'}))).listen(${b.config.port},'127.0.0.1',()=>process.send('ready'));`);
+  fs.writeFileSync(racePreload, `
+const net=require('node:net'); const cp=require('node:child_process');
+const close=net.Server.prototype.close; let injected=false;
+net.Server.prototype.close=function(callback){
+  if (!injected && this.address()?.port===${b.config.port}) {
+    injected=true;
+    return close.call(this,()=>{
+      const intruder=cp.fork(${JSON.stringify(foreignListener)},[],{stdio:['ignore','ignore','ignore','ipc']});
+      intruder.once('message',()=>{ intruder.disconnect(); intruder.unref(); callback(); });
+      process.once('exit',()=>intruder.kill('SIGTERM'));
+    });
+  }
+  return close.call(this,callback);
+};`);
+  const racedWorker = await launch(b.file, racePreload);
+  await wait(() => racedWorker.exitCode !== null);
+  assert.notEqual(racedWorker.exitCode, 0);
+  assert.equal(fs.existsSync(path.join(root, 'b.sock')), false, 'post-reservation impostor cannot expose a bridge');
+  // A pre-existing competing listener is also refused.
   const impostor = http.createServer((_req, res) => res.end(JSON.stringify({ currentVersion: 'b' })));
   await new Promise(resolve => impostor.listen(b.config.port, '127.0.0.1', resolve));
   const impersonated = await launch(b.file);

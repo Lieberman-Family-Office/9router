@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -90,6 +91,12 @@ try:
     (SCRATCH / "vitest.config.mjs").write_bytes(
         (SOURCE / ".superpowers/sdd/task-2-vitest.config.mjs").read_bytes()
     )
+    archived_lock = (
+        SOURCE
+        / "docs/superpowers/evidence/task-2-retry-f76093a4f8ec-de12e533"
+        / "tests-package-lock.json"
+    )
+    shutil.copyfile(archived_lock, SCRATCH / "tests-package-lock.json")
     manifest = {
         "head": HEAD,
         "baseline": BASE,

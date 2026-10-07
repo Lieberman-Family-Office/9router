@@ -379,9 +379,7 @@ try:
         assert digest(incoming) == expected, "enumerated patch hash mismatch"
         target = head / filename
         if target.exists():
-            assert filename == "tests/mac/test_9router_worker_templates.py", (
-                "patch would overwrite unreviewed source"
-            )
+            assert digest(target) == expected, "patch would overwrite unreviewed source"
         target.write_bytes(incoming.read_bytes())
     cfg = root / "targeted.config.mjs"
     cfg.write_text(
@@ -952,10 +950,9 @@ try:
         assert digest(head / filename) == expected, (
             "source runtime changed during checks"
         )
-    assert (
-        command(["git", "diff", "--name-only", "HEAD"], head)
-        == "tests/mac/test_9router_worker_templates.py"
-    ), "tracked guest source exceeds enumerated patch"
+    assert set(
+        command(["git", "diff", "--name-only", "HEAD"], head).splitlines()
+    ) <= set(m["patchFiles"]), "tracked guest source exceeds enumerated patch"
     all_ok = (
         run(
             "templates-patched",
@@ -993,7 +990,11 @@ finally:
         if p.is_file():
             p.write_text(clean(p.read_text(errors="replace")))
     for filename, expected in m["patchFiles"].items():
-        if "head" not in globals() or not (head / filename).is_file() or digest(head / filename) != expected:
+        if (
+            "head" not in globals()
+            or not (head / filename).is_file()
+            or digest(head / filename) != expected
+        ):
             success = False
     identity = {
         "head": m["head"],
