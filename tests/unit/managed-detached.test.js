@@ -36,6 +36,9 @@ it('retains websocket event work after socket closure and preserves local fetch'
   socket.emit('close');
   expect(managed.workState().websocket).toBe(1);
   expect(fetchLocalResponses.mock.calls[0][0]).toBe('/v1/responses');
-  task.resolve(new Response('data: [DONE]\n\n'));
+  expect(fetchLocalResponses.mock.calls[0][3].aborted).toBe(true);
+  const cancel = vi.fn();
+  task.resolve(new Response(new ReadableStream({ cancel })));
   await vi.waitFor(() => expect(managed.workState().websocket).toBe(0));
+  expect(cancel).toHaveBeenCalledOnce();
 });

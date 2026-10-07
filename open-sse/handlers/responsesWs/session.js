@@ -179,19 +179,25 @@ export function createResponsesWsSession({ socket, req, fetchLocalResponses, res
         return;
       }
 
-      const dec = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const { done, value } = await readerBody.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const parts = buf.split("\n");
-        buf = parts.pop() || "";
-        for (const line of parts) {
-          await onSseLine(line);
+      const cancelReader = () => { readerBody.cancel().catch(() => {}); };
+      signal.addEventListener("abort", cancelReader, { once: true });
+      try {
+        if (signal.aborted) { await readerBody.cancel(); return; }
+        const dec = new TextDecoder();
+        let buf = "";
+        while (true) {
+          const { done, value } = await readerBody.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const parts = buf.split("\n");
+          buf = parts.pop() || "";
+          for (const line of parts) await onSseLine(line);
         }
+        if (buf) await onSseLine(buf);
+      } finally {
+        signal.removeEventListener("abort", cancelReader);
+        readerBody.releaseLock();
       }
-      if (buf) await onSseLine(buf);
     } catch (err) {
       if (err?.name === "AbortError") return;
       send({
