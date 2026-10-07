@@ -1,6 +1,7 @@
 """Run: python3 tests/mac/pr52-archive.check.py. No services or runner jobs execute."""
 
 import ast
+import hashlib
 import importlib.util
 import json
 import os
@@ -10,6 +11,18 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE = ROOT / "docs/superpowers/evidence"
+manifests = list(EVIDENCE.rglob("manifest.json")) + [
+    EVIDENCE / "task-2-2026-10-05-ef67fdaa/evidence-sha256.json",
+    EVIDENCE / "task-4-red-959c577a870a-652526fc/host-manifest.json",
+]
+entries = 0
+for manifest in manifests:
+    payload = json.loads(manifest.read_text())
+    for name, digest in payload.get("files", payload).items():
+        if isinstance(digest, str) and len(digest) == 64:
+            entries += 1
+            assert hashlib.sha256((manifest.parent / name).read_bytes()).hexdigest() == digest
+assert entries > 100, "Archive integrity population is incomplete"
 plugin_path = EVIDENCE / "task-4-red-959c577a870a-652526fc/checkpoint_plugin.py"
 spec = importlib.util.spec_from_file_location("checkpoint", plugin_path)
 plugin = importlib.util.module_from_spec(spec)
