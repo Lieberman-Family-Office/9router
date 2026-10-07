@@ -1284,6 +1284,43 @@ class ConcurrentApiTest(unittest.TestCase):
         self.exercise(running=False)
 
 
+class ContinuousSigninTest(unittest.TestCase):
+    def test_run_dispatch_accepts_signin_without_a_second_lifecycle_owner(self):
+        with patch.object(qualify, "cmd_run", return_value=0) as callback:
+            result = qualify.main([
+                "run", "candidate.tgz", "--interactive-signin",
+                "--signin-timeout", "1200", "--confirmation-file", "confirmation.json",
+                "--evidence", "new-evidence",
+            ])
+        self.assertEqual(result, 0)
+        self.assertTrue(callback.call_args.args[0].interactive_signin)
+        self.assertEqual(callback.call_args.args[0].signin_timeout, 1200)
+
+    def test_guest_dispatch_selects_same_instance_live_scope_without_restore(self):
+        args = unittest.mock.Mock(interactive_signin=True, tgz="candidate.tgz", signin_timeout=1200)
+        binding = {"namespace": {"devbox_id": "fixture", "instance_id": "same-instance"}}
+        scope = {"home": "fixture-home", "packages": {"digest": {"release": "release"}}}
+        with (
+            patch.object(qualify, "interactive_baseline", return_value=(Path("scope.json"), scope)) as signin,
+            patch.object(qualify, "controller_call") as controller,
+        ):
+            result = qualify.live_scope_for_run(args, binding, Path("guest-run"))
+        self.assertEqual(result, (Path("scope.json"), scope))
+        signin.assert_called_once_with(Path("candidate.tgz"), binding, Path("guest-run"), 1200)
+        controller.assert_not_called()
+
+    def test_confirmation_binds_run_and_instance_and_refuses_nonconfirmation(self):
+        binding = {"run_id": "current", "namespace": {"devbox_id": "box", "instance_id": "instance"}}
+        good = {"run_id": "current", "namespace": binding["namespace"], "operator_quote": "Signed in independently", "operator_turn": "current actual turn"}
+        qualify.validate_signin_confirmation(good, binding)
+        for patch_value in (
+            {"run_id": "other"}, {"namespace": {"devbox_id": "box", "instance_id": "old"}},
+            {"operator_quote": ""}, {"operator_turn": ""}, {"confirmed": False},
+        ):
+            with self.subTest(patch_value=patch_value), self.assertRaises(ValueError):
+                qualify.validate_signin_confirmation({**good, **patch_value}, binding)
+
+
 class NativeReviewIdentityTest(unittest.TestCase):
     def test_existing_review_counterfactual_terminal_is_accepted_but_wrong_terminal_refuses(self):
         entry = next(item for item in qualify.NATIVE if item[0] == "review-counterfactual")
