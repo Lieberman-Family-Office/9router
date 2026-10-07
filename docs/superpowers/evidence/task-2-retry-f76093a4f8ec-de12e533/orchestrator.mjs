@@ -11,6 +11,7 @@ import { createDevboxClient } from '@namespacelabs/sdk';
 const AUTH = { quote: 'Yes—run Task 2 checks and scans in Namespace; verify shutdown twice; leave production untouched (Recommended)', provenance: 'Current AskQuestion response namespace_task2_validation selected authorize. The question specifies immediate and 60+ second stopped/no-instance verification. No production authorization.' };
 const BASE = '5fd82262218f5f00b4f987587318908e548ad65a';
 const RED = '245de4a9';
+const H2C_RED = 'e08fa1a43d89caeefa880a612db445c68d578d01';
 const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, v, i, all) => {
   if (i % 2 === 0) { assert(v.startsWith('--') && all[i + 1], 'Expected --key value arguments'); pairs.push([v.slice(2), all[i + 1]]); }
   return pairs;
@@ -215,7 +216,7 @@ try:
         incoming=root/pathlib.Path(filename).name
         assert digest(incoming)==expected, 'enumerated patch hash mismatch'
         target=head/filename
-        if target.exists(): assert filename=='tests/mac/test_9router_worker_templates.py', 'patch would overwrite unreviewed source'
+        if target.exists(): assert digest(target)==expected, 'patch would overwrite unreviewed source'
         target.write_bytes(incoming.read_bytes())
     cfg=root/'targeted.config.mjs'
     cfg.write_text('import path from "node:path"; import {createRequire} from "node:module"; const root='+json.dumps(str(head))+'; const req=createRequire(path.join(root,"package.json")); export default {root,test:{environment:"node",globals:true},resolve:{alias:[{find:"open-sse",replacement:path.join(root,"open-sse")},{find:"@",replacement:path.join(root,"src")},{find:"vitest",replacement:path.join(root,"tests/node_modules/vitest/dist/index.js")},...["uuid","sql.js","undici","bcryptjs","node-machine-id"].map(name=>({find:name,replacement:req.resolve(name)}))]}};')
@@ -271,7 +272,7 @@ try:
             finally: p.unlink()
             assert (checkout/'tests/unit/custom-server-h2c.test.cjs').read_text()==original
     mirror=root/'h2c-counterfactual'; (mirror/'tests/unit').mkdir(parents=True)
-    (mirror/'custom-server.js').write_text(command(['git','show','e08fa1a43d89caeefa880a612db445c68d578d01:custom-server.js'],head)+'\n')
+    (mirror/'custom-server.js').write_text(command(['git','show',m['h2cCounterfactualBaseline']+':custom-server.js'],head)+'\n')
     (mirror/'tests/unit/custom-server-h2c.test.cjs').write_bytes((head/'tests/unit/custom-server-h2c.test.cjs').read_bytes())
     red_ok=run('h2c-counterfactual',['node','--test','--test-reporter=tap','--test-timeout=10000','tests/unit/custom-server-h2c.test.cjs'],mirror,30,{'unit':'new regression suite on pre-fix server mirror; expected failure','count':5})
     assert not red_ok and 'h2c fallback response timed out' in (out/'h2c-counterfactual.log').read_text(), 'regression did not detect pre-fix failure'
@@ -302,7 +303,7 @@ try:
         return {'logSha256':digest(out/'sonar-secrets.log'),'leg':'secrets only; not code analysis'}
     all_ok=run('sonar-secrets',[str(scanner),'analyze','secrets',*changed,*m['patchFiles']],head,600,{'unit':'changed branch files and enumerated test patches','count':len(changed)+len(m['patchFiles'])},secrets_summary) and all_ok
     for filename,expected in m['runtimeFiles'].items(): assert digest(head/filename)==expected, 'source runtime changed during checks'
-    assert command(['git','diff','--name-only','HEAD'],head)=='tests/mac/test_9router_worker_templates.py', 'tracked guest source exceeds enumerated patch'
+    assert set(command(['git','diff','--name-only','HEAD'],head).splitlines()) <= set(m['patchFiles']), 'tracked guest source exceeds enumerated patch'
     all_ok=run('templates-patched',['python3','tests/mac/test_9router_worker_templates.py'],head,60,{'unit':'patched template assertion commands','count':1},native_summary('templates-patched')) and all_ok
     success=all_ok
 except BaseException as e:
@@ -323,7 +324,7 @@ finally:
       'bundleSha256':m['bundleSha256'],'runnerSha256':m['runnerSha256'],'lockHashes':m['lockHashes'],
       'authorization':m['authorization'],'devboxId':m['devboxId'],'instanceId':m['instanceId'],
       'success':success,'interrupted':aborted,'scope':'Task 2 deterministic source checks and routing prerequisites only; NOT packaging/launchd/production qualification',
-      'unrun':['lint/format','Sonar scans','build/package','native Caddy-to-real-worker','launchd','Task 4/5 lifecycle fault-injection proofs']}
+      'unrun':['Sonar code analysis','build/package','native Caddy-to-real-worker','launchd','Task 4/5 lifecycle fault-injection proofs']}
     (out/'identity.json').write_text(json.dumps(identity,indent=2))
     identity['testScope']=m['testScope']
     (out/'identity.json').write_text(json.dumps(identity,indent=2))
@@ -369,7 +370,7 @@ const evidence = path.join(tree, 'docs/superpowers/evidence', `task-2-retry-${ru
 assert(!fs.existsSync(evidence), 'Evidence path exists');
 fs.mkdirSync(evidence, { recursive: true, mode: 0o700 });
 ownedEvidence = path.relative(tree, evidence);
-const record = { schema: 1, runId, head: args.head, baseline: BASE, counterfactualBaseline: red, authorization: AUTH,
+const record = { schema: 1, runId, head: args.head, baseline: BASE, counterfactualBaseline: red, h2cCounterfactualBaseline: H2C_RED, authorization: AUTH,
   testScope: args.scope,
   scanBase: git('rev-parse', 'lfenergy/master'),
   patchFiles: Object.fromEntries(patchFiles.map(p => [p, sha(fs.readFileSync(path.join(tree, p)))])),
@@ -421,8 +422,7 @@ try {
     }
     assert(fs.readFileSync(claimPath).equals(previousBytes), 'Previous claim changed');
     record.recoveredClaim = previous; save();
-    fs.unlinkSync(claimPath);
-    claim = fs.openSync(claimPath, 'wx', 0o600);
+    throw new Error('Stale claim requires serialized operator recovery; automatic takeover is refused');
   }
   fs.writeFileSync(claim, JSON.stringify({ pid: process.pid, runId, head: args.head }));
   immutable();

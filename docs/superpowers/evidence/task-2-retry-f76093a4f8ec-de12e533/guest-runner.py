@@ -732,7 +732,7 @@ try:
             [
                 "git",
                 "show",
-                "e08fa1a43d89caeefa880a612db445c68d578d01:custom-server.js",
+                m["h2cCounterfactualBaseline"] + ":custom-server.js",
             ],
             head,
         )
@@ -993,7 +993,7 @@ finally:
         if p.is_file():
             p.write_text(clean(p.read_text(errors="replace")))
     for filename, expected in m["patchFiles"].items():
-        if digest(head / filename) != expected:
+        if "head" not in globals() or not (head / filename).is_file() or digest(head / filename) != expected:
             success = False
     identity = {
         "head": m["head"],

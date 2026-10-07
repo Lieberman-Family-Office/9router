@@ -138,6 +138,24 @@ it('translator actual POST carries family generations to real repository and kee
   expect(row.expiresAt).toBe(expiry);
 });
 
+it('translator retains ephemeral Vertex service-account tokens without CAS persistence', async () => {
+  const execute = vi.fn().mockResolvedValueOnce({ response: new Response('', { status: 401 }) })
+    .mockResolvedValueOnce({ response: new Response('data: done\n\n') });
+  const account = JSON.stringify({ type: 'service_account', client_email: 'fake@example.invalid', private_key: 'fake', project_id: 'fake' });
+  db.prepare('UPDATE providerConnections SET provider=?,data=? WHERE id=?').run('vertex', JSON.stringify({ apiKey: account }), 'fake-id');
+  vi.doMock('open-sse/index.js', () => ({ getExecutor: () => ({ execute,
+    refreshCredentials: async () => ({ accessToken: 'fake-ephemeral', expiresAt: Date.now() + 3600_000 }),
+  }) }));
+  const { POST } = await import('@/app/api/translator/send/route.js');
+  const response = await POST(new Request('http://localhost/api/translator/send', { method: 'POST',
+    body: JSON.stringify({ provider: 'vertex', model: 'fake', body: {} }) }));
+  expect(response.status).toBe(200);
+  expect(execute).toHaveBeenCalledTimes(2);
+  expect(execute.mock.calls[1][0].credentials.accessToken).toBe('fake-ephemeral');
+  const { getProviderConnectionById } = await import('@/lib/db/repos/connectionsRepo.js');
+  expect((await getProviderConnectionById('fake-id')).accessToken).toBeUndefined();
+});
+
 it('provider actual PUT preserves noncredential edits and refuses stale credential input', async () => {
   const { PUT } = await import('@/app/api/providers/[id]/route.js');
   const call = body => PUT(new Request('http://localhost/api/providers/fake-id', { method: 'PUT', body: JSON.stringify(body) }),

@@ -45,8 +45,6 @@ def clean(text):
 def stop_group(p):
     if p is None:
         return
-    if p.poll() is not None:
-        return
     try:
         os.killpg(p.pid, signal.SIGTERM)
     except ProcessLookupError:
@@ -57,14 +55,13 @@ def stop_group(p):
         )
         p.terminate()
     time.sleep(1)
-    if p.poll() is None:
-        try:
-            os.killpg(p.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            # The group already exited; still wait below to reap the owned child.
-            pass
-        except PermissionError:
-            p.kill()
+    try:
+        os.killpg(p.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        # The group already exited; still wait below to reap the owned child.
+        pass
+    except PermissionError:
+        p.kill()
     try:
         p.wait(timeout=5)
     except subprocess.TimeoutExpired:
@@ -449,6 +446,8 @@ try:
 
         return validate
 
+    if m["testScope"] not in ("task2", "h2c"):
+        raise ValueError("Unsupported test scope")
     for name, argv, limit in checks if m["testScope"] == "task2" else []:
         all_ok = (
             run(
@@ -784,6 +783,9 @@ finally:
     (out / "identity.json").write_text(json.dumps(identity, indent=2))
     identity["testScope"] = m["testScope"]
     (out / "identity.json").write_text(json.dumps(identity, indent=2))
+    for p in out.iterdir():
+        if p.is_file():
+            p.write_text(clean(p.read_text(errors="replace")))
     # Only these regular evidence files leave the guest. No databases, HOME,
     # credentials, or dependency trees.
     hashes = {p.name: digest(p) for p in out.iterdir() if p.is_file()}

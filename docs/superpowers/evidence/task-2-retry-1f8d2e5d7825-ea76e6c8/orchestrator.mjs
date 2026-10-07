@@ -370,8 +370,7 @@ try {
     }
     assert(fs.readFileSync(claimPath).equals(previousBytes), 'Previous claim changed');
     record.recoveredClaim = previous; save();
-    fs.unlinkSync(claimPath);
-    claim = fs.openSync(claimPath, 'wx', 0o600);
+    throw new Error('Stale claim requires serialized operator recovery; automatic takeover is refused');
   }
   fs.writeFileSync(claim, JSON.stringify({ pid: process.pid, runId, head: args.head }));
   immutable();

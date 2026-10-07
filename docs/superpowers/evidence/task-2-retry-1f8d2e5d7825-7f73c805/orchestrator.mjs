@@ -407,7 +407,7 @@ try {
   assert(executionId, 'Detached CLI did not return an execution ID');
   record.executionId = executionId; save();
   // Progress is safe JSON only; test stdout is sanitized into separate evidence files.
-  const streamed = spawnSync(cli, ['logs', args['devbox-name'], executionId], { timeout: 600000, stdio: ['ignore', 'inherit', 'pipe'], encoding: 'utf8' });
+  const streamed = spawnSync(cli, ['logs', args['devbox-name'], executionId], { timeout: 600000, stdio: ['ignore', 'ignore', 'pipe'], encoding: 'utf8' });
   record.guestLogCompleted = !streamed.error && streamed.status === 0;
   if (!record.guestLogCompleted) record.logTransportFailure = safeError(streamed.error || new Error('Guest log transport failed'));
   save();

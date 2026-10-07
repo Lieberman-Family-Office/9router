@@ -1,7 +1,11 @@
 import { getProviderConnections, updateProviderConnection } from "@/lib/localDb.js";
 import { getExecutor } from "open-sse/index.js";
+import { parseVertexSaJson } from "open-sse/services/tokenRefresh.js";
 
 async function persistRefreshedCredentials(connection, newCredentials) {
+  // Service-account JWT tokens are process-local, repeatable mints, not rotating shared grants.
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1" && ["vertex", "vertex-partner"].includes(connection.provider)
+      && parseVertexSaJson(connection.apiKey)) return null;
   const updateData = {};
 
   if (newCredentials.accessToken) updateData.accessToken = newCredentials.accessToken;
