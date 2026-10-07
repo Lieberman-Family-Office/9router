@@ -1127,6 +1127,7 @@ def await_worker_readiness(slot, entry):
             if response["mode"] in {"ready", "active"}:
                 return
         except (OSError, ValueError):
+            # Retry transient status errors after the normal delay, until the deadline.
             pass
         time.sleep(0.2)
     raise ValueError("slot startup readiness unproven")

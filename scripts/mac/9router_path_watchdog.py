@@ -278,6 +278,7 @@ def managed_lock(home: Path, uid: int):
         fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
         acquired = True
     except (OSError, ValueError):
+        # Refuse recovery when lock validation or acquisition fails.
         pass
     try:
         yield acquired
