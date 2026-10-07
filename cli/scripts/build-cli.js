@@ -169,7 +169,7 @@ function copyResponsesWsArtifacts(source, destination) {
 }
 
 async function buildCliPackage() {
-  // Build-only requirement; the unmanaged CLI keeps its published runtime floor.
+  // Match the package engine requirement before creating any build artifacts.
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 22 || (major === 22 && minor < 5)) throw new Error('CLI packaging requires Node >=22.5 for the compatibility manifest');
   console.log("📦 Building 9Router CLI package with Next.js...\n");
