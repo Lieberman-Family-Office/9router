@@ -74,7 +74,7 @@ def log(**entry) -> None:
 
 def release_dir(version: str) -> Path:
     if not isinstance(version, str) or not re.fullmatch(
-        r"[A-Za-z0-9][A-Za-z0-9._-]*", version
+        r"[A-Za-z0-9][A-Za-z0-9._+-]*", version
     ):
         raise ValueError("invalid release version")
     return RELEASES / version / "lib" / "node_modules" / "9router"
@@ -413,7 +413,13 @@ def cmd_status(_args) -> int:
     cur = live()
     print(f"pointer: {LINK} -> {cur or 'NOT A SYMLINK (run adopt)'}")
     for d in sorted(RELEASES.glob("*")) if RELEASES.exists() else []:
-        mark = "*" if cur and cur == release_dir(d.name) else " "
+        try:
+            target = release_dir(d.name)
+        except ValueError:
+            continue
+        if not d.is_dir():
+            continue
+        mark = "*" if cur and cur == target else " "
         print(f" {mark} {d.name}")
     try:
         with http("/api/version") as resp:

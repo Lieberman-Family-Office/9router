@@ -1,3 +1,4 @@
+// Run: node tests/unit/managed-state.check.mjs (requires Node >=22.5 for node:sqlite).
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';

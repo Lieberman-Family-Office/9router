@@ -7,13 +7,18 @@ const { pathToFileURL } = require("url");
 const origCreate = http.createServer.bind(http);
 const managed = process.env.NINEROUTER_MANAGED_WORKER === "1"
   ? require("./src/lib/db/managed.cjs") : null;
+let ingressServer;
 if (managed && process.send) {
   process.on("message", (message) => {
     if (message?.type !== "9router-managed" || !Number.isSafeInteger(message.id)) return;
-    if (message.op === "drain") managed.workState().draining = true;
+    if (message.op === "drain") {
+      managed.workState().draining = true;
+      ingressServer?.closeIdleConnections();
+    }
     if (message.op === "resume") managed.workState().draining = false;
     const work = { ...managed.workState() };
     work.initialized = work.initialized === true && work.responsesWsAttached === true;
+    work.listenerPort = ingressServer?.address()?.port ?? null;
     process.send({ type: "9router-managed", id: message.id, work }, () => {});
   });
 }
@@ -27,6 +32,10 @@ process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
 
 let backgroundRefreshStarted = false;
 let responsesWsStarted = false;
+let completeResponsesWsReady;
+if (managed) {
+  managed.setResponsesWsReady(new Promise((resolve, reject) => { completeResponsesWsReady = { resolve, reject }; }));
+}
 
 function startBackgroundTokenRefreshFromCustomServer() {
   // Managed initialization validates settings before either gated scheduler starts.
@@ -108,7 +117,7 @@ function startResponsesWsFromCustomServer(server) {
     }
   };
   const attachment = tryAttach();
-  if (managed) managed.setResponsesWsReady(attachment);
+  if (managed) attachment.then(completeResponsesWsReady.resolve, completeResponsesWsReady.reject);
   attachment.catch((e) => {
     console.error("[ResponsesWS] attach failed:", e && e.message ? e.message : e);
   });
@@ -121,7 +130,9 @@ http.createServer = (...args) => {
   const handler = args.find((a) => typeof a === "function");
   const rest = args.filter((a) => typeof a !== "function");
   if (!handler) return origCreate(...args);
+  let ingress = !managed;
   const wrapped = (req, res) => {
+    if (managed && !ingress) return handler(req, res);
     if (String(req.headers.upgrade || "").toLowerCase() === "h2c") {
       delete req.headers.upgrade;
       delete req.headers["http2-settings"];
@@ -129,8 +140,12 @@ http.createServer = (...args) => {
       res.shouldKeepAlive = false;
     }
     if (managed) {
+      if (managed.workState().draining) res.shouldKeepAlive = false;
       const responseDone = managed.beginWork("responses");
-      res.once("finish", responseDone);
+      res.once("finish", () => {
+        responseDone();
+        if (managed.workState().draining) ingressServer.closeIdleConnections();
+      });
       res.once("close", responseDone);
     }
     const socketIp = req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : "";
@@ -173,6 +188,12 @@ http.createServer = (...args) => {
   }
   // ponytail: older Node runtimes lack upgrade selection; retain the legacy replay below until support ends.
   server.once("listening", () => {
+    if (managed) {
+      const address = server.address();
+      ingress = address && typeof address === "object" && address.port === Number(process.env.PORT);
+      if (!ingress) return;
+      ingressServer = server;
+    }
     startBackgroundTokenRefreshFromCustomServer();
     startResponsesWsFromCustomServer(server);
   });
@@ -182,7 +203,7 @@ http.createServer = (...args) => {
   // and are handled by attachResponsesWebSocket listeners.
   server.emit = function (event, ...eventArgs) {
     const [req, socket, head] = eventArgs;
-    if (event === "upgrade" && managed) {
+    if (event === "upgrade" && managed && ingress) {
       const done = managed.beginWork("upgrades");
       socket.once("close", done);
     }

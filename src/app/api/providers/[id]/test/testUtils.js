@@ -231,7 +231,8 @@ async function refreshOAuthToken(connection) {
 
   try {
     if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
-      return await refreshProviderCredentials(provider, connection, console);
+      const refreshed = await refreshProviderCredentials(provider, connection, console);
+      return refreshed?.error ? null : refreshed;
     }
     if (provider === "gemini-cli" || provider === "antigravity") {
       const config = provider === "gemini-cli" ? GEMINI_CONFIG : ANTIGRAVITY_CONFIG;

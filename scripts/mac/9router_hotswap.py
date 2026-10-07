@@ -19,6 +19,7 @@ import plistlib
 import re
 import shutil
 import socket
+import sqlite3
 import stat
 import subprocess
 import sys
@@ -98,7 +99,7 @@ def refusal(scope, error):
 
 def valid_version(value):
     if not isinstance(value, str) or not re.fullmatch(
-        r"[A-Za-z0-9][A-Za-z0-9._-]*", value
+        r"[A-Za-z0-9][A-Za-z0-9._+-]*", value
     ):
         raise ValueError("invalid release version")
     return value
@@ -590,7 +591,10 @@ def snapshot_db(dest):
         raise ValueError("insufficient snapshot and transaction disk space")
     fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     os.close(fd)
-    deployer().snapshot_db(dest)
+    try:
+        deployer().snapshot_db(dest)
+    except sqlite3.Error as error:
+        raise ValueError("database snapshot refused") from error
     with dest.open("rb") as stream:
         os.fsync(stream.fileno())
     sync_directory(dest.parent)
@@ -648,6 +652,9 @@ def route_slot():
     target = Path(os.path.abspath(RUNTIME / os.readlink(path)))
     for slot in PORTS:
         if target == RUNTIME / f"{slot}.sock":
+            info = target.lstat()
+            if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
+                raise ValueError("serving bridge identity unknown")
             return slot
     raise ValueError("foreign public socket route")
 

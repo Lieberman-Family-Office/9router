@@ -123,11 +123,11 @@ describe('managed worker ownership', () => {
       let finish;
       const pending = runBackgroundTokenRefreshTick({ loadConnections: () => new Promise(resolve => { finish = resolve; }) });
       expect(managed.workState().background).toBe(1);
+      finish([]); await pending;
+      expect(managed.workState().background).toBe(0);
       managed.workState().draining = true;
       await runBackgroundTokenRefreshTick({ loadConnections: load });
       expect(load).not.toHaveBeenCalled();
-      finish([]); await pending;
-      expect(managed.workState().background).toBe(0);
       const getSettings = vi.fn(async () => ({}));
       await runQuotaAutoPingTick({ getSettings }); expect(getSettings).not.toHaveBeenCalled();
       managed.workState().draining = false;

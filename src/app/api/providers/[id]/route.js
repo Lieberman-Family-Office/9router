@@ -116,6 +116,10 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: proxyPoolResult.error }, { status: 400 });
     }
 
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1" && Object.hasOwn(body, "apiKey")) {
+      return NextResponse.json({ error: "Credential edits require reauthorization" }, { status: 400 });
+    }
+
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (priority !== undefined) updateData.priority = priority;

@@ -26,6 +26,10 @@ test('managed h2c drain IPC retains responses and deferred persistence', { timeo
       const managed = require('./src/lib/db/managed.cjs');
       require('./custom-server.js');
       let endResponse, endPersistence;
+      // Bootstrap can run before the ingress listener attaches its WebSocket module.
+      const earlyReadiness = managed.awaitResponsesWsReady();
+      earlyReadiness.catch(() => {});
+      const auxiliary = http.createServer((_req, res) => res.end('oauth callback'));
       const server = http.createServer(async (req, res) => {
         const chunks = [];
         for await (const chunk of req) chunks.push(chunk);
@@ -45,15 +49,22 @@ test('managed h2c drain IPC retains responses and deferred persistence', { timeo
         if (message.fixture === 'end-response') endResponse();
         if (message.fixture === 'end-persistence') endPersistence();
       });
-      server.listen(0, '127.0.0.1', async () => {
-        await managed.awaitResponsesWsReady();
+      server.listen(Number(process.env.PORT), '127.0.0.1', async () => {
+        await earlyReadiness;
+        await new Promise(resolve => auxiliary.listen(0, '127.0.0.1', resolve));
+        await (await fetch('http://127.0.0.1:' + auxiliary.address().port)).text();
+        await new Promise(resolve => auxiliary.close(resolve));
         managed.workState().initialized = true;
         process.send({ fixture: 'ready', port: server.address().port });
       });
     `;
+    const reservation = net.createServer();
+    await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
+    const port = reservation.address().port;
+    await new Promise(resolve => reservation.close(resolve));
     child = spawn(process.execPath, ['-e', program], {
       cwd: root,
-      env: { ...process.env, NINEROUTER_MANAGED_WORKER: '1' },
+      env: { ...process.env, PORT: String(port), NINEROUTER_MANAGED_WORKER: '1' },
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     });
     let output = '';
@@ -77,6 +88,7 @@ test('managed h2c drain IPC retains responses and deferred persistence', { timeo
     const ready = await message(value => value.fixture === 'ready');
     const request = message(value => value.fixture === 'request');
     socket = net.createConnection({ host: '127.0.0.1', port: ready.port });
+    socket.on('error', () => socket.destroy());
     socket.setTimeout(5_000, () => socket.destroy(new Error('Fixture HTTP timed out')));
     let response = '';
     socket.on('data', chunk => { response += chunk; });

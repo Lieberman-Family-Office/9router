@@ -13,7 +13,7 @@ function configuration(file) {
   managed.privateFile(file);
   const c = JSON.parse(fs.readFileSync(file, 'utf8'));
   if (!['a', 'b'].includes(c.slot) || typeof c.version !== 'string' ||
-      !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(c.version) || !Number.isSafeInteger(c.port) ||
+      !/^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(c.version) || !Number.isSafeInteger(c.port) ||
       c.port < 1024 || c.port > 65535 || [20128, 20129].includes(c.port)) throw new Error('Invalid slot configuration');
   for (const directory of [c.runtime, c.dataDir]) managed.privateDirectory(directory);
   if (typeof c.release !== 'string' || !path.isAbsolute(c.release)) throw new Error('Invalid release path');
@@ -132,7 +132,7 @@ async function main() {
   });
   const validateWork = work => {
     const keys = ['responses', 'handlers', 'upgrades', 'cleanup', 'persistence', 'refresh', 'background', 'quota', 'websocket'];
-    if (!work || work.initialized !== true || work.unknown !== false ||
+    if (!work || work.initialized !== true || work.unknown !== false || work.listenerPort !== config.port ||
         keys.some(key => !Number.isSafeInteger(work[key]) || work[key] < 0)) throw new Error('Unknown app work');
     return keys.every(key => work[key] === 0);
   };

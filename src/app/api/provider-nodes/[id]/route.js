@@ -64,7 +64,7 @@ export async function PUT(request, { params }) {
     await Promise.all(connections.map((connection) => (
       updateProviderConnection(connection.id, {
         providerSpecificData: {
-          ...(connection.providerSpecificData || {}),
+          ...(process.env.NINEROUTER_MANAGED_WORKER === "1" ? {} : connection.providerSpecificData || {}),
           prefix: prefix.trim(),
           apiType: node.type === "openai-compatible" ? apiType : undefined,
           baseUrl: sanitizedBaseUrl,

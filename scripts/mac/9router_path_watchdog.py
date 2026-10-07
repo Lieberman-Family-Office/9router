@@ -310,9 +310,9 @@ def managed_probes(
     targets = {"local_9router": (), "hairpin_ts": ()}
     if known:
         port = {"a": 21128, "b": 21130}[route]
-        # Private loopback HTTP uses the same health endpoint as the stable proxy.
+        # Private readiness is unauthenticated; model discovery requires an API key.
         healthy, detail = http_probe(
-            f"http://127.0.0.1:{port}/v1/models",
+            f"http://127.0.0.1:{port}/api/version",
             timeout_s=timeout_s,  # NOSONAR python:S5332
         )
         active = ProbeResult("active_worker", healthy, detail, (WORKER_TARGETS[route],))

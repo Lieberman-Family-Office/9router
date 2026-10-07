@@ -349,14 +349,18 @@ def test_managed_status_runs_as_requested_home(wd, tmp_path, monkeypatch):
 
 
 def test_cycle_unknown_enrollment_is_degraded_not_legacy(wd, monkeypatch, tmp_path):
-    (tmp_path / ".9router" / "hotswap").mkdir(parents=True, mode=0o700)
+    directory = tmp_path / ".9router" / "hotswap"
+    directory.mkdir(parents=True, mode=0o700)
+    lock = directory / "deploy.lock"
+    lock.write_text("")
+    lock.chmod(0o600)
     monkeypatch.setattr(
         wd, "run_probes", lambda **k: _path_results(wd, local=False, hairpin=False)
     )
     monkeypatch.setattr(
         wd,
         "managed_status",
-        lambda **k: (_ for _ in ()).throw(AssertionError("lock refused")),
+        lambda **k: {"errors": ["managed enrollment unknown"]},
     )
     calls = []
     monkeypatch.setattr(

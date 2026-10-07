@@ -141,6 +141,7 @@ export function createResponsesWsSession({ socket, req, fetchLocalResponses, res
 
     if (activeAbort) activeAbort.abort();
     activeAbort = new AbortController();
+    const signal = activeAbort.signal;
 
     const headers = {};
     const auth = req.headers.authorization;
@@ -155,7 +156,7 @@ export function createResponsesWsSession({ socket, req, fetchLocalResponses, res
     const requiredInput = [];
 
     try {
-      const res = await fetchLocalResponses("/v1/responses", headers, createBody);
+      const res = await fetchLocalResponses("/v1/responses", headers, createBody, signal);
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         send({

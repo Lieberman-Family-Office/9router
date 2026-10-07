@@ -96,7 +96,7 @@ export function mergeRefreshedCredentials(provider, currentCredentials, refreshe
 
   if (refreshedCredentials.providerSpecificData) {
     next.providerSpecificData = mergeProviderSpecificData(
-      process.env.NINEROUTER_MANAGED_WORKER === "1" ? {} : currentCredentials?.providerSpecificData,
+      currentCredentials?.providerSpecificData,
       refreshedCredentials.providerSpecificData
     );
   }

@@ -55,7 +55,10 @@ export class GeminiCLIExecutor extends BaseExecutor {
   }
 
   async refreshCredentials(credentials, log) {
-    if (process.env.NINEROUTER_MANAGED_WORKER === "1") return refreshProviderCredentials("gemini-cli", credentials, null);
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      const refreshed = await refreshProviderCredentials("gemini-cli", credentials, null);
+      return refreshed ? { ...refreshed, projectId: refreshed.projectId ?? credentials?.projectId } : refreshed;
+    }
     if (!credentials.refreshToken) return null;
 
     try {

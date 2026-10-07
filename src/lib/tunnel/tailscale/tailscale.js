@@ -739,6 +739,7 @@ export function startLogin(hostname) {
 
 /** Start tailscale funnel for the given port */
 export async function startFunnel(port) {
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1") throw new Error("Managed workers cannot start app-owned ingress");
   const bin = getTailscaleBin();
   if (!bin) throw new Error("Tailscale not installed");
 

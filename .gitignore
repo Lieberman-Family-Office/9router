@@ -56,9 +56,15 @@ docs/superpowers/*
 !docs/superpowers/plans/
 docs/superpowers/plans/*
 !docs/superpowers/plans/2026-10-05-9router-hot-swap.md
+!docs/superpowers/plans/2026-08-02-gpt-5-6-codex-reasoning-overrides.md
+!docs/superpowers/plans/2026-09-04-opencode-go-session-header.md
 !docs/superpowers/evidence/
 docs/superpowers/evidence/*
 !docs/superpowers/evidence/task4b-94b4aa69ea24-eeb42f36-receipt.json
+!docs/superpowers/evidence/task5-source-887d5ddaf500-5e27e269/
+!docs/superpowers/evidence/task5-source-887d5ddaf500-5e27e269/**
+!docs/superpowers/evidence/task5-qualification-owner-5e27e269/
+!docs/superpowers/evidence/task5-qualification-owner-5e27e269/**
 test/*
 open-sse/test/*
 RM.vn.md

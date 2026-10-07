@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-const root = path.resolve(import.meta.dirname, '../..');
+import { fileURLToPath } from 'node:url';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const installed = process.env.NINEROUTER_TEST_PACKAGES;
 assert.ok(installed, 'NINEROUTER_TEST_PACKAGES must name installed test dependencies');
 const { parse } = createRequire(path.join(installed, 'package.json'))('@babel/parser');
@@ -124,7 +125,7 @@ for (const mod of modules.values()) {
   if (mod.file.endsWith('/tokenRefresh/dedup.js')) continue;
   // Every imported refresh dispatch resolves its real symbol, including aliases and re-exports.
   for (const [local, imported] of mod.imports) {
-    if (!/^_?refresh(?:Access|Provider|TokenBy|Codex|Google|GitHub|Copilot|Claude|Kiro|Iflow|Xai|Kimi|Cline|Codebuddy|Trae)/.test(imported.name)) continue;
+    if (!/^_?refresh/.test(imported.name)) continue;
     const target = binding(mod, local);
     assert.ok(target, `Unresolved refresh import: ${path.relative(root, mod.file)}:${local}`);
     walk(mod.ast, node => {

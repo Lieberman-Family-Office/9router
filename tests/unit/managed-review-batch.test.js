@@ -9,7 +9,7 @@ import { TABLES, buildCreateTableSql } from '../../src/lib/db/schema.js';
 let root, db;
 const saved = { ...process.env };
 beforeEach(async () => {
-  root = fs.mkdtempSync(path.join(os.tmpdir(), '9r-review-'));
+  root = fs.mkdtempSync(path.join(os.homedir(), '.9r-review-'));
   const directory = path.join(root, 'db');
   fs.mkdirSync(directory, { mode: 0o700 });
   const file = path.join(directory, 'data.sqlite');
@@ -49,6 +49,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.doUnmock('open-sse/index.js');
   vi.doUnmock('open-sse/executors/index.js');
+  vi.doUnmock('dns');
+  vi.doUnmock('open-sse/services/usage.js');
+  vi.doUnmock('@/lib/network/connectionProxy');
+  vi.doUnmock('next/server');
 });
 
 it.each(['example.invalid', 'cloudcode-pa.googleapis.com'])('single-attempt managed transport refuses accepted-but-response-lost replay for %s', async host => {
@@ -147,6 +151,27 @@ it('provider actual PUT preserves noncredential edits and refuses stale credenti
   expect(row.name).toBe('after');
   expect(row.providerSpecificData.copilotToken).toBe('fake-old-copilot');
   expect(row.providerSpecificData.usage).toBe(8);
+});
+
+it('provider-node metadata update does not replay credential snapshots', async () => {
+  vi.doMock('@/models', () => ({
+    getProviderNodeById: async () => ({ type: 'openai-compatible' }),
+    updateProviderNode: async (_id, patch) => patch,
+    getProviderConnections: async () => [{ id: 'fake-id', providerSpecificData: { copilotToken: 'fake-old-copilot' } }],
+    updateProviderConnection: async (...args) => (await import('@/lib/db/repos/connectionsRepo.js')).updateProviderConnection(...args),
+    deleteProviderNode: async () => {}, deleteProviderConnectionsByProvider: async () => {},
+  }));
+  try {
+    const { PUT } = await import('@/app/api/provider-nodes/[id]/route.js');
+    const response = await PUT(new Request('http://localhost/api/provider-nodes/fake-node', { method: 'PUT',
+      body: JSON.stringify({ name: 'metadata', prefix: 'node', apiType: 'chat', baseUrl: 'https://example.invalid' }) }),
+      { params: Promise.resolve({ id: 'fake-node' }) });
+    expect(response.status).toBe(200);
+    const { getProviderConnectionById } = await import('@/lib/db/repos/connectionsRepo.js');
+    const row = await getProviderConnectionById('fake-id');
+    expect(row.providerSpecificData.copilotToken).toBe('fake-old-copilot');
+    expect(row.providerSpecificData.nodeName).toBe('metadata');
+  } finally { vi.doUnmock('@/models'); }
 });
 
 it('reauth fences pending old refresh and its delayed callback without blocking the new grant', async () => {

@@ -14,6 +14,11 @@ process.env.NINEROUTER_HOTSWAP_RUNTIME = root;
 process.env.NINEROUTER_SLOT = 'a';
 const state = managed.workState();
 const defer = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+const awaitCleanup = async () => {
+  const deadline = Date.now() + 3000;
+  while (state.cleanup > 0 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
+  assert.equal(state.cleanup, 0);
+};
 const server = net.createServer();
 try {
   server.listen(path.join(root, 'a.sock'));
@@ -37,16 +42,14 @@ try {
   await Promise.resolve();
   assert.ok(state.cleanup > 0, 'client cancel must retain source cleanup');
   cancellation.resolve(); await cancelled;
-  await new Promise(resolve => setTimeout(resolve, 550));
-  assert.equal(state.cleanup, 0);
+  await awaitCleanup();
   const upstreamCancel = defer();
   const upstream = new ReadableStream({ cancel: () => upstreamCancel.promise });
   const output = pipeWithDisconnect(new Response(upstream), new TransformStream(), createStreamController(), null, 10000);
   await output.cancel();
   assert.ok(state.cleanup > 0, 'pump cancellation remains counted after downstream close');
   upstreamCancel.resolve();
-  await new Promise(resolve => setTimeout(resolve, 550));
-  assert.equal(state.cleanup, 0);
+  await awaitCleanup();
   const refresh = defer();
   const { withRefreshWork, getRefreshWorkStatus } = await import('../../open-sse/services/tokenRefresh/dedup.js');
   const operation = withRefreshWork(() => refresh.promise);

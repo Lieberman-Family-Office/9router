@@ -83,8 +83,11 @@ const managed = require('./src/lib/db/managed.cjs');
 const statusHold = path.join(process.env.NINEROUTER_HOTSWAP_RUNTIME, process.env.NINEROUTER_SLOT + '.status-hold');
 const send = process.send.bind(process);
 const waiting = [];
+let sealedStatusCount = 0;
 process.send = (message, ...args) => {
-  const sealed = !fs.existsSync(path.join(process.env.NINEROUTER_HOTSWAP_RUNTIME, process.env.NINEROUTER_SLOT + '.sock'));
+  const hold = fs.existsSync(statusHold) ? fs.readFileSync(statusHold, 'utf8') : null;
+  if (hold !== 'sealed') sealedStatusCount = 0;
+  const sealed = hold === 'sealed' && ++sealedStatusCount >= 2;
   if (message.type === '9router-managed' && fs.existsSync(statusHold) &&
       fs.readFileSync(statusHold, 'utf8') === (sealed ? 'sealed' : 'open')) {
     waiting.push(() => send(message, ...args));
@@ -98,7 +101,7 @@ process.once('SIGTERM', () => {
   const delayed = fs.existsSync(path.join(process.env.NINEROUTER_HOTSWAP_RUNTIME, process.env.NINEROUTER_SLOT + '.exit-delay'));
   setTimeout(() => process.exit(0), delayed ? 5500 : 0);
 });
-const held = [];
+  const held = [];
 const server = http.createServer(async (req, res) => {
   if (req.url === '/api/version') {
     try { await managed.awaitResponsesWsReady(); } catch { res.statusCode = 503; return res.end('unready'); }
@@ -173,11 +176,21 @@ async function main() {
   await wait(async () => { try { return (await command('b', 'status')).mode === 'ready'; } catch { assert.equal(wb.exitCode, null, wb.log()); } });
   const before = await command('a', 'status');
   assert.notEqual(before.appPid, (await command('b', 'status')).appPid);
+  const idle = net.connect(path.join(root, 'a.sock'));
+  sockets.push(idle); idle.on('error', () => {});
+  let idleResponse = '';
+  idle.on('data', chunk => { idleResponse += chunk; });
+  await once(idle, 'connect');
+  idle.write('GET /version HTTP/1.1\r\nHost: test.invalid\r\nConnection: keep-alive\r\n\r\n');
+  await wait(() => idleResponse.includes('200 OK'));
   const sse = await connect('a', '/stream');
   const ws = await connect('a', '/ws');
-  await wait(async () => (await command('a', 'status')).connections === 2);
+  await wait(async () => (await command('a', 'status')).connections === 3);
   select('b');
   await command('a', 'drain');
+  await wait(() => idle.closed, 1);
+  assert.equal(sse.socket.destroyed, false, 'draining idle sockets must preserve SSE');
+  assert.equal(ws.socket.destroyed, false, 'draining idle sockets must preserve WebSocket');
   assert.equal(await request(b.config.port, '/version'), 'b');
   for (const turn of ['one', 'two', 'three']) {
     ws.socket.write(turn);
@@ -237,6 +250,7 @@ async function main() {
   const holdFile = path.join(root, 'a.status-hold');
   async function retirementRace(stage, race) {
     await delay(10500);
+    // The sealed fixture must hold the final status, not the initial open-socket status.
     fs.writeFileSync(holdFile, stage);
     const retirement = command('a', 'stop');
     const refused = assert.rejects(retirement, /Retirement not quiescent/);
@@ -310,6 +324,14 @@ async function main() {
   process.kill((await command('b', 'status')).appPid, 'SIGKILL');
   await wait(() => candidate.exitCode !== null);
   assert.notEqual(candidate.exitCode, 0, 'failed candidate must not silently stay ready');
+  // An unrelated listener may claim the released reservation, but cannot prove the child owns it.
+  const impostor = http.createServer((_req, res) => res.end(JSON.stringify({ currentVersion: 'b' })));
+  await new Promise(resolve => impostor.listen(b.config.port, '127.0.0.1', resolve));
+  const impersonated = await launch(b.file);
+  await wait(() => impersonated.exitCode !== null);
+  assert.notEqual(impersonated.exitCode, 0);
+  assert.equal(fs.existsSync(path.join(root, 'b.sock')), false, 'impostor listener never exposes a bridge');
+  await new Promise(resolve => impostor.close(resolve));
   const spawnFault = path.join(root, 'spawn-fault.cjs');
   const missingExecutable = path.join(root, 'missing-node-executable');
   fs.writeFileSync(spawnFault, `

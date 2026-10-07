@@ -20,9 +20,11 @@ beforeEach(async () => {
     db.exec(buildCreateTableSql(name, definition));
     for (const index of definition.indexes || []) db.exec(index);
   }
-  db.exec("INSERT INTO _meta VALUES('schemaVersion','1'),('backupSchemaVersion','1')");
-  db.exec("INSERT INTO providerConnections VALUES('fake-id','github','oauth',NULL,NULL,1,1,'{}','now','now')");
   const manifest = await managed.createManifest(path.resolve(import.meta.dirname, '../..'));
+  const insertMeta = db.prepare('INSERT INTO _meta VALUES(?,?)');
+  insertMeta.run('schemaVersion', String(manifest.migrationVersion));
+  insertMeta.run('backupSchemaVersion', String(manifest.schemaVersion));
+  db.exec("INSERT INTO providerConnections VALUES('fake-id','github','oauth',NULL,NULL,1,1,'{}','now','now')");
   const receipt = path.join(directory, 'enrolled.json');
   fs.writeFileSync(receipt, JSON.stringify(manifest), { mode: 0o600 });
   const refresh = path.join(directory, 'refresh.sqlite');

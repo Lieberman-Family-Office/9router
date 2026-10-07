@@ -1,4 +1,4 @@
-import { it, expect, vi } from 'vitest';
+import { beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 import managed from '../../src/lib/db/managed.cjs';
 const jobs = vi.hoisted(() => ({ usage: null, detail: null }));
@@ -8,18 +8,20 @@ vi.mock('@/lib/usageDb.js', () => ({
   appendRequestLog: async () => {}, trackPendingRequest: () => {},
 }));
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+beforeEach(() => vi.stubEnv('NINEROUTER_MANAGED_WORKER', '1'));
+afterEach(() => {
+  vi.unstubAllEnvs();
+  delete globalThis[Symbol.for('9router.managed.work')];
+});
 it('retains detached usage persistence after callback returns', async () => {
-  process.env.NINEROUTER_MANAGED_WORKER = '1';
   const task = deferred(); jobs.usage = task.promise;
   const { saveUsageStats } = await import('../../open-sse/handlers/chatCore/requestDetail.js');
   saveUsageStats({ provider: 'openai', model: 'test', tokens: { prompt_tokens: 1 }, silent: true });
   expect(managed.workState().persistence).toBe(1);
   task.resolve(); await Promise.resolve(); await Promise.resolve();
   expect(managed.workState().persistence).toBe(0);
-  delete process.env.NINEROUTER_MANAGED_WORKER;
 });
 it('retains websocket event work after socket closure and preserves local fetch', async () => {
-  process.env.NINEROUTER_MANAGED_WORKER = '1';
   const task = deferred();
   const socket = new EventEmitter(); socket.write = vi.fn(); socket.end = vi.fn();
   const fetchLocalResponses = vi.fn(() => task.promise);
@@ -36,5 +38,4 @@ it('retains websocket event work after socket closure and preserves local fetch'
   expect(fetchLocalResponses.mock.calls[0][0]).toBe('/v1/responses');
   task.resolve(new Response('data: [DONE]\n\n'));
   await vi.waitFor(() => expect(managed.workState().websocket).toBe(0));
-  delete process.env.NINEROUTER_MANAGED_WORKER;
 });

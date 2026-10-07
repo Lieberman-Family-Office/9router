@@ -168,7 +168,7 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
     const managed = process.env.NINEROUTER_MANAGED_WORKER === "1";
 
     for (const field of ["apiKey", "token", "tokenExpiresAt", "tokenType", "scope"]) {
-      if (Object.hasOwn(newCredentials, field)) updates[field] = newCredentials[field];
+      if (Object.hasOwn(newCredentials, field) && newCredentials[field] !== undefined) updates[field] = newCredentials[field];
     }
     if (newCredentials.accessToken)         updates.accessToken  = newCredentials.accessToken;
     if (newCredentials.refreshToken)        updates.refreshToken = newCredentials.refreshToken;

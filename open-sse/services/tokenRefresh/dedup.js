@@ -19,7 +19,7 @@ export async function withRefreshWork(fn) {
 function validResult(result, generation, family) {
   const expiry = typeof result?.expiresAt === "number" ? result.expiresAt * 1000 : Date.parse(result?.expiresAt);
   if (family === "copilot" && !Number.isFinite(expiry)) return false;
-  if (family === "oauth" && result?.expiresIn !== undefined && !Number.isFinite(expiry)) return false;
+  if (family === "oauth" && (result?.expiresAt !== undefined || result?.expiresIn !== undefined) && !Number.isFinite(expiry)) return false;
   return result && typeof result === "object" && !Array.isArray(result) &&
     Number.isSafeInteger(generation) && generation > 0 &&
     Object.keys(result.refreshGenerations || {}).length === 1 &&

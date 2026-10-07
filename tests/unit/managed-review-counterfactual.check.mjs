@@ -10,6 +10,9 @@ const root = path.resolve(import.meta.dirname, '../..');
 const installed = process.env.NINEROUTER_TEST_PACKAGES;
 assert.ok(installed, 'NINEROUTER_TEST_PACKAGES must name installed dependencies');
 const require = createRequire(path.join(installed, 'package.json'));
+const baseline = '245de4a9df6e62a3134d67c30c017a2ef6b43376';
+assert.equal(spawnSync('git', ['cat-file', '-e', `${baseline}^{commit}`], { cwd: root }).status, 0,
+  `Counterfactual baseline ${baseline} is unavailable; fetch PR 52 history before running this proof`);
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), '9r-review-mirror-'));
 try {
   for (const directory of ['src', 'open-sse', 'tests/unit']) fs.cpSync(path.join(root, directory), path.join(temporary, directory), { recursive: true });
@@ -31,7 +34,7 @@ try {
     'src/lib/db/repos/connectionsRepo.js', 'src/app/api/usage/[connectionId]/route.js', 'src/app/api/translator/send/route.js',
     'src/app/api/providers/[id]/route.js', 'open-sse/executors/github.js', 'src/sse/services/tokenRefresh.js',
     'open-sse/services/oauthCredentialManager.js'];
-  for (const file of files) fs.writeFileSync(path.join(temporary, file), execFileSync('git', ['show', `245de4a9:${file}`], { cwd: root }));
+  for (const file of files) fs.writeFileSync(path.join(temporary, file), execFileSync('git', ['show', `${baseline}:${file}`], { cwd: root }));
   const red = run();
   assert.equal(red.status, 1, 'baseline mirror must fail assertions, not launch or time out');
   const output = stripVTControlCharacters(red.stdout + red.stderr);

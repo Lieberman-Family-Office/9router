@@ -28,6 +28,7 @@ def test_templates():
             data[key] = values[data[key]]
         if kind == "worker":
             data["EnvironmentVariables"]["HOME"] = values["__HOME__"]
+        assert b"__" not in plistlib.dumps(data), "unresolved template placeholder"
         assert plistlib.loads(plistlib.dumps(data)) == data
         assert data["Label"] == f"com.lfenergy.9router-{kind}" + (
             "-a" if kind == "worker" else ""
