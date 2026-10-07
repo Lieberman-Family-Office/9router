@@ -1,8 +1,7 @@
 // Regenerable green-only Task 4 host runner. Preparation is not execution authorization.
 import assert from 'node:assert/strict';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -17,6 +16,7 @@ throw new Error('Archived runner is evidence only. A new run requires current op
 const sourcePaths = ['scripts/mac/9router_hotswap.py', 'scripts/mac/9router_deploy.py', 'tests/mac/test_9router_hotswap.py', 'tests/mac/test_9router_deploy.py'];
 const requiredChecks = ['venv', 'tools', 'tool-versions', 'dependencies-app', 'dependencies-tests', 'controller-tests', 'ruff-check', 'ruff-format', ...sourcePaths.map((_, i) => 'syntax-' + i), 's3776', 'caddy-download', 'caddy-extract', 'worker', 'proxy', 'counterfactual', 'scanner-download', 'scanner-version', 'secrets'];
 const scope = 'Task 4 green source checks only; no package/launchd/production acceptance; Sonar secrets is not code analysis';
+const os = await import('node:os');
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const git = (...args) => {
   const p = spawnSync('git', ['-C', tree, ...args], { encoding: 'utf8', timeout: 120000, maxBuffer: 8388608, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' } });
@@ -58,7 +58,7 @@ const archive = path.join(stage, 'source.tar');
 const bundle = path.join(stage, 'source.bundle');
 git('archive', '--format=tar', '--output', archive, expectedHead);
 git('bundle', 'create', bundle, 'HEAD');
-const runId = 'green-' + expectedHead.slice(0, 12) + '-' + randomUUID().slice(0, 8);
+const runId = 'green-' + expectedHead.slice(0, 12) + '-' + (await import('node:crypto')).randomUUID().slice(0, 8);
 const remote = '/Volumes/devbox/t4' + runId.slice(-8);
 const evidence = path.join(tree, 'docs/superpowers/evidence/task-4-' + runId);
 assert(!fs.existsSync(evidence), 'Evidence output already exists');

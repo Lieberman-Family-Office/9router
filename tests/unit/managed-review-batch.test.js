@@ -35,7 +35,11 @@ beforeEach(async () => {
   delete global._dbAdapter;
   vi.resetModules();
   vi.doMock('next/server', () => ({ NextResponse: { json: (body, init) => {
-    const response = Response.json(body, init); response.cookies = { set(name, value) { response.headers.append('Set-Cookie', `${name}=${value}`); } }; return response;
+    const response = Response.json(body, init); response.cookies = { set(name, value, options = {}) {
+      const attributes = [options.path ? `Path=${options.path}` : '', options.httpOnly ? 'HttpOnly' : '',
+        options.sameSite ? `SameSite=${options.sameSite}` : '', options.maxAge !== undefined ? `Max-Age=${options.maxAge}` : '', options.secure ? 'Secure' : ''].filter(Boolean);
+      response.headers.append('Set-Cookie', `${name}=${value}${attributes.length ? '; ' + attributes.join('; ') : ''}`);
+    } }; return response;
   } } }));
   vi.doMock('@/lib/network/connectionProxy', () => ({ resolveConnectionProxyConfig: async () => ({}) }));
 });
@@ -193,13 +197,20 @@ it('Xiaomi browser status mints a bound proof only after provider verification',
   try {
     const { GET } = await import('@/app/api/oauth/xiaomi-mimo/login/status/route.js');
     const request = new Request('http://localhost/api/oauth/xiaomi-mimo/login/status?state=fixture-state');
-    expect((await GET(request)).status).toBe(400);
+    const refused = await GET(request);
+    expect(refused.status).toBe(400);
+    expect(refused.headers.getSetCookie().some(cookie => cookie.startsWith('9r_mimo_reauth='))).toBe(false);
     verified = true;
     const response = await GET(request);
     expect(response.status).toBe(200);
     const payload = await response.json();
     expect(payload.reauthorizationProof).toBeUndefined();
-    const token = response.headers.getSetCookie().find(cookie => cookie.startsWith('9r_mimo_reauth=')).slice('9r_mimo_reauth='.length);
+    const proofCookie = response.headers.getSetCookie().find(cookie => cookie.startsWith('9r_mimo_reauth='));
+    expect(proofCookie).toContain('HttpOnly');
+    expect(proofCookie).toContain('SameSite=strict');
+    expect(proofCookie).toContain('Path=/api/oauth/xiaomi-mimo/api-key');
+    expect(proofCookie).toContain('Max-Age=60');
+    const token = proofCookie.split(';')[0].slice('9r_mimo_reauth='.length);
     const { getDashboardAuthSession } = await import('@/lib/auth/dashboardSession');
     const proof = await getDashboardAuthSession(token);
     expect(proof).toMatchObject({ purpose: 'xiaomi-reauthorization', userId: 'fixture', region: 'sgp' });
@@ -212,7 +223,12 @@ it('signed Xiaomi reauthorization uses real issuance generation and rejects a ta
     .run('xiaomi-mimo', 'fixture@xiaomi', JSON.stringify({ providerSpecificData: { mimoPassToken: 'fake-before', usage: 7 } }), 'fake-id');
   vi.doMock('@/models', () => ({
     getProviderConnections: async () => (await import('@/lib/db/repos/connectionsRepo.js')).getProviderConnections(),
-    createProviderConnection: async (...args) => (await import('@/lib/db/repos/connectionsRepo.js')).createProviderConnection(...args),
+    createProviderConnection: async (...args) => {
+      const row = db.prepare('SELECT data FROM providerConnections WHERE id=?').get('fake-id');
+      const current = JSON.parse(row.data); current.providerSpecificData.usage = 99; current.accessToken = 'fake-concurrent';
+      db.prepare('UPDATE providerConnections SET data=? WHERE id=?').run(JSON.stringify(current), 'fake-id');
+      return (await import('@/lib/db/repos/connectionsRepo.js')).createProviderConnection(...args);
+    },
     updateProviderConnection: async (...args) => (await import('@/lib/db/repos/connectionsRepo.js')).updateProviderConnection(...args),
   }));
   try {
@@ -229,7 +245,8 @@ it('signed Xiaomi reauthorization uses real issuance generation and rejects a ta
     const { getProviderConnectionById } = await import('@/lib/db/repos/connectionsRepo.js');
     const row = await getProviderConnectionById('fake-id');
     expect(row.providerSpecificData.mimoPassToken).toBe('fake-after');
-    expect(row.providerSpecificData.usage).toBe(7);
+    expect(row.providerSpecificData.usage).toBe(99);
+    expect(row.accessToken).toBe('fake-concurrent');
     expect(row.refreshGenerations.oauth).toBeGreaterThan(0);
   } finally { vi.doUnmock('@/models'); }
 });

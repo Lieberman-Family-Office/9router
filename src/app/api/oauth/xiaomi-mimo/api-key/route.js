@@ -86,8 +86,7 @@ export async function POST(request) {
         }
         const connection = await createProviderConnection({
           provider: "xiaomi-mimo", authType: "oauth", email: existing.email,
-          displayName: existing.displayName, accessToken: existing.accessToken, refreshToken: null,
-          providerSpecificData: { ...existing.providerSpecificData, mimoPassToken, mimoUserId, mimoCUserId,
+          providerSpecificData: { mimoPassToken, mimoUserId, mimoCUserId,
             region: normRegion, authMethod: "session" },
           testStatus: "active",
         });
