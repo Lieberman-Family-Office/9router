@@ -38,7 +38,7 @@
   },
   "verifiedChecks": {
     "focusedPythonTests": 257,
-    "focusedVitestTestsLatestCombined": 69,
+    "focusedVitestTestsLatestCombined": 70,
     "additionalSafetyModuleLatest": 6,
     "nativeHttpAndPackagingTests": 11,
     "worker": "Passed in replacement tree, including post-reservation competing listener, active SSE/WS preservation and idle keepalive drain",
