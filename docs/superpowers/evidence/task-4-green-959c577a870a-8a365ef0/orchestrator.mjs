@@ -4,9 +4,6 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { setTimeout as delay } from 'node:timers/promises';
-import { createDevboxClient } from '@namespacelabs/sdk';
-
 const [requestedTree, requestedPhase = 'green'] = process.argv.slice(2);
 assert(requestedTree && requestedPhase === 'green' && process.argv.length <= 4, 'Supply worktree and optional green only');
 const tree = fs.realpathSync(requestedTree);
@@ -266,7 +263,7 @@ try {
   claim = fs.openSync(claimPath, 'wx', 0o600);claimStat = fs.fstatSync(claim);fs.writeFileSync(claim, claimBytes);
   requireClaim();sourceBinding();assert(!interrupted, 'Interrupted before activation');
   // Metadata-only SDK Fetch: no connection/session/display calls in shutdown observation.
-  metadata = createDevboxClient({ connectionTimeoutMs: 15000 });
+  metadata = (await import('@namespacelabs/sdk')).createDevboxClient({ connectionTimeoutMs: 15000 });
   let box = await metadata.devboxes.get(record.devboxId, { timeoutMs: 15000 });matches(box);
   record.lifecycle.push({ phase: 'before', ...snapshot(box) });save();
   assert.equal(box.info.state, 'stopped');assert(!box.info.instanceId);
@@ -294,7 +291,7 @@ try {
     const p = spawnSync(cli, ['exec', record.devboxName, '--', '/bin/test', '-s', remote + '/evidence/manifest.json'], { encoding: 'utf8', timeout: 30000, env: cliEnv });
     assert(!p.error && (p.status === 0 || p.status === 1), 'Manifest observation failed');
     if (p.status === 0) { complete = true;break; }
-    await delay(15000);
+    await new Promise(resolve => setTimeout(resolve, 15000));
   }
   assert(complete, 'Guest evidence missing, interrupted, or deadline exceeded');
 } catch (e) { complete = false;record.failure = clean(e);save(); }
@@ -342,7 +339,7 @@ finally {
   }
   if (claimOwned() && metadata) {
     for (const phase of ['immediate', 'after-60-seconds']) {
-      if (phase === 'after-60-seconds') await delay(60000);
+      if (phase === 'after-60-seconds') await new Promise(resolve => setTimeout(resolve, 60000));
       try {
         requireClaim();const b = await metadata.devboxes.get(record.devboxId, { timeoutMs: 15000 });matches(b);
         const observation = { phase, ...snapshot(b) };record.lifecycle.push(observation);

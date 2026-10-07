@@ -3,8 +3,23 @@
   "population": "All 120 unique Cubic root findings from the two b2c59fd0 review submissions; indices refer to the unchanged complete initial API ordering, not a count limit.",
   "sourceHead": "b2c59fd00ab9c218950d2c8ac01e0e35ebe5d7f4",
   "status": "Original 120 outcomes were published at e7658388 and verified resolved in actual threads. The completed exact-head review raised seven new Cubic findings and two new GitHub code-quality comments; their batched fix/proof outcomes are separate below. Historical artifacts are not final-head acceptance.",
+  "reviewRoundFive": {
+    "findingHead":"b29f58c2c63af6e64da458799baee592d714a6b8",
+    "provenance":"The following are local fixes after findingHead; published fix SHA is recorded in each actual thread after this batch. Historical bytes are not rewritten.",
+    "cubic":[
+      {"issueId":"925411e2-1e7f-4742-9e46-d36dde68a044","status":"resolved","evidence":"RoundFour now separates findingHead=988219a from verifiedFixCommit=b29f58c and expressly states fixes postdate the finding head; exact Git blobs verified."},
+      {"issueId":"bb8b48a7-3767-4fa3-af7f-bfad7c5a4a65","status":"resolved","evidence":"Parser dependency root resolved with path.resolve before createRequire and manifest presence validated. The runnable check passes for both absolute and relative installed paths."},
+      {"issueId":"bad57ea5-0513-45de-9258-8d41a90be51f","status":"resolved","evidence":"Verifier text and function name now explicitly measure direct non-computed .mkdtempSync syntax only, not aliases/computed forms. Four runnable specimens pin included/excluded syntax and post-refusal boundary; no wider claim remains."}
+    ],
+    "github":[
+      {"rootComment":4210064180,"status":"resolved","evidence":"GREEN dead top-level delay binding deleted. Historical delay sites use native setTimeout inline after unchanged refusal; syntax and lint pass."},
+      {"rootComment":4210064201,"status":"resolved","evidence":"GREEN dead named SDK binding deleted; historical use is a dynamic module expression after unchanged refusal. No execution/gate change."}
+    ]
+  },
   "reviewRoundFour": {
-    "reviewedHead":"988219a56ce7fef185747afbecd257b1ef83e540",
+    "findingHead":"988219a56ce7fef185747afbecd257b1ef83e540",
+    "verifiedFixCommit":"b29f58c2c63af6e64da458799baee592d714a6b8",
+    "provenance":"The findings were received on findingHead. The fixes described below first exist at verifiedFixCommit, independently checked from Git blobs; they are not claims about findingHead.",
     "cubic":[
       {"issueId":"0ac570a4-3573-43e0-b3ed-74e972382566","status":"resolved","evidence":"GREEN claim nonce now uses await import(node:crypto).randomUUID(), like its runId. No unbound host randomUUID identifier remains; parser scope check, syntax and lint verify without runner execution."},
       {"issueId":"93f0ac14-0440-4eca-b638-015955ec2fb3","status":"resolved","evidence":"Outcome wording now specifies GREEN path/821cd9bf diff and explicitly distinguishes unchanged RED randomUUID import and RED-only 70b0c117. It acknowledges the omitted GREEN nonce use rather than overstating prior completeness."},
