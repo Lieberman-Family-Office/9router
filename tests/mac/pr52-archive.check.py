@@ -5,11 +5,24 @@ import hashlib
 import importlib.util
 import json
 import os
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
+if len(sys.argv) == 2:
+    receipt = json.loads(
+        (
+            ROOT / "docs/superpowers/evidence/task4b-94b4aa69ea24-eeb42f36-receipt.json"
+        ).read_text()
+    )
+    original = Path(sys.argv[1])
+    for name, expected in receipt["rawEvidenceHashes"].items():
+        assert hashlib.sha256((original / name).read_bytes()).hexdigest() == expected, (
+            name
+        )
+    print("PASS: seven original Task 4b raw artifact digests; log contents withheld")
 EVIDENCE = ROOT / "docs/superpowers/evidence"
 manifests = list(EVIDENCE.rglob("manifest.json")) + [
     EVIDENCE / "task-2-2026-10-05-ef67fdaa/evidence-sha256.json",
