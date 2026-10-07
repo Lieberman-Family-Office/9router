@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-vi.mock('@/lib/usageDb.js', () => ({ trackPendingRequest: vi.fn(), appendRequestLog: vi.fn() }));
+vi.mock('@/lib/usageDb.js', () => ({ trackPendingRequest: vi.fn(), appendRequestLog: vi.fn(async () => {}) }));
 vi.mock('../../open-sse/utils/usageTracking.js', () => ({ extractUsage: () => null, mergeUsage: () => null, hasValidUsage: () => false, estimateUsage: () => null, logUsage: vi.fn(), addBufferToUsage: value => value, filterUsageForFormat: value => value, COLORS: {} }));
 import { createPassthroughStreamWithLogger } from '../../open-sse/utils/stream.js';
 
