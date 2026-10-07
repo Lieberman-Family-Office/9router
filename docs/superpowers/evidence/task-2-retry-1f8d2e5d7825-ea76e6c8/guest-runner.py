@@ -61,6 +61,7 @@ def stop_group(p):
         try:
             os.killpg(p.pid, signal.SIGKILL)
         except ProcessLookupError:
+            # The group already exited; still wait below to reap the owned child.
             pass
         except PermissionError:
             p.kill()
