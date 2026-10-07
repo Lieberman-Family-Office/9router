@@ -1,0 +1,1906 @@
+[
+  {
+    "name": "source-roundtrip",
+    "args": [
+      "python3",
+      "-c",
+      "print(\"archive, bundle, patch, and declared inputs reconstructed and independently hash-verified\")"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "independently reconstructed runtime file hashes",
+      "count": 1748
+    },
+    "seconds": 0.052330707999999504
+  },
+  {
+    "name": "venv",
+    "args": [
+      "python3",
+      "-m",
+      "venv",
+      "/Volumes/devbox/t55e27e269/venv"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "isolated guest Python environments",
+      "count": 1
+    },
+    "seconds": 3.4765158329999934
+  },
+  {
+    "name": "python-tools",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pip",
+      "install",
+      "--disable-pip-version-check",
+      "pytest==8.4.2",
+      "ruff==0.15.18"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "pinned guest Python tools",
+      "count": 2
+    },
+    "seconds": 6.708931749999991
+  },
+  {
+    "name": "dependencies-app",
+    "args": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "unchanged locked guest dependency graphs",
+      "count": 1
+    },
+    "seconds": 17.949898207999993
+  },
+  {
+    "name": "dependencies-tests",
+    "args": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "unchanged locked guest dependency graphs",
+      "count": 1
+    },
+    "seconds": 0.6085756250000003
+  },
+  {
+    "name": "dependencies-cli",
+    "args": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "unchanged locked guest dependency graphs",
+      "count": 1
+    },
+    "seconds": 0.5567123750000036
+  },
+  {
+    "name": "tool-versions",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-c",
+      "import importlib.metadata as x,json,pathlib;seen={\"pytest\":x.version(\"pytest\"),\"ruff\":x.version(\"ruff\")};assert seen=={\"pytest\":\"8.4.2\",\"ruff\":\"0.15.18\"}\nfor name,d in [(\"vitest\",\"tests\"),(\"eslint\",\"\"),(\"esbuild\",\"cli\")]:\n p=pathlib.Path(d);v=json.loads((p/\"node_modules\"/name/\"package.json\").read_text())[\"version\"];lock=json.loads((p/\"package-lock.json\").read_text());assert v==lock[\"packages\"][\"node_modules/\"+name][\"version\"];seen[name]=v\nprint(json.dumps(seen))"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "guest installed Python and npm tool identities",
+      "count": 5
+    },
+    "seconds": 0.10736750000000939,
+    "toolCount": 5,
+    "versions": {
+      "pytest": "8.4.2",
+      "ruff": "0.15.18",
+      "vitest": "4.1.11",
+      "eslint": "9.39.5",
+      "esbuild": "0.25.12"
+    }
+  },
+  {
+    "name": "caddy-download",
+    "args": [
+      "curl",
+      "--fail",
+      "--location",
+      "--max-time",
+      "120",
+      "--output",
+      "/Volumes/devbox/t55e27e269/caddy.tgz",
+      "https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_mac_arm64.tar.gz"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "hash-pinned guest Caddy archives",
+      "count": 1
+    },
+    "seconds": 0.22404816700000652
+  },
+  {
+    "name": "caddy-extract",
+    "args": [
+      "tar",
+      "-xzf",
+      "/Volumes/devbox/t55e27e269/caddy.tgz",
+      "-C",
+      "/Volumes/devbox/t55e27e269/tools",
+      "caddy"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "verified Caddy extractions",
+      "count": 1
+    },
+    "seconds": 0.11537954100001002
+  },
+  {
+    "name": "caddy-version",
+    "args": [
+      "/Volumes/devbox/t55e27e269/tools/caddy",
+      "version"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "pinned Caddy binaries",
+      "count": 1
+    },
+    "seconds": 0.07127862499999083,
+    "version": "v2.11.4 h1:XKxkMTgNSizEvKG6QHue6cAsFOteU2qA61w2tKkCWi0="
+  },
+  {
+    "name": "baseline-red",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "task5_pytest_probe",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_format_only_and_tampered_exports_are_refused",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_hash_bound_but_insufficient_continuity_is_refused",
+      "tests/mac/test_9router_vm_qualify.py::LifecycleTest::test_every_work_failure_still_closes_stops_and_observes_twice",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_prerequisite_checks_keep_socket_temporary_paths_short",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_host_run_creates_persistent_parent_before_new_run_directory",
+      "tests/mac/test_9router_path_watchdog.py::test_watchdog_does_not_restart_healthy_draining_worker",
+      "-vv",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t55e27e269/evidence/baseline-red.xml"
+    ],
+    "exitCode": 1,
+    "expectedExitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "fully collected pytest modules; exact executed identities exported",
+      "count": 2
+    },
+    "seconds": 0.40156858400000317,
+    "testCount": 6,
+    "moduleCount": 2,
+    "passed": 0,
+    "failed": 6,
+    "skipped": 0,
+    "failedIds": [
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_format_only_and_tampered_exports_are_refused",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_hash_bound_but_insufficient_continuity_is_refused",
+      "tests/mac/test_9router_vm_qualify.py::LifecycleTest::test_every_work_failure_still_closes_stops_and_observes_twice",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_prerequisite_checks_keep_socket_temporary_paths_short",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_host_run_creates_persistent_parent_before_new_run_directory",
+      "tests/mac/test_9router_path_watchdog.py::test_watchdog_does_not_restart_healthy_draining_worker"
+    ],
+    "collectedIds": [
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_format_only_and_tampered_exports_are_refused",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_hash_bound_but_insufficient_continuity_is_refused",
+      "tests/mac/test_9router_vm_qualify.py::LifecycleTest::test_every_work_failure_still_closes_stops_and_observes_twice",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_prerequisite_checks_keep_socket_temporary_paths_short",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_host_run_creates_persistent_parent_before_new_run_directory",
+      "tests/mac/test_9router_path_watchdog.py::test_watchdog_does_not_restart_healthy_draining_worker"
+    ],
+    "reportSha256": "43700f81a80923fa22168003df6a2016956d4cf8a9812fbb7ea0d333d8706d4b"
+  },
+  {
+    "name": "models-auth-red",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "task5_pytest_probe",
+      "tests/mac/test_9router_deploy.py::test_http_authenticates_models_without_changing_get_method",
+      "-vv",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t55e27e269/evidence/models-auth-red.xml"
+    ],
+    "exitCode": 1,
+    "expectedExitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "fully collected pytest modules; exact executed identities exported",
+      "count": 1
+    },
+    "seconds": 0.27883295899999894,
+    "testCount": 3,
+    "moduleCount": 1,
+    "passed": 2,
+    "failed": 1,
+    "skipped": 0,
+    "failedIds": [
+      "tests/mac/test_9router_deploy.py::test_http_authenticates_models_without_changing_get_method[/v1/models-None-True]"
+    ],
+    "collectedIds": [
+      "tests/mac/test_9router_deploy.py::test_http_authenticates_models_without_changing_get_method[/api/version-None-False]",
+      "tests/mac/test_9router_deploy.py::test_http_authenticates_models_without_changing_get_method[/v1/models-None-True]",
+      "tests/mac/test_9router_deploy.py::test_http_authenticates_models_without_changing_get_method[/v1/chat/completions-body2-True]"
+    ],
+    "reportSha256": "d64878d8baac1695c831e9aa56e5e1ee5d0ffee0c23c34e3f2b9d4860fa6a15d"
+  },
+  {
+    "name": "bootout-delay-red",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "task5_pytest_probe",
+      "tests/mac/test_9router_hotswap.py::test_bootout_waits_for_positive_job_absence[delayed]",
+      "-vv",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t55e27e269/evidence/bootout-delay-red.xml"
+    ],
+    "exitCode": 1,
+    "expectedExitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "fully collected pytest modules; exact executed identities exported",
+      "count": 1
+    },
+    "seconds": 0.38547979199999816,
+    "testCount": 1,
+    "moduleCount": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "failedIds": [
+      "tests/mac/test_9router_hotswap.py::test_bootout_waits_for_positive_job_absence[delayed]"
+    ],
+    "collectedIds": [
+      "tests/mac/test_9router_hotswap.py::test_bootout_waits_for_positive_job_absence[delayed]"
+    ],
+    "reportSha256": "ab357b14da4eb891722863a8d074ab38dd1a61755c42c97a63ab12e6418fe026"
+  },
+  {
+    "name": "green-python",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "task5_pytest_probe",
+      "tests/mac/test_9router_deploy.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_vm_qualify.py",
+      "tests/mac/test_9router_path_watchdog.py",
+      "tests/mac/test_9router_devbox_restore.py",
+      "-vv",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t55e27e269/evidence/green-python.xml"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "fully collected pytest modules; exact executed identities exported",
+      "count": 5
+    },
+    "seconds": 3.9602437080000072,
+    "testCount": 281,
+    "moduleCount": 5,
+    "passed": 281,
+    "failed": 0,
+    "skipped": 0,
+    "failedIds": [],
+    "collectedIds": [
+      "tests/mac/test_9router_deploy.py::test_stream_terminal_detection",
+      "tests/mac/test_9router_deploy.py::test_stream_once_rejects_error_before_done_without_retry[event: error\\n]",
+      "tests/mac/test_9router_deploy.py::test_stream_once_rejects_error_before_done_without_retry[data: {\"error\":{\"message\":\"failed\"}}\\n]",
+      "tests/mac/test_9router_deploy.py::test_stream_once_rejects_error_before_done_without_retry[data: {\"type\":\"error\",\"error\":null}\\n]",
+      "tests/mac/test_9router_deploy.py::test_stream_once_rejects_error_before_done_without_retry[event: response.failed\\n]",
+      "tests/mac/test_9router_deploy.py::test_stream_once_rejects_error_before_done_without_retry[data: {\"type\":\"response.incomplete\"}\\n]",
+      "tests/mac/test_9router_deploy.py::test_stream_once_accepts_successful_sse",
+      "tests/mac/test_9router_deploy.py::test_probe_retries_transient_then_passes",
+      "tests/mac/test_9router_deploy.py::test_probe_wedged_release_still_fails",
+      "tests/mac/test_9router_deploy.py::test_probe_non_transient_fails_without_retry",
+      "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc0-True]",
+      "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:503-True]",
+      "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:429-True]",
+      "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:401-False]",
+      "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc4-False]",
+      "tests/mac/test_9router_deploy.py::test_adopt_moves_real_dir_behind_symlink",
+      "tests/mac/test_9router_deploy.py::test_deploy_ok_switches_pointer",
+      "tests/mac/test_9router_deploy.py::test_deploy_refuses_existing_version",
+      "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[None]",
+      "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[fail]",
+      "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-bytes]",
+      "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-deploy]",
+      "tests/mac/test_9router_deploy.py::test_deploy_inside_vm_needs_no_record",
+      "tests/mac/test_9router_deploy.py::test_failed_verify_rolls_back",
+      "tests/mac/test_9router_deploy.py::test_rollback_targets_what_live_version_replaced",
+      "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[deploy]",
+      "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[rollback]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[../escape]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[/absolute]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[v2/nested]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[.]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[..]",
+      "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[]",
+      "tests/mac/test_9router_deploy.py::test_partial_enrollment_never_falls_back_to_legacy_deploy",
+      "tests/mac/test_9router_deploy.py::test_http_explicit_base_does_not_change_global",
+      "tests/mac/test_9router_deploy.py::test_http_authenticates_models_without_changing_get_method[/api/version-None-False]",
+      "tests/mac/test_9router_deploy.py::test_http_authenticates_models_without_changing_get_method[/v1/models-None-True]",
+      "tests/mac/test_9router_deploy.py::test_http_authenticates_models_without_changing_get_method[/v1/chat/completions-body2-True]",
+      "tests/mac/test_9router_deploy.py::test_verify_reports_missing_models_probe_key",
+      "tests/mac/test_9router_deploy.py::test_stream_probe_propagates_private_base_without_mutating_global",
+      "tests/mac/test_9router_deploy.py::test_verify_propagates_private_base_to_all_probes",
+      "tests/mac/test_9router_deploy.py::test_stream_once_uses_explicit_private_base",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_enrollment_preserves_literal_values",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_refuses_unproven_continuity[export JWT_SECRET=\"$(touch unsafe)\"]",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_refuses_unproven_continuity[export JWT_SECRET=\"$UNKNOWN\"]",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_refuses_unproven_continuity[export JWT_SECRET=\"duplicate\"]",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_refuses_unproven_continuity[export DATA_DIR=\"/wrong/root\"]",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_refuses_unproven_continuity[export NODE_OPTIONS=\"--require /foreign/code\"]",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_refuses_unproven_continuity[source /foreign/env.sh]",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_refuses_unproven_continuity[export JWT_SECRET=\"a\\\\\"b\"]",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_refuses_unproven_continuity[export INITIAL_PASSWORD=\"a\\\\\\\\b\"]",
+      "tests/mac/test_9router_hotswap.py::test_shared_environment_refuses_unproven_continuity[export DATA_DIR='$HOME/.9router']",
+      "tests/mac/test_9router_hotswap.py::test_worker_data_root_resolves_to_controller_database",
+      "tests/mac/test_9router_hotswap.py::test_failed_candidate_never_changes_route",
+      "tests/mac/test_9router_hotswap.py::test_error_sse_candidate_keeps_old_route_and_worker",
+      "tests/mac/test_9router_hotswap.py::test_success_switches_only_after_verification",
+      "tests/mac/test_9router_hotswap.py::test_prejournal_crash_preserves_backup_and_allows_new_version[snapshot]",
+      "tests/mac/test_9router_hotswap.py::test_prejournal_crash_preserves_backup_and_allows_new_version[assets]",
+      "tests/mac/test_9router_hotswap.py::test_deployment_commit_crash_boundaries_reconcile[public]",
+      "tests/mac/test_9router_hotswap.py::test_deployment_commit_crash_boundaries_reconcile[drain]",
+      "tests/mac/test_9router_hotswap.py::test_deployment_commit_crash_boundaries_reconcile[pointer]",
+      "tests/mac/test_9router_hotswap.py::test_deployment_commit_crash_boundaries_reconcile[log]",
+      "tests/mac/test_9router_hotswap.py::test_worker_disappearance_preserves_route_without_blind_cleanup[candidate-ready]",
+      "tests/mac/test_9router_hotswap.py::test_worker_disappearance_preserves_route_without_blind_cleanup[route-published]",
+      "tests/mac/test_9router_hotswap.py::test_busy_inactive_slot_refuses_next_deploy",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[responses]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[handlers]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[upgrades]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[cleanup]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[persistence]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[refresh]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[background]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[quota]",
+      "tests/mac/test_9router_hotswap.py::test_positive_app_work_preserves_inactive_worker[websocket]",
+      "tests/mac/test_9router_hotswap.py::test_missing_or_malformed_status_refuses_mutation[None]",
+      "tests/mac/test_9router_hotswap.py::test_missing_or_malformed_status_refuses_mutation[response1]",
+      "tests/mac/test_9router_hotswap.py::test_missing_or_malformed_status_refuses_mutation[response2]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[connections-True]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[connections--1]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[connections-None]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[appWork-None]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[version-foreign]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[slot-b]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[appPid-None]",
+      "tests/mac/test_9router_hotswap.py::test_unknown_worker_identity_preserves_both_workers[mode-failed]",
+      "tests/mac/test_9router_hotswap.py::test_controller_bootouts_only_after_worker_acknowledges_stopped",
+      "tests/mac/test_9router_hotswap.py::test_stop_refusal_preserves_slot_and_route",
+      "tests/mac/test_9router_hotswap.py::test_public_failure_resumes_old_slot_before_switching_back",
+      "tests/mac/test_9router_hotswap.py::test_failed_rollback_keeps_last_serving_route",
+      "tests/mac/test_9router_hotswap.py::test_manual_rollback_reuses_draining_worker_without_restart",
+      "tests/mac/test_9router_hotswap.py::test_flock_refuses_concurrent_deployment",
+      "tests/mac/test_9router_hotswap.py::test_lock_covers_retirement_and_every_route_mutation",
+      "tests/mac/test_9router_hotswap.py::test_corrupted_journal_refuses_without_worker_mutations",
+      "tests/mac/test_9router_hotswap.py::test_status_remains_diagnostic_when_worker_probe_fails",
+      "tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[prepared]",
+      "tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[verified]",
+      "tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[switched]",
+      "tests/mac/test_9router_hotswap.py::test_crash_recovery_uses_socket_route_authority[committed]",
+      "tests/mac/test_9router_hotswap.py::test_crash_between_route_rename_and_state_commit_recovers_new_route",
+      "tests/mac/test_9router_hotswap.py::test_recovery_with_unknown_new_identity_preserves_workers",
+      "tests/mac/test_9router_hotswap.py::test_route_or_state_io_failure_never_bootouts_healthy_worker[replace_route]",
+      "tests/mac/test_9router_hotswap.py::test_route_or_state_io_failure_never_bootouts_healthy_worker[write_state]",
+      "tests/mac/test_9router_hotswap.py::test_legacy_qualification_receipt_cannot_enroll_managed_release",
+      "tests/mac/test_9router_hotswap.py::test_runtime_binding_mismatch_refuses_before_native_checks",
+      "tests/mac/test_9router_hotswap.py::test_qualification_refuses_invalid_shutdown_timestamp[nan]",
+      "tests/mac/test_9router_hotswap.py::test_qualification_refuses_invalid_shutdown_timestamp[inf]",
+      "tests/mac/test_9router_hotswap.py::test_qualification_refuses_invalid_shutdown_timestamp[True]",
+      "tests/mac/test_9router_hotswap.py::test_release_validation_does_not_require_snapshot_space",
+      "tests/mac/test_9router_hotswap.py::test_snapshot_refuses_low_space_before_creating_file",
+      "tests/mac/test_9router_hotswap.py::test_real_validation_requires_receipt_even_in_guest",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[../escape]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[/absolute]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[v2/child]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[.]",
+      "tests/mac/test_9router_hotswap.py::test_invalid_versions_refuse_before_side_effects[..]",
+      "tests/mac/test_9router_hotswap.py::test_managed_install_uses_exact_private_copy_without_package_hooks",
+      "tests/mac/test_9router_hotswap.py::test_malformed_stop_acknowledgement_never_grants_bootout",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_rejects_package_before_executing_its_helper",
+      "tests/mac/test_9router_hotswap.py::test_managed_probe_does_not_retry_uncertain_completion",
+      "tests/mac/test_9router_hotswap.py::test_recovery_repairs_convenience_pointer_without_route_change",
+      "tests/mac/test_9router_hotswap.py::test_recovery_resumes_authoritative_draining_worker",
+      "tests/mac/test_9router_hotswap.py::test_candidate_stopped_after_probe_never_receives_public_route",
+      "tests/mac/test_9router_hotswap.py::test_asset_copy_failure_never_publishes_partial_bytes",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_requires_explicit_maintenance_acknowledgement",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_acknowledgement_is_not_a_qualification_bypass",
+      "tests/mac/test_9router_hotswap.py::test_rollback_does_not_require_broken_candidate_readiness",
+      "tests/mac/test_9router_hotswap.py::test_rollback_with_unknown_candidate_identity_preserves_serving_route",
+      "tests/mac/test_9router_hotswap.py::test_failed_private_candidate_can_reconcile_without_becoming_public",
+      "tests/mac/test_9router_hotswap.py::test_occupied_port_refuses_real_start_worker",
+      "tests/mac/test_9router_hotswap.py::test_startup_boundaries_preserve_route_and_recover_only_owned_candidates[config-published]",
+      "tests/mac/test_9router_hotswap.py::test_startup_boundaries_preserve_route_and_recover_only_owned_candidates[config-fsync]",
+      "tests/mac/test_9router_hotswap.py::test_startup_boundaries_preserve_route_and_recover_only_owned_candidates[bootstrap-failed]",
+      "tests/mac/test_9router_hotswap.py::test_startup_boundaries_preserve_route_and_recover_only_owned_candidates[bootstrap-failed-loaded]",
+      "tests/mac/test_9router_hotswap.py::test_startup_boundaries_preserve_route_and_recover_only_owned_candidates[bootstrap-loaded]",
+      "tests/mac/test_9router_hotswap.py::test_startup_boundaries_preserve_route_and_recover_only_owned_candidates[foreign-job]",
+      "tests/mac/test_9router_hotswap.py::test_startup_boundaries_preserve_route_and_recover_only_owned_candidates[loaded-without-sockets]",
+      "tests/mac/test_9router_hotswap.py::test_startup_boundaries_preserve_route_and_recover_only_owned_candidates[metadata-unreadable]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[stopping-checkpoint]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[stop-acknowledged]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[stopped-checkpoint]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[stopped-fsync]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[bootout]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[bootout-refused]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[cleanup-checkpoint]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[socket-unlinked]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[config-unlinked]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[cleanup-fsync]",
+      "tests/mac/test_9router_hotswap.py::test_retirement_boundaries_recover_without_touching_serving_worker[deallocation-fsync]",
+      "tests/mac/test_9router_hotswap.py::test_launch_config_preserves_shared_secrets_across_swap_and_rollback",
+      "tests/mac/test_9router_hotswap.py::test_changed_shared_environment_refuses_candidate_start",
+      "tests/mac/test_9router_hotswap.py::test_retirement_retry_refreshes_reopened_bridge_identity",
+      "tests/mac/test_9router_hotswap.py::test_retirement_recovery_refuses_replaced_socket",
+      "tests/mac/test_9router_hotswap.py::test_post_rename_directory_fsync_failure_recovers_published_bytes[route]",
+      "tests/mac/test_9router_hotswap.py::test_post_rename_directory_fsync_failure_recovers_published_bytes[journal]",
+      "tests/mac/test_9router_hotswap.py::test_rollback_intent_recovers_before_route_switch[resume]",
+      "tests/mac/test_9router_hotswap.py::test_rollback_intent_recovers_before_route_switch[probe]",
+      "tests/mac/test_9router_hotswap.py::test_interrupted_deployment_recovers_or_preserves_both_targets[private]",
+      "tests/mac/test_9router_hotswap.py::test_interrupted_deployment_recovers_or_preserves_both_targets[public]",
+      "tests/mac/test_9router_hotswap.py::test_interrupted_deployment_recovers_or_preserves_both_targets[both-private]",
+      "tests/mac/test_9router_hotswap.py::test_interrupted_deployment_recovers_or_preserves_both_targets[old-resume]",
+      "tests/mac/test_9router_hotswap.py::test_interrupted_deployment_recovers_or_preserves_both_targets[old-public]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_public_failure_preserves_failed_subcheck",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[journal]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[refresh-created]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[refresh]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[snapshot-created]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[snapshot]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[assets]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[legacy-stop]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[worker-config]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[worker-plist]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[worker-bootstrap]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[route]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[proxy-config]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[proxy-plist]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[proxy-bootstrap]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[public]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[worker-bootstrap-refused]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[proxy-bootstrap-refused]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_dispatch_resumes_every_maintenance_boundary[bookkeeping]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_recovery_refuses_foreign_artifact[refresh.sqlite]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_recovery_refuses_foreign_artifact[pre-enrollment.sqlite]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_recovery_refuses_foreign_artifact[Caddyfile]",
+      "tests/mac/test_9router_hotswap.py::test_enrollment_recovery_refuses_foreign_artifact[proxy-job]",
+      "tests/mac/test_9router_hotswap.py::test_qualification_commands_never_use_production_defaults",
+      "tests/mac/test_9router_hotswap.py::test_qualification_scope_is_refused_on_the_laptop",
+      "tests/mac/test_9router_hotswap.py::test_guest_scope_binds_real_bytes_without_a_passing_receipt",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_enters_installed_dispatch_with_bound_journal[a]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_enters_installed_dispatch_with_bound_journal[b]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[missing]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[duplicate]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[swapped]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[foreign]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[version]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[release]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[symlink]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[files]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[manifest]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[fingerprint]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[archive]",
+      "tests/mac/test_9router_hotswap.py::test_paired_scope_refuses_unbound_or_changed_installation[private]",
+      "tests/mac/test_9router_hotswap.py::test_guest_scope_rejects_undeclared_copy_and_production_slot_layout[False]",
+      "tests/mac/test_9router_hotswap.py::test_guest_scope_rejects_undeclared_copy_and_production_slot_layout[True]",
+      "tests/mac/test_9router_hotswap.py::test_digest_cannot_authorize_another_records_identical_installation[False]",
+      "tests/mac/test_9router_hotswap.py::test_digest_cannot_authorize_another_records_identical_installation[True]",
+      "tests/mac/test_9router_hotswap.py::test_guest_scope_refuses_forged_or_stale_inputs[pass]",
+      "tests/mac/test_9router_hotswap.py::test_guest_scope_refuses_forged_or_stale_inputs[home]",
+      "tests/mac/test_9router_hotswap.py::test_guest_scope_refuses_forged_or_stale_inputs[runtime]",
+      "tests/mac/test_9router_hotswap.py::test_guest_scope_refuses_forged_or_stale_inputs[namespace]",
+      "tests/mac/test_9router_hotswap.py::test_guest_scope_refuses_forged_or_stale_inputs[archive]",
+      "tests/mac/test_9router_hotswap.py::test_guest_scope_refuses_forged_or_stale_inputs[files]",
+      "tests/mac/test_9router_hotswap.py::test_qualification_scope_refuses_failed_runtime_identity",
+      "tests/mac/test_9router_hotswap.py::test_restore_validates_every_slot_before_starting_jobs[mode]",
+      "tests/mac/test_9router_hotswap.py::test_restore_validates_every_slot_before_starting_jobs[digest]",
+      "tests/mac/test_9router_hotswap.py::test_restore_validates_every_slot_before_starting_jobs[configuration]",
+      "tests/mac/test_9router_hotswap.py::test_restore_validates_every_slot_before_starting_jobs[stopped-digest]",
+      "tests/mac/test_9router_hotswap.py::test_restore_validates_every_slot_before_starting_jobs[active-missing]",
+      "tests/mac/test_9router_hotswap.py::test_restore_validates_every_slot_before_starting_jobs[active-stopped]",
+      "tests/mac/test_9router_hotswap.py::test_restore_validates_every_slot_before_starting_jobs[active-draining]",
+      "tests/mac/test_9router_hotswap.py::test_restore_validates_every_slot_before_starting_jobs[second-active]",
+      "tests/mac/test_9router_hotswap.py::test_restore_starts_jobs_only_after_complete_validation",
+      "tests/mac/test_9router_hotswap.py::test_bootout_waits_for_positive_job_absence[delayed]",
+      "tests/mac/test_9router_hotswap.py::test_bootout_waits_for_positive_job_absence[timeout]",
+      "tests/mac/test_9router_hotswap.py::test_bootout_waits_for_positive_job_absence[unreadable]",
+      "tests/mac/test_9router_hotswap.py::test_isolated_scope_never_stops_legacy_guest_baseline",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_authentication_and_recovery_cannot_fill_healthy_population",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_cleanup_failure_reactivation_and_short_interval_refuse",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_exported_bytes_and_complete_populations_are_accepted",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_format_only_and_tampered_exports_are_refused",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_hash_bound_but_insufficient_continuity_is_refused",
+      "tests/mac/test_9router_vm_qualify.py::LifecycleTest::test_cleanup_failure_cannot_pass_even_with_guest_success",
+      "tests/mac/test_9router_vm_qualify.py::LifecycleTest::test_every_work_failure_still_closes_stops_and_observes_twice",
+      "tests/mac/test_9router_vm_qualify.py::LifecycleTest::test_foreign_or_running_devbox_is_not_claimed_or_stopped",
+      "tests/mac/test_9router_vm_qualify.py::LifecycleTest::test_successful_callback_is_not_a_qualification_receipt",
+      "tests/mac/test_9router_vm_qualify.py::RuntimeBindingTest::test_guest_caddy_provisioning_accepts_only_pinned_archive",
+      "tests/mac/test_9router_vm_qualify.py::RuntimeBindingTest::test_guest_dispatch_refuses_static_and_native_mismatch_before_dependencies",
+      "tests/mac/test_9router_vm_qualify.py::RuntimeBindingTest::test_guest_runtime_reuses_existing_pinned_caddy_without_download",
+      "tests/mac/test_9router_vm_qualify.py::RuntimeBindingTest::test_host_stage_binds_static_source_without_host_native_observations",
+      "tests/mac/test_9router_vm_qualify.py::RuntimeBindingTest::test_preflight_accepts_guest_binaries_and_pins_fixture_controller_path",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_archive_links_and_legacy_manifest_are_refused",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_guest_and_baseline_refuse_host_execution",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_guest_child_failure_keeps_only_redacted_output",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_guest_dispatch_prepares_paired_fixture_and_single_live_baseline",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_host_run_creates_persistent_parent_before_new_run_directory",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_host_run_requires_current_acknowledgement_before_any_activation",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_isolated_environment_does_not_forward_credentials_or_module_injection",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_models_and_metacharacters_remain_separate_argv_values",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_prerequisite_checks_keep_socket_temporary_paths_short",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_record_check_keeps_failed_populations_out_of_receipt",
+      "tests/mac/test_9router_vm_qualify.py::BootstrapTest::test_supplementary_unit_population_rejects_missing_modules_and_skips",
+      "tests/mac/test_9router_vm_qualify.py::RuntimeProvisioningTest::test_repeated_runs_reuse_the_same_hash_bound_binary_and_path",
+      "tests/mac/test_9router_vm_qualify.py::RuntimeProvisioningTest::test_run_specific_tool_paths_refuse_before_download",
+      "tests/mac/test_9router_vm_qualify.py::ConcurrentApiTest::test_api_is_polled_during_streams_and_latency_is_measured",
+      "tests/mac/test_9router_vm_qualify.py::ConcurrentApiTest::test_stalled_wrong_version_and_zero_population_api_refuse",
+      "tests/mac/test_9router_path_watchdog.py::test_no_kick_on_first_failure",
+      "tests/mac/test_9router_path_watchdog.py::test_second_failure_kicks_targets",
+      "tests/mac/test_9router_path_watchdog.py::test_cooldown_suppresses_repeat_kick",
+      "tests/mac/test_9router_path_watchdog.py::test_success_resets_streak",
+      "tests/mac/test_9router_path_watchdog.py::test_kickstart_command_shapes",
+      "tests/mac/test_9router_path_watchdog.py::test_dry_run_apply_does_not_mutate_last_kick",
+      "tests/mac/test_9router_path_watchdog.py::test_watchdog_does_not_restart_healthy_draining_worker",
+      "tests/mac/test_9router_path_watchdog.py::test_failed_proxy_targets_only_proxy",
+      "tests/mac/test_9router_path_watchdog.py::test_confirmed_active_failure_does_not_restart_tailscale",
+      "tests/mac/test_9router_path_watchdog.py::test_unknown_managed_control_alarms_without_worker_kick[status0]",
+      "tests/mac/test_9router_path_watchdog.py::test_unknown_managed_control_alarms_without_worker_kick[status1]",
+      "tests/mac/test_9router_path_watchdog.py::test_unknown_managed_control_alarms_without_worker_kick[status2]",
+      "tests/mac/test_9router_path_watchdog.py::test_unknown_managed_control_alarms_without_worker_kick[status3]",
+      "tests/mac/test_9router_path_watchdog.py::test_managed_kickstart_labels_are_concrete",
+      "tests/mac/test_9router_path_watchdog.py::test_unenrolled_watchdog_retains_legacy_probe_targets",
+      "tests/mac/test_9router_path_watchdog.py::test_enrollment_directory_without_journal_is_not_legacy",
+      "tests/mac/test_9router_path_watchdog.py::test_cycle_uses_managed_decisions",
+      "tests/mac/test_9router_path_watchdog.py::test_failure_streak_is_reset_when_active_slot_changes",
+      "tests/mac/test_9router_path_watchdog.py::test_managed_watchdog_lock_excludes_controller_mutation",
+      "tests/mac/test_9router_path_watchdog.py::test_managed_status_runs_as_requested_home",
+      "tests/mac/test_9router_path_watchdog.py::test_cycle_unknown_enrollment_is_degraded_not_legacy",
+      "tests/mac/test_9router_devbox_restore.py::RestoreTest::test_live_authentication_without_guest_credentials_is_an_explicit_blocker",
+      "tests/mac/test_9router_devbox_restore.py::RestoreTest::test_native_schema_seed_has_independent_secrets_and_never_resets_existing_state",
+      "tests/mac/test_9router_devbox_restore.py::RestoreTest::test_restore_and_baseline_leave_referenced_releases_and_database_untouched",
+      "tests/mac/test_9router_devbox_restore.py::RestoreTest::test_restore_dispatches_only_scoped_controller_without_resetting_database",
+      "tests/mac/test_9router_devbox_restore.py::RestoreTest::test_wrapper_arguments_preserve_spaces_and_metacharacters"
+    ],
+    "reportSha256": "9955fab1d5228f1c0be6d7d13144f98f3a2eb23d80e58565a8243939acaf41e8"
+  },
+  {
+    "name": "templates",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "task5_pytest_probe",
+      "tests/mac/test_9router_worker_templates.py",
+      "-vv",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t55e27e269/evidence/templates.xml"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "fully collected pytest modules; exact executed identities exported",
+      "count": 1
+    },
+    "seconds": 0.2185981660000067,
+    "testCount": 1,
+    "moduleCount": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "failedIds": [],
+    "collectedIds": [
+      "tests/mac/test_9router_worker_templates.py::test_templates"
+    ],
+    "reportSha256": "a4b6a5b371d55871b815b843c6117d156c0cf67e927888483c9e406b7f803436"
+  },
+  {
+    "name": "task12-worker",
+    "args": [
+      "node",
+      "tests/mac/9router_worker.check.cjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "named native proof command with instrumented assertion executions",
+      "count": 1
+    },
+    "seconds": 89.279346,
+    "visibleAssertionExecutions": 615,
+    "mainAssertionExecutions": 615,
+    "visibleProcessPopulations": [
+      {
+        "pid": 988,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/mac/9router_worker.check.cjs",
+        "count": 615
+      }
+    ],
+    "redRoutingAssertionVerified": false,
+    "logSha256": "8b5ae2a93b51a54a4457fc4ce51424a1db2e3d4dc1b04cd327ac76c2333bc0f1"
+  },
+  {
+    "name": "task1-proxy",
+    "args": [
+      "node",
+      "tests/mac/9router_hotswap.check.cjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "named native proof command with instrumented assertion executions",
+      "count": 1
+    },
+    "seconds": 89.63519745800002,
+    "visibleAssertionExecutions": 89266,
+    "mainAssertionExecutions": 88653,
+    "visibleProcessPopulations": [
+      {
+        "pid": 1317,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/mac/9router_worker.check.cjs",
+        "count": 613
+      },
+      {
+        "pid": 1312,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/mac/9router_hotswap.check.cjs",
+        "count": 88653
+      }
+    ],
+    "redRoutingAssertionVerified": false,
+    "logSha256": "a0974841a2b6540e555ad24fd7958031c7302636963328efaa27fad7663bd161"
+  },
+  {
+    "name": "route-counterfactual",
+    "args": [
+      "node",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "named native proof command with instrumented assertion executions",
+      "count": 1
+    },
+    "seconds": 179.541033792,
+    "visibleAssertionExecutions": 89311,
+    "mainAssertionExecutions": 25,
+    "visibleProcessPopulations": [
+      {
+        "pid": 1862,
+        "file": "/Volumes/devbox/t55e27e269/isolated/route-counterfactual/tmp/9r-counterfactual-crJzVz/tests/mac/9router_worker.check.cjs",
+        "count": 610
+      },
+      {
+        "pid": 1861,
+        "file": "/Volumes/devbox/t55e27e269/isolated/route-counterfactual/tmp/9r-counterfactual-crJzVz/tests/mac/9router_hotswap.check.cjs",
+        "count": 88676
+      },
+      {
+        "pid": 1860,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/mac/9router_hotswap_counterfactual.check.cjs",
+        "count": 25
+      }
+    ],
+    "redRoutingAssertionVerified": true,
+    "logSha256": "968505295c1dfc7788d54b78514a8286e3b86200e8e1c95067af40329d0c2552"
+  },
+  {
+    "name": "task2-cleanup",
+    "args": [
+      "node",
+      "tests/unit/managed-cleanup.check.mjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "named native proof command with instrumented assertion executions",
+      "count": 1
+    },
+    "seconds": 1.2386990839999612,
+    "visibleAssertionExecutions": 12,
+    "mainAssertionExecutions": 12,
+    "visibleProcessPopulations": [
+      {
+        "pid": 3260,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/unit/managed-cleanup.check.mjs",
+        "count": 12
+      }
+    ],
+    "redRoutingAssertionVerified": false,
+    "logSha256": "c2eb83c930f27152340faa7d99f3ca6d7af57d4f3e83a78facb4be37c281fcc7"
+  },
+  {
+    "name": "task3-dispatch",
+    "args": [
+      "node",
+      "tests/unit/managed-dispatch.check.mjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "named native proof command with instrumented assertion executions",
+      "count": 1
+    },
+    "seconds": 0.42348687500003734,
+    "visibleAssertionExecutions": 162,
+    "mainAssertionExecutions": 162,
+    "visibleProcessPopulations": [
+      {
+        "pid": 3271,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/unit/managed-dispatch.check.mjs",
+        "count": 162
+      }
+    ],
+    "redRoutingAssertionVerified": false,
+    "logSha256": "9708aabd6a34df179d5820b5ac8394fdf39c11eac224b53974992eba234104d8"
+  },
+  {
+    "name": "task3-state",
+    "args": [
+      "node",
+      "tests/unit/managed-state.check.mjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "named native proof command with instrumented assertion executions",
+      "count": 1
+    },
+    "seconds": 0.17463424999999688,
+    "visibleAssertionExecutions": 33,
+    "mainAssertionExecutions": 33,
+    "visibleProcessPopulations": [
+      {
+        "pid": 3274,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/unit/managed-state.check.mjs",
+        "count": 33
+      }
+    ],
+    "redRoutingAssertionVerified": false,
+    "logSha256": "cd39aa4c7a0ec7f43a6ad508aa850382b9c6bd5ec682a8edc1d48245a83c1c5e"
+  },
+  {
+    "name": "task3-refresh",
+    "args": [
+      "node",
+      "tests/unit/token-refresh-cross-process.check.mjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "named native proof command with instrumented assertion executions",
+      "count": 1
+    },
+    "seconds": 0.8879427499999792,
+    "visibleAssertionExecutions": 13,
+    "mainAssertionExecutions": 13,
+    "visibleProcessPopulations": [
+      {
+        "pid": 3277,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/unit/token-refresh-cross-process.check.mjs",
+        "count": 13
+      }
+    ],
+    "redRoutingAssertionVerified": false,
+    "logSha256": "fdaafa61142d67fbb8417b6430ac8cae7672c879dd21db10ded414ec3a5722dd"
+  },
+  {
+    "name": "task3-cas",
+    "args": [
+      "node",
+      "tests/unit/managed-cas-process.check.mjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "named native proof command with instrumented assertion executions",
+      "count": 1
+    },
+    "seconds": 1.3225496659999862,
+    "visibleAssertionExecutions": 21,
+    "mainAssertionExecutions": 21,
+    "visibleProcessPopulations": [
+      {
+        "pid": 3293,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/unit/managed-cas-process.check.mjs",
+        "count": 21
+      }
+    ],
+    "redRoutingAssertionVerified": false,
+    "logSha256": "244481a9bb140daf4346e75ad8fe8877f816513025d1ec4b1f0802e5ca78947a"
+  },
+  {
+    "name": "task3-review-counterfactual",
+    "args": [
+      "node",
+      "tests/unit/managed-review-counterfactual.check.mjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "named native proof command with instrumented assertion executions",
+      "count": 1
+    },
+    "seconds": 4.66449070799996,
+    "visibleAssertionExecutions": 12,
+    "mainAssertionExecutions": 12,
+    "visibleProcessPopulations": [
+      {
+        "pid": 3316,
+        "file": "/Volumes/devbox/t55e27e269/head/tests/unit/managed-review-counterfactual.check.mjs",
+        "count": 12
+      }
+    ],
+    "redRoutingAssertionVerified": false,
+    "logSha256": "69d5afd4d847e6cf0f0564c8151cd0bfa7a6c21f15335d0a3bc7a06c81ff547c"
+  },
+  {
+    "name": "task2-vitest",
+    "args": [
+      "node",
+      "/Volumes/devbox/t55e27e269/head/tests/node_modules/vitest/vitest.mjs",
+      "run",
+      "--config",
+      "/Volumes/devbox/t55e27e269/targeted.config.mjs",
+      "tests/unit/managed-buffer.test.js",
+      "tests/unit/managed-detached.test.js",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/background-token-refresh.test.js",
+      "tests/unit/quota-auto-ping.test.js",
+      "tests/unit/cli-build-artifacts.test.js",
+      "tests/unit/custom-server-peer-headers.test.js",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/request-details-metadata-mode.test.js",
+      "tests/unit/responses-mid-turn-steering.test.js",
+      "--reporter=json",
+      "--outputFile=/Volumes/devbox/t55e27e269/evidence/task2-vitest.json"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "explicit Vitest module selection; exact case identities exported",
+      "count": 10
+    },
+    "seconds": 1.7349493329999746,
+    "testCount": 84,
+    "moduleCount": 10,
+    "modules": [
+      "tests/unit/managed-buffer.test.js",
+      "tests/unit/managed-detached.test.js",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/background-token-refresh.test.js",
+      "tests/unit/quota-auto-ping.test.js",
+      "tests/unit/cli-build-artifacts.test.js",
+      "tests/unit/custom-server-peer-headers.test.js",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/request-details-metadata-mode.test.js",
+      "tests/unit/responses-mid-turn-steering.test.js"
+    ],
+    "caseIds": [
+      "selectConnectionsNeedingRefresh selects oauth grok-cli connection expiring in 10 minutes",
+      "selectConnectionsNeedingRefresh skips connection expiring in 2 hours",
+      "selectConnectionsNeedingRefresh never selects apikey connections",
+      "selectConnectionsNeedingRefresh skips oauth connection without refreshToken",
+      "selectConnectionsNeedingRefresh selects already-expired oauth connection",
+      "runBackgroundTokenRefreshTick calls refresh only for due connections and swallows per-connection errors",
+      "runBackgroundTokenRefreshTick does not call refresh when nothing is due",
+      "runBackgroundTokenRefreshTick swallows top-level load errors",
+      "start/stop guards honors DISABLE_BACKGROUND_TOKEN_REFRESH kill-switch",
+      "start/stop guards is idempotent: second start is no-op",
+      "CLI build server artifacts merges complete API routes and provider chunks for the legacy nested app layout",
+      "CLI build server artifacts merges complete API routes and provider chunks for the Next 16 workspace layout",
+      "CLI build server artifacts resolves the copied WebSocket registry beside an isolated alternate output",
+      "CLI build server artifacts merges idempotently without removing standalone-generated files",
+      "CLI build server artifacts reports the missing required API route artifact path",
+      "custom-server peer header sanitizing generates a peer trust token at boot",
+      "custom-server peer header sanitizing replaces a client-supplied x-9r-real-ip with the socket address",
+      "custom-server peer header sanitizing stamps the trust token so downstream can tell the wrapper ran",
+      "custom-server peer header sanitizing drops a client-supplied peer trust token",
+      "custom-server peer header sanitizing drops a client-supplied x-9r-via-proxy marker",
+      "custom-server peer header sanitizing marks via-proxy and adopts the forwarded IP for a loopback proxy hop",
+      "custom-server peer header sanitizing keeps the peer token out of persisted request details",
+      "counts buffered detail work through actual transaction and fails closed on write loss",
+      "refuses clean retirement when observability settings reject",
+      "permits explicitly disabled observability without unknown work",
+      "preserves unmanaged disabled fallback on settings rejection",
+      "managed family generation persistence oauth keeps newest credentials through dispatch in order 1,2",
+      "managed family generation persistence oauth keeps newest credentials through dispatch in order 2,1",
+      "managed family generation persistence copilot keeps newest credentials through dispatch in order 1,2",
+      "managed family generation persistence copilot keeps newest credentials through dispatch in order 2,1",
+      "managed family generation persistence merges crossed families and stale nested snapshots in order oauth,copilot",
+      "managed family generation persistence merges crossed families and stale nested snapshots in order copilot,oauth",
+      "managed family generation persistence merges a combined result independently when only one family is stale",
+      "managed family generation persistence refuses missing, unknown, and malformed family generations at the actual repository",
+      "managed family generation persistence carries both generations through the combined refresh dispatch",
+      "managed family generation persistence re-reads persisted credentials through proactive dispatch before further refreshes",
+      "managed family generation persistence preserves family ownership through GitHub executor dispatch",
+      "managed family generation persistence reads native stored settings strictly without changing legacy defaults",
+      "managed family generation persistence refuses unsupported native runtime before fallback or migration",
+      "managed family generation persistence refuses actual schema mutation before migration and native fallback",
+      "retains detached usage persistence after callback returns",
+      "retains websocket event work after socket closure and preserves local fetch",
+      "managed worker ownership refuses app infrastructure before registering cleanup signals",
+      "managed worker ownership refuses stored non-object or malformed settings \"{bad\"",
+      "managed worker ownership refuses stored non-object or malformed settings \"null\"",
+      "managed worker ownership refuses stored non-object or malformed settings \"[]\"",
+      "managed worker ownership refuses stored non-object or malformed settings \"true\"",
+      "managed worker ownership refuses stored non-object or malformed settings \"3\"",
+      "managed worker ownership refuses stored non-object or malformed settings \"\\\"text\\\"\"",
+      "managed worker ownership refuses stored non-object or malformed settings null",
+      "managed worker ownership refuses stored non-object or malformed settings {}",
+      "managed worker ownership refuses unreadable settings rather than defaulting",
+      "managed worker ownership keeps legacy defaults while strict startup reads only stored objects",
+      "managed worker ownership does not initialize or report private version before delayed attachment settles",
+      "managed worker ownership refuses missing attachment readiness",
+      "managed worker ownership refuses failed attachment readiness",
+      "managed worker ownership starts both schedulers without inactive ticks, then follows activation/drain",
+      "quota auto-ping does not ping Codex when setting is absent",
+      "quota auto-ping starts the scheduler only when an account opts in",
+      "quota auto-ping stops the scheduler when the last account opts out",
+      "quota auto-ping does not ping Codex on the first resetAt observation",
+      "quota auto-ping sends Codex ping when session resetAt slides",
+      "quota auto-ping does not ping Codex when resetAt is stable",
+      "quota auto-ping does not repeat Codex ping inside the minimum ping interval",
+      "quota auto-ping does not ping Codex just because reported usage is zero",
+      "quota auto-ping does not ping Codex when weekly quota is exhausted",
+      "quota auto-ping does not ping Codex when monthly quota is exhausted",
+      "quota auto-ping does not ping Codex when session quota is exhausted",
+      "quota auto-ping sends one tiny gpt-5.5 Codex request through the executor",
+      "quota auto-ping does not ping same Codex reset twice when seconds drift",
+      "quota auto-ping skips non-OAuth Codex connections",
+      "quota auto-ping keeps Claude session quota key behavior",
+      "requestDetails metadata-only mode writes an error row despite ENABLE_REQUEST_LOGS=false, with status and no error text or bodies",
+      "requestDetails metadata-only mode writes a success row without response content",
+      "requestDetails metadata-only mode keeps only type/code from a JSON upstream error, never its message (the S18 shape)",
+      "requestDetails metadata-only mode writes one row per client request across account fallback, with the attempt count",
+      "requestDetails metadata-only mode errorIdentifiers keeps only identifier-shaped type/code and drops everything else",
+      "responses mid-turn steering GPT-6 family detection includes astra/sol/cx variants",
+      "responses mid-turn steering validateSteerEvent rejects unknown fields and empty input",
+      "responses mid-turn steering accept \u2192 pending \u2192 continuation state machine",
+      "responses mid-turn steering invalid_input and response_not_found and too_many_pending_steers",
+      "responses mid-turn steering steering_not_supported for non-GPT-6 models",
+      "responses mid-turn steering continuation after steer does NOT rewrite top-level reasoning.effort when effort changes via configuration_update",
+      "responses mid-turn steering Responses wire uses reasoning.effort object; never leaves reasoning_effort on continuation"
+    ],
+    "skipped": 0,
+    "reportSha256": "8f5c9e1a69337a83af025d1d2a056e62727190f3a98d7557c069a2f910a7e06b"
+  },
+  {
+    "name": "task3-vitest",
+    "args": [
+      "node",
+      "/Volumes/devbox/t55e27e269/head/tests/node_modules/vitest/vitest.mjs",
+      "run",
+      "--config",
+      "/Volumes/devbox/t55e27e269/targeted.config.mjs",
+      "tests/unit/managed-review-batch.test.js",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/db-driver-chain.test.js",
+      "tests/unit/db-migration-chain.test.js",
+      "tests/unit/token-refresh-generic.test.js",
+      "tests/unit/codex-refresh-token.test.js",
+      "--reporter=json",
+      "--outputFile=/Volumes/devbox/t55e27e269/evidence/task3-vitest.json"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "explicit Vitest module selection; exact case identities exported",
+      "count": 6
+    },
+    "seconds": 1.2108884579999994,
+    "testCount": 46,
+    "moduleCount": 6,
+    "modules": [
+      "tests/unit/managed-review-batch.test.js",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/db-driver-chain.test.js",
+      "tests/unit/db-migration-chain.test.js",
+      "tests/unit/token-refresh-generic.test.js",
+      "tests/unit/codex-refresh-token.test.js"
+    ],
+    "caseIds": [
+      "Codex Refresh Token refreshCodexToken should return new refresh_token when server provides one (token rotation)",
+      "Codex Refresh Token refreshCodexToken should keep old refresh_token when server does not return new one",
+      "Codex Refresh Token CodexExecutor credential lifecycle should refresh Codex credentials and preserve omitted id_token",
+      "Codex Refresh Token CodexExecutor credential lifecycle should refresh Codex when lastRefreshAt is older than the upstream stale window",
+      "Codex Refresh Token CodexExecutor credential lifecycle should de-duplicate concurrent refreshes for the same Codex connection",
+      "Codex Refresh Token getRefreshLeadMs (early refresh config) should return provider-specific lead time for OAuth providers",
+      "Codex Refresh Token getRefreshLeadMs (early refresh config) should fallback to default buffer for unknown providers",
+      "Codex Refresh Token getRefreshLeadMs (early refresh config) codex lead should be greater than default buffer",
+      "Driver fallback chain default \u2192 picks better-sqlite3 when available",
+      "Driver fallback chain falls back to node:sqlite when better-sqlite3 unavailable",
+      "Driver fallback chain falls back to sql.js when both native drivers unavailable",
+      "Schema migrations fresh DB \u2192 applies migrations & stamps schemaVersion",
+      "Schema migrations existing DB at older schemaVersion \u2192 re-applies pending migrations on restart",
+      "Schema migrations fresh DB + legacy db.json \u2192 imports data automatically",
+      "Schema migrations auto-sync re-creates missing index when DB lacks it",
+      "managed family generation persistence oauth keeps newest credentials through dispatch in order 1,2",
+      "managed family generation persistence oauth keeps newest credentials through dispatch in order 2,1",
+      "managed family generation persistence copilot keeps newest credentials through dispatch in order 1,2",
+      "managed family generation persistence copilot keeps newest credentials through dispatch in order 2,1",
+      "managed family generation persistence merges crossed families and stale nested snapshots in order oauth,copilot",
+      "managed family generation persistence merges crossed families and stale nested snapshots in order copilot,oauth",
+      "managed family generation persistence merges a combined result independently when only one family is stale",
+      "managed family generation persistence refuses missing, unknown, and malformed family generations at the actual repository",
+      "managed family generation persistence carries both generations through the combined refresh dispatch",
+      "managed family generation persistence re-reads persisted credentials through proactive dispatch before further refreshes",
+      "managed family generation persistence preserves family ownership through GitHub executor dispatch",
+      "managed family generation persistence reads native stored settings strictly without changing legacy defaults",
+      "managed family generation persistence refuses unsupported native runtime before fallback or migration",
+      "managed family generation persistence refuses actual schema mutation before migration and native fallback",
+      "single-attempt managed transport refuses accepted-but-response-lost replay for example.invalid",
+      "single-attempt managed transport refuses accepted-but-response-lost replay for cloudcode-pa.googleapis.com",
+      "repeatable Copilot exchange replaces only expired completed results; OAuth remains durable",
+      "uncertain and pending Copilot exchanges are never reclaimed",
+      "usage real GET refreshes without an enabled proxy and persists Copilot generation",
+      "translator actual POST carries family generations to real repository and keeps fixed expiry",
+      "provider actual PUT preserves noncredential edits and refuses stale credential input",
+      "reauth fences pending old refresh and its delayed callback without blocking the new grant",
+      "durable completion fixes expiry before delayed persistence and replay",
+      "refreshAccessToken \u2014 config-driven profiles iflow: Basic Auth header from clientId:clientSecret, form body keeps client_secret",
+      "refreshAccessToken \u2014 config-driven profiles github: omits client_secret when config has none",
+      "refreshAccessToken \u2014 config-driven profiles kimi: merges X-Msh-* headers from credentials.providerSpecificData.deviceId",
+      "refreshAccessToken \u2014 config-driven profiles claude: JSON body, client_id only (no client_secret)",
+      "refreshAccessToken \u2014 config-driven profiles returns null on non-ok response",
+      "refreshAccessToken \u2014 config-driven profiles returns null when refreshToken missing",
+      "refreshAccessToken \u2014 config-driven profiles dedupes concurrent calls with same refresh token (same dedupKey)",
+      "Cline refresh uses the extension JSON refresh contract"
+    ],
+    "skipped": 0,
+    "reportSha256": "afefdfd0394179259b94fad7f6bed72da38558be8edc98478af5974a34471d6e"
+  },
+  {
+    "name": "task4b-dispatch",
+    "args": [
+      "node",
+      "/Volumes/devbox/t55e27e269/head/tests/node_modules/vitest/vitest.mjs",
+      "run",
+      "--config",
+      "/Volumes/devbox/t55e27e269/targeted.config.mjs",
+      "tests/unit/managed-update.test.js",
+      "--reporter=json",
+      "--outputFile=/Volumes/devbox/t55e27e269/evidence/task4b-dispatch.json"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "explicit Vitest module selection; exact case identities exported",
+      "count": 1
+    },
+    "seconds": 0.48344716700000845,
+    "testCount": 8,
+    "moduleCount": 1,
+    "modules": [
+      "tests/unit/managed-update.test.js"
+    ],
+    "caseIds": [
+      "managed release endpoints update refuses managed production calls before process side effects",
+      "managed release endpoints shutdown refuses managed production calls before process side effects",
+      "managed release endpoints update refuses managed development calls before process side effects",
+      "managed release endpoints shutdown refuses managed development calls before process side effects",
+      "unmanaged release endpoints retains production update behavior with no managed flag",
+      "unmanaged release endpoints retains the development update refusal",
+      "unmanaged release endpoints retains the production shutdown timer behavior",
+      "unmanaged release endpoints retains the development shutdown timer behavior"
+    ],
+    "skipped": 0,
+    "reportSha256": "595a3783c382b5dc163a61d14bf2de57e11c7bdfe331dc2742cb6b957fc967a5"
+  },
+  {
+    "name": "h2c-green",
+    "args": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "actual h2c TAP cases",
+      "count": 5
+    },
+    "seconds": 0.2408791249999922,
+    "testCount": 5,
+    "tapCounts": {
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "assertionIdentities": [
+      "serves split h2c POST requests as HTTP/1.1",
+      "serves coalesced h2c POST requests as HTTP/1.1",
+      "serves chunked h2c POST requests as HTTP/1.1",
+      "serves empty h2c POST requests as HTTP/1.1",
+      "preserves non-h2c upgrade selection"
+    ]
+  },
+  {
+    "name": "h2c-managed",
+    "args": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c-managed.test.cjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "actual h2c TAP cases",
+      "count": 1
+    },
+    "seconds": 0.23758170899998277,
+    "testCount": 1,
+    "tapCounts": {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "assertionIdentities": [
+      "managed h2c drain IPC retains responses and deferred persistence"
+    ]
+  },
+  {
+    "name": "h2c-baseline-red",
+    "args": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "exitCode": 1,
+    "expectedExitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "pinned historical h2c cases in runtime mirror",
+      "count": 1
+    },
+    "seconds": 10.187184542000011,
+    "testCount": 1,
+    "tapCounts": {
+      "tests": 1,
+      "pass": 0,
+      "fail": 0,
+      "cancelled": 1,
+      "skipped": 0,
+      "todo": 0
+    },
+    "expectedBaselineTimeout": true,
+    "assertionIdentities": [
+      "serves h2c POST requests as HTTP/1.1"
+    ]
+  },
+  {
+    "name": "h2c-runtime-red",
+    "args": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "exitCode": 1,
+    "expectedExitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "pinned historical h2c cases in runtime mirror",
+      "count": 5
+    },
+    "seconds": 4.264357000000018,
+    "testCount": 5,
+    "tapCounts": {
+      "tests": 5,
+      "pass": 2,
+      "fail": 3,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "assertionIdentities": [
+      "serves split h2c POST requests as HTTP/1.1",
+      "serves coalesced h2c POST requests as HTTP/1.1",
+      "serves chunked h2c POST requests as HTTP/1.1",
+      "serves empty h2c POST requests as HTTP/1.1",
+      "preserves non-h2c upgrade selection"
+    ]
+  },
+  {
+    "name": "runtime-binding-mirror-green",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "task5_pytest_probe",
+      "tests/mac/test_9router_hotswap.py::test_runtime_binding_mismatch_refuses_before_native_checks",
+      "-vv",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t55e27e269/evidence/runtime-binding-mirror-green.xml"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "fully collected pytest modules; exact executed identities exported",
+      "count": 1
+    },
+    "seconds": 0.36427483299996766,
+    "testCount": 1,
+    "moduleCount": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "failedIds": [],
+    "collectedIds": [
+      "tests/mac/test_9router_hotswap.py::test_runtime_binding_mismatch_refuses_before_native_checks"
+    ],
+    "reportSha256": "53e8d05cbd7c37806665d66d62afd722edc91bb7cebfd5faf887a2b9f59095f2"
+  },
+  {
+    "name": "runtime-binding-mirror-red",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "task5_pytest_probe",
+      "tests/mac/test_9router_hotswap.py::test_runtime_binding_mismatch_refuses_before_native_checks",
+      "-vv",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t55e27e269/evidence/runtime-binding-mirror-red.xml"
+    ],
+    "exitCode": 1,
+    "expectedExitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "fully collected pytest modules; exact executed identities exported",
+      "count": 1
+    },
+    "seconds": 0.366012875000024,
+    "testCount": 1,
+    "moduleCount": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "failedIds": [
+      "tests/mac/test_9router_hotswap.py::test_runtime_binding_mismatch_refuses_before_native_checks"
+    ],
+    "collectedIds": [
+      "tests/mac/test_9router_hotswap.py::test_runtime_binding_mismatch_refuses_before_native_checks"
+    ],
+    "reportSha256": "69e1ee7bfedee047a7a2fb10ea9fe71e456a480dd5a423d1358b5c0b775833b5"
+  },
+  {
+    "name": "receipt-binding-mirror-green",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "task5_pytest_probe",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_format_only_and_tampered_exports_are_refused",
+      "-vv",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t55e27e269/evidence/receipt-binding-mirror-green.xml"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "fully collected pytest modules; exact executed identities exported",
+      "count": 1
+    },
+    "seconds": 0.31417212500002734,
+    "testCount": 1,
+    "moduleCount": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "failedIds": [],
+    "collectedIds": [
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_format_only_and_tampered_exports_are_refused"
+    ],
+    "reportSha256": "d9a1d5747c1e2de9405d0f42f0e3ee9ac8847b613396137a1c23d51791cfabaa"
+  },
+  {
+    "name": "receipt-binding-mirror-red",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "task5_pytest_probe",
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_format_only_and_tampered_exports_are_refused",
+      "-vv",
+      "-o",
+      "faulthandler_timeout=60",
+      "--junitxml=/Volumes/devbox/t55e27e269/evidence/receipt-binding-mirror-red.xml"
+    ],
+    "exitCode": 1,
+    "expectedExitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "fully collected pytest modules; exact executed identities exported",
+      "count": 1
+    },
+    "seconds": 0.29829058299998223,
+    "testCount": 1,
+    "moduleCount": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "failedIds": [
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_format_only_and_tampered_exports_are_refused"
+    ],
+    "collectedIds": [
+      "tests/mac/test_9router_vm_qualify.py::ReceiptTest::test_format_only_and_tampered_exports_are_refused"
+    ],
+    "reportSha256": "2c4f1969ac786983e91995af3615085a72374408cc95928cd03988c56ebc37a8"
+  },
+  {
+    "name": "ruff-check",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "ruff",
+      "check",
+      "--select=E,F,I",
+      "scripts/mac/9router_deploy.py",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_path_watchdog.py",
+      "scripts/mac/9router_vm_qualify.py",
+      "tests/mac/test_9router_deploy.py",
+      "tests/mac/test_9router_devbox_restore.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_path_watchdog.py",
+      "tests/mac/test_9router_vm_qualify.py"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact changed Python files",
+      "count": 9
+    },
+    "seconds": 0.2268837499999563
+  },
+  {
+    "name": "ruff-format",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-m",
+      "ruff",
+      "format",
+      "--check",
+      "scripts/mac/9router_deploy.py",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_path_watchdog.py",
+      "scripts/mac/9router_vm_qualify.py",
+      "tests/mac/test_9router_deploy.py",
+      "tests/mac/test_9router_devbox_restore.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_path_watchdog.py",
+      "tests/mac/test_9router_vm_qualify.py"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact changed Python files",
+      "count": 9
+    },
+    "seconds": 0.07798579199999267
+  },
+  {
+    "name": "python-syntax",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-c",
+      "import json,pathlib,sys;paths=sys.argv[1:];assert paths;[compile(pathlib.Path(p).read_bytes(),p,\"exec\") for p in paths];print(json.dumps({\"paths\":paths,\"fileCount\":len(paths)}))",
+      "scripts/mac/9router_deploy.py",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_path_watchdog.py",
+      "scripts/mac/9router_vm_qualify.py",
+      "tests/mac/test_9router_deploy.py",
+      "tests/mac/test_9router_devbox_restore.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_path_watchdog.py",
+      "tests/mac/test_9router_vm_qualify.py"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact changed Python source compilation without bytecode writes",
+      "count": 9
+    },
+    "seconds": 0.12691962500002774,
+    "fileCount": 9,
+    "paths": [
+      "scripts/mac/9router_deploy.py",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_path_watchdog.py",
+      "scripts/mac/9router_vm_qualify.py",
+      "tests/mac/test_9router_deploy.py",
+      "tests/mac/test_9router_devbox_restore.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_path_watchdog.py",
+      "tests/mac/test_9router_vm_qualify.py"
+    ]
+  },
+  {
+    "name": "js-syntax",
+    "args": [
+      "node",
+      "-e",
+      "const {spawnSync}=require(\"node:child_process\");const files=process.argv.slice(1);if(!files.length)throw Error(\"empty syntax population\");for(const p of files){const r=spawnSync(process.execPath,[\"--check\",p],{encoding:\"utf8\"});if(r.error||r.status!==0)throw Error(p+\" \"+r.stderr);}console.log(JSON.stringify({paths:files,fileCount:files.length}));",
+      "custom-server.js",
+      "scripts/mac/9router_worker.cjs",
+      "src/app/api/version/shutdown/route.js",
+      "src/app/api/version/update/route.js",
+      "src/lib/db/managed.cjs",
+      "src/lib/db/repos/settingsRepo.js",
+      "src/shared/services/initializeApp.js",
+      "tests/mac/9router_hotswap.check.cjs",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs",
+      "tests/mac/9router_packaged_hotswap.check.mjs",
+      "tests/mac/9router_worker.check.cjs",
+      "tests/unit/custom-server-h2c-managed.test.cjs",
+      "tests/unit/custom-server-h2c.test.cjs",
+      "tests/unit/managed-cas-process.check.mjs",
+      "tests/unit/managed-cleanup.check.mjs",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/managed-dispatch.check.mjs",
+      "tests/unit/managed-review-counterfactual.check.mjs",
+      "tests/unit/managed-state.check.mjs",
+      "tests/unit/managed-update.test.js",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/token-refresh-cross-process.check.mjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "explicit runtime/test JavaScript inputs",
+      "count": 22
+    },
+    "seconds": 0.9528411250000204,
+    "fileCount": 22,
+    "paths": [
+      "custom-server.js",
+      "scripts/mac/9router_worker.cjs",
+      "src/app/api/version/shutdown/route.js",
+      "src/app/api/version/update/route.js",
+      "src/lib/db/managed.cjs",
+      "src/lib/db/repos/settingsRepo.js",
+      "src/shared/services/initializeApp.js",
+      "tests/mac/9router_hotswap.check.cjs",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs",
+      "tests/mac/9router_packaged_hotswap.check.mjs",
+      "tests/mac/9router_worker.check.cjs",
+      "tests/unit/custom-server-h2c-managed.test.cjs",
+      "tests/unit/custom-server-h2c.test.cjs",
+      "tests/unit/managed-cas-process.check.mjs",
+      "tests/unit/managed-cleanup.check.mjs",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/managed-dispatch.check.mjs",
+      "tests/unit/managed-review-counterfactual.check.mjs",
+      "tests/unit/managed-state.check.mjs",
+      "tests/unit/managed-update.test.js",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/token-refresh-cross-process.check.mjs"
+    ]
+  },
+  {
+    "name": "eslint",
+    "args": [
+      "node",
+      "/Volumes/devbox/t55e27e269/head/node_modules/eslint/bin/eslint.js",
+      "--no-ignore",
+      "--format",
+      "json",
+      "custom-server.js",
+      "scripts/mac/9router_worker.cjs",
+      "src/app/api/version/shutdown/route.js",
+      "src/app/api/version/update/route.js",
+      "src/lib/db/managed.cjs",
+      "src/lib/db/repos/settingsRepo.js",
+      "src/shared/services/initializeApp.js",
+      "tests/mac/9router_hotswap.check.cjs",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs",
+      "tests/mac/9router_packaged_hotswap.check.mjs",
+      "tests/mac/9router_worker.check.cjs",
+      "tests/unit/custom-server-h2c-managed.test.cjs",
+      "tests/unit/custom-server-h2c.test.cjs",
+      "tests/unit/managed-cas-process.check.mjs",
+      "tests/unit/managed-cleanup.check.mjs",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/managed-dispatch.check.mjs",
+      "tests/unit/managed-review-counterfactual.check.mjs",
+      "tests/unit/managed-state.check.mjs",
+      "tests/unit/managed-update.test.js",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/token-refresh-cross-process.check.mjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact enumerated JavaScript syntax/lint inputs",
+      "count": 22
+    },
+    "seconds": 2.284149040999978,
+    "fileCount": 22,
+    "paths": [
+      "custom-server.js",
+      "scripts/mac/9router_worker.cjs",
+      "src/app/api/version/shutdown/route.js",
+      "src/app/api/version/update/route.js",
+      "src/lib/db/managed.cjs",
+      "src/lib/db/repos/settingsRepo.js",
+      "src/shared/services/initializeApp.js",
+      "tests/mac/9router_hotswap.check.cjs",
+      "tests/mac/9router_hotswap_counterfactual.check.cjs",
+      "tests/mac/9router_packaged_hotswap.check.mjs",
+      "tests/mac/9router_worker.check.cjs",
+      "tests/unit/custom-server-h2c-managed.test.cjs",
+      "tests/unit/custom-server-h2c.test.cjs",
+      "tests/unit/managed-cas-process.check.mjs",
+      "tests/unit/managed-cleanup.check.mjs",
+      "tests/unit/managed-credentials.test.js",
+      "tests/unit/managed-dispatch.check.mjs",
+      "tests/unit/managed-review-counterfactual.check.mjs",
+      "tests/unit/managed-state.check.mjs",
+      "tests/unit/managed-update.test.js",
+      "tests/unit/managed-worker.test.js",
+      "tests/unit/token-refresh-cross-process.check.mjs"
+    ],
+    "errors": 0,
+    "warnings": 0
+  },
+  {
+    "name": "shell-syntax",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-c",
+      "import json,subprocess,sys;paths=sys.argv[1:];[subprocess.run([\"bash\",\"-n\",p],check=True) for p in paths];print(json.dumps({\"paths\":paths,\"fileCount\":len(paths)}))",
+      "scripts/mac/9router_devbox_baseline.sh",
+      "scripts/mac/9router_devbox_restore.sh"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact changed shell scripts",
+      "count": 2
+    },
+    "seconds": 0.0842942090000065
+  },
+  {
+    "name": "s3776",
+    "args": [
+      "/Volumes/devbox/t55e27e269/venv/bin/python",
+      "-c",
+      "import json,sys;sys.path.insert(0,'/Volumes/devbox/t55e27e269');import sonar_pr_issues as s;p=sys.argv[2:];assert p and p==json.loads('[\"scripts/mac/9router_deploy.py\", \"scripts/mac/9router_hotswap.py\", \"scripts/mac/9router_path_watchdog.py\", \"scripts/mac/9router_vm_qualify.py\", \"tests/mac/test_9router_deploy.py\", \"tests/mac/test_9router_devbox_restore.py\", \"tests/mac/test_9router_hotswap.py\", \"tests/mac/test_9router_path_watchdog.py\", \"tests/mac/test_9router_vm_qualify.py\"]');print(\"task5-self-check-population: \"+str(len(p))+\" file(s)\",flush=True);print(\"task5-self-check-paths: \"+json.dumps(p),flush=True);raise SystemExit(s.self_check(p,base=sys.argv[1]))",
+      "887d5ddaf5006d0721f3a9572de8f4e99b21f2d2",
+      "scripts/mac/9router_deploy.py",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_path_watchdog.py",
+      "scripts/mac/9router_vm_qualify.py",
+      "tests/mac/test_9router_deploy.py",
+      "tests/mac/test_9router_devbox_restore.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_path_watchdog.py",
+      "tests/mac/test_9router_vm_qualify.py"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact nonzero changed Python population in candidate checkout",
+      "count": 9
+    },
+    "seconds": 0.5253985420000049,
+    "fileCount": 9,
+    "paths": [
+      "scripts/mac/9router_deploy.py",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_path_watchdog.py",
+      "scripts/mac/9router_vm_qualify.py",
+      "tests/mac/test_9router_deploy.py",
+      "tests/mac/test_9router_devbox_restore.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_path_watchdog.py",
+      "tests/mac/test_9router_vm_qualify.py"
+    ],
+    "leg": "S3776 self-check heuristic; NOT Sonar code analysis",
+    "helperSha256": "068a2513af4899539732b992a86320ec5ddae12db13a1978e9cb9afaa9d45ae8"
+  },
+  {
+    "name": "scanner-download",
+    "args": [
+      "curl",
+      "--fail",
+      "--location",
+      "--max-time",
+      "120",
+      "--output",
+      "/Volumes/devbox/t55e27e269/tools/sonar",
+      "https://binaries.sonarsource.com/Distribution/sonarqube-cli/1.9.0.15656/macos/sonarqube-cli-1.9.0.15656-macos-arm64.bin"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "hash-pinned Sonar secrets scanner",
+      "count": 1
+    },
+    "seconds": 0.5518553340000381
+  },
+  {
+    "name": "scanner-version",
+    "args": [
+      "/Volumes/devbox/t55e27e269/tools/sonar",
+      "--version"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "hash-pinned secrets scanners",
+      "count": 1
+    },
+    "seconds": 0.12633412500002805
+  },
+  {
+    "name": "secrets",
+    "args": [
+      "/Volumes/devbox/t55e27e269/tools/sonar",
+      "analyze",
+      "secrets",
+      "scripts/mac/9router_deploy.py",
+      "scripts/mac/9router_devbox_baseline.sh",
+      "scripts/mac/9router_devbox_restore.sh",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_path_watchdog.py",
+      "scripts/mac/9router_vm_qualify.py",
+      "tests/mac/9router_packaged_hotswap.check.mjs",
+      "tests/mac/test_9router_deploy.py",
+      "tests/mac/test_9router_devbox_restore.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_path_watchdog.py",
+      "tests/mac/test_9router_vm_qualify.py",
+      "tests/unit/managed-review-counterfactual.check.mjs"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "exact enumerated changed source/test files",
+      "count": 13
+    },
+    "seconds": 3.243430832999934,
+    "leg": "secrets only; NOT code analysis",
+    "fileCount": 13,
+    "paths": [
+      "scripts/mac/9router_deploy.py",
+      "scripts/mac/9router_devbox_baseline.sh",
+      "scripts/mac/9router_devbox_restore.sh",
+      "scripts/mac/9router_hotswap.py",
+      "scripts/mac/9router_path_watchdog.py",
+      "scripts/mac/9router_vm_qualify.py",
+      "tests/mac/9router_packaged_hotswap.check.mjs",
+      "tests/mac/test_9router_deploy.py",
+      "tests/mac/test_9router_devbox_restore.py",
+      "tests/mac/test_9router_hotswap.py",
+      "tests/mac/test_9router_path_watchdog.py",
+      "tests/mac/test_9router_vm_qualify.py",
+      "tests/unit/managed-review-counterfactual.check.mjs"
+    ]
+  },
+  {
+    "name": "cli-pack",
+    "args": [
+      "npm",
+      "run",
+      "cli:pack"
+    ],
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "validated": true,
+    "population": {
+      "unit": "actual guest CLI pack execution",
+      "count": 1
+    },
+    "seconds": 27.93439049999995
+  }
+]

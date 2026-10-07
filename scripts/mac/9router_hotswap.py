@@ -51,6 +51,13 @@ WORK_KEYS = (
 )
 MODES = {"starting", "ready", "active", "draining", "stopped", "failed"}
 CHECKS = {"continuity", "authentication", "recovery"}
+QUALIFICATION_SCOPE = None
+QUALIFICATION_VOLUME = Path("/Volumes/devbox")
+JOB_PREFIX = "com.lfenergy.9router"
+
+
+def job_label(slot):
+    return f"{JOB_PREFIX}-worker-{slot}" if slot in PORTS else slot
 
 
 def deployer():
@@ -186,36 +193,73 @@ def deployment_lock():
         os.close(fd)
 
 
-def concrete_release(dest):
-    dest = Path(dest)
-    version = valid_version(dest.parents[2].name)
-    expected = RELEASES / version / "lib/node_modules/9router"
-    if dest != expected or dest.resolve() != dest:
-        raise ValueError("release must be concrete and confined")
-    info = RELEASES.lstat()
-    if (
-        not stat.S_ISDIR(info.st_mode)
-        or info.st_uid != os.getuid()
-        or info.st_mode & 0o022
-    ):
-        raise ValueError("unsafe release directory")
-    cursor = RELEASES
-    for component in dest.relative_to(RELEASES).parts:
-        cursor /= component
-        info = cursor.lstat()
+def qualification_destinations(record, releases):
+    """Accept one baseline path or exactly two slot-bound guest installations."""
+    if "installations" in record:
+        installations = record["installations"]
         if (
-            not stat.S_ISDIR(info.st_mode)
-            or info.st_uid != os.getuid()
-            or info.st_mode & 0o022
+            "release" in record
+            or not isinstance(installations, dict)
+            or set(installations) != set(PORTS)
         ):
-            raise ValueError("unsafe release ancestor")
-    info = (dest / "package.json").lstat()
-    if (
-        not stat.S_ISREG(info.st_mode)
-        or info.st_uid != os.getuid()
-        or info.st_mode & 0o022
-    ):
-        raise ValueError("unsafe release package")
+            raise ValueError("qualification requires two bound installations")
+    else:
+        installations = {None: record.get("release")}
+    if any(not isinstance(value, str) or not value for value in installations.values()):
+        raise ValueError("invalid qualification installation binding")
+    destinations, versions = {}, set()
+    for slot, value in installations.items():
+        dest = Path(value)
+        if releases not in dest.parents:
+            raise ValueError("release must be concrete and confined")
+        version = valid_version(dest.relative_to(releases).parts[0])
+        expected = releases / version
+        if slot is not None:
+            expected /= slot
+        if dest != expected / "lib/node_modules/9router":
+            raise ValueError("release must be concrete and confined")
+        destinations[slot] = dest
+        versions.add(version)
+    if len(versions) != 1:
+        raise ValueError("qualification installation versions differ")
+    return destinations
+
+
+def require_release_entry(path, kind, reason):
+    info = path.lstat()
+    if not kind(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o022:
+        raise ValueError(reason)
+
+
+def concrete_release(dest, *, releases=None, scope=None):
+    dest = Path(dest)
+    if releases is None:
+        releases, scope = RELEASES, QUALIFICATION_SCOPE
+    if scope is None:
+        version = valid_version(dest.parents[2].name)
+        expected = releases / version / "lib/node_modules/9router"
+        bound = dest == expected
+    else:
+        if (
+            scope.get("phase") != "qualification"
+            or "result" in scope
+            or releases != Path(scope["home"]) / ".9router/releases"
+            or releases not in dest.parents
+        ):
+            raise ValueError("release must be concrete and confined")
+        version = valid_version(dest.relative_to(releases).parts[0])
+        bound = any(
+            dest in qualification_destinations(record, releases).values()
+            for record in scope["packages"].values()
+        )
+    if not bound or dest.resolve() != dest:
+        raise ValueError("release must be concrete and confined")
+    require_release_entry(releases, stat.S_ISDIR, "unsafe release directory")
+    cursor = releases
+    for component in dest.relative_to(releases).parts:
+        cursor /= component
+        require_release_entry(cursor, stat.S_ISDIR, "unsafe release ancestor")
+    require_release_entry(dest / "package.json", stat.S_ISREG, "unsafe release package")
     if json.loads((dest / "package.json").read_text()).get("version") != version:
         raise ValueError("release version mismatch")
     return version
@@ -248,9 +292,154 @@ def runtime_hashes():
     return {name: sha256(path) for name, path in files.items()}
 
 
+def require_qualification_guest():
+    if sys.platform != "darwin":
+        raise ValueError("qualification requires a macOS guest")
+    guest = subprocess.run(
+        ["/usr/sbin/sysctl", "-n", "kern.hv_vmm_present"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    architecture = subprocess.run(
+        ["/usr/bin/uname", "-m"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if (
+        guest.returncode
+        or guest.stdout.strip() != "1"
+        or architecture.returncode
+        or architecture.stdout.strip() != "arm64"
+    ):
+        raise ValueError("qualification requires an ARM64 virtual machine")
+
+
+def qualification_identity(path):
+    scope = read_json(Path(path))
+    if not isinstance(scope, dict):
+        raise ValueError("invalid qualification scope")
+    run_id = scope.get("run_id")
+    if (
+        type(scope.get("protocol")) is not int
+        or scope["protocol"] != 1
+        or scope.get("phase") != "qualification"
+        or "result" in scope
+        or not isinstance(run_id, str)
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", run_id)
+    ):
+        raise ValueError("invalid qualification scope")
+    home = QUALIFICATION_VOLUME / "9router/qualification" / run_id / "home"
+    if (
+        scope.get("home") != str(home)
+        or Path.home() != home
+        or home.resolve() != home
+        or Path(path).resolve() != home / "scope.json"
+        or scope.get("source_root") != str(HERE.parents[1])
+        or HERE.parents[1].resolve() != HERE.parents[1]
+        or QUALIFICATION_VOLUME not in HERE.parents[1].parents
+        or not re.fullmatch(r"[a-f0-9]{40}", scope.get("source_commit", ""))
+        or not re.fullmatch(r"[a-f0-9]{64}", scope.get("source_patch_sha256", ""))
+        or not isinstance(scope.get("namespace"), dict)
+        or any(
+            not isinstance(scope["namespace"].get(key), str)
+            or not scope["namespace"][key]
+            for key in ("devbox_id", "instance_id")
+        )
+    ):
+        raise ValueError("qualification guest identity or confinement differs")
+    private_directory(home)
+    revision = subprocess.run(
+        ["git", "-C", scope["source_root"], "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if revision.returncode or revision.stdout.strip() != scope["source_commit"]:
+        raise ValueError("qualification source revision differs")
+    runtime = Path("/tmp") / ("9rq-" + hashlib.sha256(run_id.encode()).hexdigest()[:12])
+    if scope.get("runtime") != str(runtime):
+        raise ValueError("qualification socket root differs")
+    if scope.get("runtime_sha256") != runtime_hashes():
+        raise ValueError("qualification runtime bytes differ")
+    proxy = subprocess.run(
+        [executable("caddy"), "version"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proxy.returncode or scope.get("proxy_version") != proxy.stdout.strip():
+        raise ValueError("qualification proxy identity differs")
+    return scope, home, runtime
+
+
+def verify_qualification_package(scope, home, data, digest, record):
+    if not re.fullmatch(r"[a-f0-9]{64}", digest) or not isinstance(record, dict):
+        raise ValueError("invalid qualification package binding")
+    destinations = qualification_destinations(record, data / "releases")
+    archive = Path(record.get("tarball", ""))
+    if (
+        not archive.is_absolute()
+        or archive.resolve() != archive
+        or home.parent not in archive.parents
+    ):
+        raise ValueError("qualification tarball confinement differs")
+    private_file(archive)
+    if sha256(archive) != digest:
+        raise ValueError("qualification tarball bytes differ")
+    for dest in destinations.values():
+        concrete_release(dest, releases=data / "releases", scope=scope)
+        if (
+            record.get("manifest_sha256") != sha256(dest / "app/hotswap-manifest.json")
+            or record.get("package_files") != installed_package_hashes(dest)
+            or record.get("persistenceFingerprint")
+            != json.loads((dest / "app/hotswap-manifest.json").read_text()).get(
+                "persistenceFingerprint"
+            )
+        ):
+            raise ValueError("qualification installed package differs")
+
+
+def configure_qualification(path):
+    """Bind a non-deployable test scope to an isolated Namespace guest runtime."""
+    global HOME, STATE_DIR, STATE_FILE, LOCK_FILE, RUNTIME, RELEASES, QUALIFIED, DB
+    global LINK, QUALIFICATION_SCOPE, JOB_PREFIX
+    require_qualification_guest()
+    scope, home, runtime = qualification_identity(path)
+    packages = scope.get("packages")
+    if not isinstance(packages, dict) or not packages:
+        raise ValueError("qualification package population missing")
+    data = home / ".9router"
+    private_directory(data)
+    for digest, record in packages.items():
+        verify_qualification_package(scope, home, data, digest, record)
+    HOME = data
+    STATE_DIR = data / "hotswap"
+    STATE_FILE, LOCK_FILE = STATE_DIR / "state.json", STATE_DIR / "deploy.lock"
+    RUNTIME, RELEASES = runtime, data / "releases"
+    QUALIFIED, DB = data / "qualified", data / "db/data.sqlite"
+    LINK = data / "package-link"
+    JOB_PREFIX = "com.lfenergy.9router-qualify-" + runtime.name.removeprefix("9rq-")
+    QUALIFICATION_SCOPE = scope
+
+
+def scoped_qualification(digest):
+    if QUALIFICATION_SCOPE["runtime_sha256"] != runtime_hashes():
+        raise ValueError("qualification runtime changed")
+    record = QUALIFICATION_SCOPE["packages"].get(digest)
+    if record is None:
+        raise ValueError("package absent from isolated qualification scope")
+    if sha256(Path(record["tarball"])) != digest:
+        raise ValueError("qualification tarball changed")
+    return record  # Test-only authorization; never a passing deployment receipt.
+
+
 def qualification(digest):
     if not isinstance(digest, str) or not re.fullmatch("[a-f0-9]{64}", digest):
         raise ValueError("invalid tarball digest")
+    if QUALIFICATION_SCOPE is not None:
+        return scoped_qualification(digest)
     record = read_json(QUALIFIED / f"{digest}.json")
     if not isinstance(record, dict):
         raise ValueError("invalid qualification record")
@@ -338,6 +527,11 @@ def node_managed(dest, operation, *arguments):
 def validate_package(dest, digest):
     version = concrete_release(dest)
     record = qualification(digest)
+    if (
+        QUALIFICATION_SCOPE is not None
+        and dest not in qualification_destinations(record, RELEASES).values()
+    ):
+        raise ValueError("qualification installation is not bound to package")
     manifest = dest / "app/hotswap-manifest.json"
     if record.get("manifest_sha256") != sha256(manifest):
         raise ValueError("qualification manifest binding differs")
@@ -658,7 +852,11 @@ def job_present(slot):
     # ponytail: strict launchctl layout; qualify guests before adding layouts.
     domain = f"gui/{os.getuid()}"
     result = subprocess.run(
-        ["launchctl", "print", domain], capture_output=True, text=True, check=False
+        ["launchctl", "print", domain],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=5,
     )
     blocks = re.findall(
         r"^([ \t]*)services = \{\n(.*?)^\1\}",
@@ -683,7 +881,7 @@ def job_present(slot):
         labels.append(fields[2])
     if len(labels) != len(set(labels)):
         raise ValueError("launchd job population ambiguous")
-    label = f"com.lfenergy.9router-worker-{slot}" if slot in PORTS else slot
+    label = job_label(slot)
     return label in labels
 
 
@@ -701,7 +899,7 @@ def verify_job(slot, entry):
         str(STATE_DIR / f"{slot}.json"),
     ]
     if (
-        plist.get("Label") != f"com.lfenergy.9router-worker-{slot}"
+        plist.get("Label") != job_label(slot)
         or plist.get("ProgramArguments") != arguments
     ):
         raise ValueError("owned launchd arguments differ")
@@ -808,6 +1006,8 @@ def verify_shared_environment(env):
     allowed = {
         "DATA_DIR",
         "JWT_SECRET",
+        "API_KEY_SECRET",
+        "MACHINE_ID_SALT",
         "INITIAL_PASSWORD",
         "ENABLE_REQUEST_LOGS",
         "NODE_ENV",
@@ -871,7 +1071,7 @@ def start_worker(slot, entry):
         "NINEROUTER_HOTSWAP_ENROLLED_MANIFEST": str(STATE_DIR / "manifest.json"),
         "NINEROUTER_HOTSWAP_REFRESH_DB": str(STATE_DIR / "refresh.sqlite"),
     }
-    label = f"com.lfenergy.9router-worker-{slot}"
+    label = job_label(slot)
     plist = {
         "Label": label,
         "ProgramArguments": [
@@ -937,15 +1137,20 @@ def bootout_worker(slot):
         [
             "launchctl",
             "bootout",
-            f"gui/{os.getuid()}/com.lfenergy.9router-worker-{slot}",
+            f"gui/{os.getuid()}/{job_label(slot)}",
         ],
         capture_output=True,
         check=False,
+        timeout=10,
     )
     if result.returncode:
         raise ValueError("exact stopped slot bootout refused")
-    if job_present(slot):
-        raise ValueError("stopped launchd job remains loaded")
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        if not job_present(slot):
+            return
+        time.sleep(0.1)
+    raise ValueError("stopped launchd job remains loaded")
 
 
 def convenience_pointer(entry):
@@ -1601,6 +1806,10 @@ def prepare_enrollment(state, dest, entry):
 
 
 def stop_enrollment_legacy_service(state):
+    if QUALIFICATION_SCOPE is not None:
+        state["enrollment"] = "legacy-stopped"
+        write_state(state)
+        return  # Isolated test jobs never alter a pre-existing guest baseline job.
     if job_present("com.lfenergy.9router"):
         result = subprocess.run(
             ["launchctl", "bootout", f"gui/{os.getuid()}/com.lfenergy.9router"],
@@ -1645,8 +1854,9 @@ def resume_enrollment(state):
     state["enrollment"] = "routed"
     write_state(state)
     proxy_enrollment()
-    if verify_at("http://127.0.0.1:20128", entry["version"]) is not None:
-        raise ValueError("enrollment public readiness failed")
+    reason = verify_at("http://127.0.0.1:20128", entry["version"])
+    if reason is not None:
+        raise ValueError(f"enrollment public readiness failed: {reason}")
     entry["mode"] = "active"
     convenience_pointer(entry)
     # ponytail: recovery may repeat audit lines. Add transaction IDs when
@@ -1667,7 +1877,7 @@ def proxy_enrollment():
     path = STATE_DIR / "Caddyfile"
     publish_enrollment_file(path, config.encode())
     plist = {
-        "Label": "com.lfenergy.9router-proxy",
+        "Label": f"{JOB_PREFIX}-proxy",
         "ProgramArguments": [
             executable("caddy"),
             "run",
@@ -1720,8 +1930,78 @@ def proxy_enrollment():
         raise ValueError("loaded proxy identity differs")
 
 
+def restore_qualification_runtime():
+    state = read_state()
+    if state.get("enrollment") != "complete" or state.get("pending") is not None:
+        raise ValueError("persistent qualification transaction incomplete")
+    if job_present(f"{JOB_PREFIX}-proxy") or any(job_present(slot) for slot in PORTS):
+        raise ValueError("qualification jobs already loaded; use reconciliation")
+    if os.path.lexists(RUNTIME):
+        private_directory(RUNTIME)
+        if any(RUNTIME.iterdir()):
+            raise ValueError("runtime artifacts remain; restoration ownership unknown")
+    else:
+        RUNTIME.mkdir(mode=0o700)
+
+
+def validate_restorable_slots(state, active):
+    for slot, recorded in state["slots"].items():
+        if recorded is None:
+            continue
+        allowed = {"active"} if slot == active else {"draining", "stopped"}
+        if recorded["mode"] not in allowed:
+            raise ValueError("persistent slot lifecycle is not restorable")
+        validate_release(Path(recorded["release"]), recorded["digest"])
+        if recorded["mode"] != "stopped":
+            verify_configuration(slot, recorded)
+
+
+def start_restored_slots(state):
+    for slot, recorded in state["slots"].items():
+        if recorded is not None and recorded["mode"] != "stopped":
+            start_worker(slot, recorded)
+
+
+def drain_restored_slots():
+    for slot, recorded in read_state()["slots"].items():
+        if recorded is not None and recorded["mode"] == "draining":
+            control(slot, "drain")
+
+
+def restore_qualification():
+    """Restore only this isolated guest's jobs after a VM activation."""
+    if QUALIFICATION_SCOPE is None:
+        return refusal("restore", "isolated qualification scope required")
+    try:
+        restore_qualification_runtime()
+        with deployment_lock():
+            state = read_state()
+            if (
+                state.get("enrollment") != "complete"
+                or state.get("pending") is not None
+            ):
+                raise ValueError("persistent qualification transaction incomplete")
+            active = state["active"]
+            entry = state["slots"][active]
+            if entry is None or entry["mode"] != "active":
+                raise ValueError("persistent active slot is not restorable")
+            validate_restorable_slots(state, active)
+            start_restored_slots(state)
+            entry = read_state()["slots"][active]
+            require_probe(active, entry)
+            replace_route(RUNTIME, active)
+            drain_restored_slots()
+            proxy_enrollment()
+            if verify_at("http://127.0.0.1:20128", entry["version"]) is not None:
+                raise ValueError("restored public readiness failed")
+        return 0
+    except EXPECTED_ERRORS as error:
+        return refusal("qualification restore", error)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--qualification-scope", type=Path)
     sub = parser.add_subparsers(dest="command", required=True)
     enrollment = sub.add_parser("enroll")
     enrollment.add_argument("--acknowledge-maintenance", action="store_true")
@@ -1731,9 +2011,26 @@ def main(argv=None):
     deployment.add_argument("tgz", type=Path)
     rollback = sub.add_parser("rollback")
     rollback.add_argument("version", nargs="?")
+    installed = sub.add_parser("deploy-installed")
+    installed.add_argument("release", type=Path)
+    installed.add_argument("--digest", required=True)
+    sub.add_parser("restore")
     sub.add_parser("status")
     sub.add_parser("reconcile")
     args = parser.parse_args(argv)
+    if args.qualification_scope is not None:
+        try:
+            configure_qualification(args.qualification_scope)
+        except EXPECTED_ERRORS as error:
+            return refusal("qualification scope", error)
+    if args.command == "deploy-installed":
+        if QUALIFICATION_SCOPE is None:
+            return refusal(
+                "installed test deployment", "isolated qualification scope required"
+            )
+        return deploy_release(args.release, args.digest)
+    if args.command == "restore":
+        return restore_qualification()
     if args.command == "enroll":
         return enroll(args)
     if args.command == "deploy":

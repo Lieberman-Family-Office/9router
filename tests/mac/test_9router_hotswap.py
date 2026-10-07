@@ -246,6 +246,8 @@ def test_shared_environment_enrollment_preserves_literal_values(hs):
     source.write_text(
         f'export DATA_DIR="{hs.DB.parent.parent}"\n'
         'export JWT_SECRET="fixture-signing-value"\n'
+        'export API_KEY_SECRET="fixture-api-signing-value"\n'
+        'export MACHINE_ID_SALT="fixture-identity-value"\n'
         'export INITIAL_PASSWORD="fixture-login-value"\n'
     )
     source.chmod(0o600)
@@ -253,6 +255,8 @@ def test_shared_environment_enrollment_preserves_literal_values(hs):
     assert env == hs.shared_environment(enrollment=True)
     assert env == hs.read_json(hs.STATE_DIR / "environment.json")
     assert env["JWT_SECRET"] == "fixture-signing-value"
+    assert env["API_KEY_SECRET"] == "fixture-api-signing-value"
+    assert env["MACHINE_ID_SALT"] == "fixture-identity-value"
     assert env["INITIAL_PASSWORD"] == "fixture-login-value"
     assert (hs.STATE_DIR / "environment.json").stat().st_mode & 0o777 == 0o600
 
@@ -1673,6 +1677,27 @@ def enrollment_controller(lifecycle_controller, monkeypatch):
     return c
 
 
+def test_enrollment_public_failure_preserves_failed_subcheck(
+    enrollment_controller, monkeypatch, capsys
+):
+    c = enrollment_controller
+    original = c.mod.verify_at
+    monkeypatch.setattr(
+        c.mod,
+        "verify_at",
+        lambda base, version: (
+            "models: HTTP Error 401: Unauthorized"
+            if base.endswith(":20128")
+            else original(base, version)
+        ),
+    )
+    assert c.mod.main(c.enroll_args) == 1
+    assert "enrollment public readiness failed: models: HTTP Error 401" in (
+        capsys.readouterr().err
+    )
+    assert c.mod.read_state()["enrollment"] == "routed"
+
+
 def enrollment_crash_boundary(boundary, expected):
     if boundary == expected:
         raise SimulatedCrash(boundary)
@@ -1867,3 +1892,523 @@ def test_enrollment_recovery_refuses_foreign_artifact(
     assert c.mod.main(["reconcile"]) != 0
     assert active(c) == "a" and set(c.jobs) == {"a"}
     assert not any(event.startswith(("stop:", "bootout:")) for event in c.events)
+
+
+def test_qualification_commands_never_use_production_defaults(hs, monkeypatch):
+    calls = []
+    monkeypatch.setattr(hs, "deploy_release", lambda *args: calls.append(args))
+    monkeypatch.setattr(hs, "read_state", lambda: calls.append("read"))
+    assert hs.main(["deploy-installed", "/foreign/release", "--digest", "a" * 64]) == 1
+    assert hs.main(["restore"]) == 1
+    assert calls == []
+
+
+def test_qualification_scope_is_refused_on_the_laptop(hs, monkeypatch):
+    monkeypatch.setattr(hs.sys, "platform", "darwin")
+    monkeypatch.setattr(
+        hs.subprocess,
+        "run",
+        lambda command, **kwargs: SimpleNamespace(
+            returncode=0,
+            stdout="0\n" if Path(command[0]).name == "sysctl" else "arm64\n",
+        ),
+    )
+    with pytest.raises(ValueError, match="virtual machine"):
+        hs.configure_qualification(hs.HOME / "scope.json")
+    assert hs.QUALIFICATION_SCOPE is None
+    assert hs.JOB_PREFIX == "com.lfenergy.9router"
+
+
+def qualification_scope_fixture(hs, monkeypatch, tmp_path, *, paired=False):
+    import hashlib
+
+    volume = tmp_path / "volume"
+    source = volume / "source"
+    home = volume / "9router/qualification/fixture-run/home"
+    releases = home / ".9router/releases"
+    installations = (
+        {slot: releases / "v1" / slot / "lib/node_modules/9router" for slot in hs.PORTS}
+        if paired
+        else {None: releases / "v1/lib/node_modules/9router"}
+    )
+    release = next(iter(installations.values()))
+    for path in (source / "scripts/mac", home, home / ".9router", releases):
+        path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    for dest in installations.values():
+        (dest / "app").mkdir(parents=True, mode=0o700)
+        private_json(dest / "package.json", {"version": "v1"})
+        private_json(
+            dest / "app/hotswap-manifest.json",
+            {"protocol": 1, "persistenceFingerprint": "fixture-native-sqlite"},
+        )
+    archive = home / "candidate.tgz"
+    archive.write_bytes(b"fixture archive binding; not release acceptance")
+    archive.chmod(0o600)
+    runtime = {"worker": "a" * 64}
+    digest = hs.sha256(archive)
+    record = {
+        "tarball": str(archive),
+        "manifest_sha256": hs.sha256(release / "app/hotswap-manifest.json"),
+        "persistenceFingerprint": "fixture-native-sqlite",
+        "package_files": hs.installed_package_hashes(release),
+    }
+    if paired:
+        record["installations"] = {
+            slot: str(dest) for slot, dest in installations.items()
+        }
+    else:
+        record["release"] = str(release)
+    scope = {
+        "protocol": 1,
+        "phase": "qualification",
+        "run_id": "fixture-run",
+        "home": str(home),
+        "source_root": str(source),
+        "source_commit": "b" * 40,
+        "source_patch_sha256": "c" * 64,
+        "namespace": {"devbox_id": "fixture-box", "instance_id": "fixture-instance"},
+        "runtime": "/tmp/9rq-" + hashlib.sha256(b"fixture-run").hexdigest()[:12],
+        "runtime_sha256": runtime,
+        "proxy_version": "fixture-caddy",
+        "packages": {digest: record},
+    }
+    path = home / "scope.json"
+    private_json(path, scope)
+    monkeypatch.setattr(hs, "QUALIFICATION_VOLUME", volume)
+    monkeypatch.setattr(hs, "HERE", source / "scripts/mac")
+    monkeypatch.setattr(hs.sys, "platform", "darwin")
+    monkeypatch.setattr(hs.Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setattr(hs, "runtime_hashes", lambda: runtime)
+
+    def run(command, **kwargs):
+        output = {
+            "sysctl": "1",
+            "uname": "arm64",
+            "git": "b" * 40,
+            "caddy": "fixture-caddy",
+        }
+        return SimpleNamespace(
+            returncode=0, stdout=output[Path(command[0]).name] + "\n"
+        )
+
+    monkeypatch.setattr(hs, "executable", lambda name: name)
+    monkeypatch.setattr(hs.subprocess, "run", run)
+    return path, scope, release, digest
+
+
+def test_guest_scope_binds_real_bytes_without_a_passing_receipt(
+    hs, monkeypatch, tmp_path
+):
+    path, scope, release, digest = qualification_scope_fixture(
+        hs, monkeypatch, tmp_path
+    )
+    hs.configure_qualification(path)
+    assert hs.validate_package(release, digest) == {"version": "v1"}
+    assert "result" not in hs.qualification(digest)
+    assert not hs.QUALIFIED.exists()
+    assert hs.LINK == Path(scope["home"]) / ".9router/package-link"
+    assert hs.job_label("a").startswith("com.lfenergy.9router-qualify-")
+    (release / "package.json").write_text('{"version":"v1","changed":true}')
+    with pytest.raises(ValueError, match="differs"):
+        hs.validate_package(release, digest)
+
+
+@pytest.mark.parametrize("slot", ["a", "b"])
+def test_paired_scope_enters_installed_dispatch_with_bound_journal(
+    hs, monkeypatch, tmp_path, slot
+):
+    from contextlib import nullcontext
+
+    path, scope, _, digest = qualification_scope_fixture(
+        hs, monkeypatch, tmp_path, paired=True
+    )
+    release = Path(scope["packages"][digest]["installations"][slot])
+    calls = []
+
+    def deploy_locked(dest, package_digest, state):
+        calls.append((dest, package_digest, state))
+        assert hs.validate_release(dest, package_digest) == {"version": "v1"}
+        entry = {
+            "release": str(dest),
+            "version": "v1",
+            "digest": digest,
+            "mode": "active",
+        }
+        hs.verify_slot_journal(entry)
+        private_json(hs.STATE_DIR / f"{slot}.json", hs.slot_configuration(slot, entry))
+        hs.verify_configuration(slot, entry)
+        (dest / "package.json").write_text('{"version":"v1","changed":true}')
+        with pytest.raises(ValueError, match="differs"):
+            hs.validate_package(dest, package_digest)
+        return 0
+
+    monkeypatch.setattr(hs, "deployment_lock", nullcontext)
+    monkeypatch.setattr(hs, "reconcile_locked", lambda: {"fixture": True})
+    monkeypatch.setattr(hs, "deploy_locked", deploy_locked)
+    monkeypatch.setattr(hs, "node_managed", lambda *args: "")
+    Path(scope["home"], ".9router/hotswap").mkdir(mode=0o700)
+    assert (
+        hs.main(
+            [
+                "--qualification-scope",
+                str(path),
+                "deploy-installed",
+                str(release),
+                "--digest",
+                digest,
+            ]
+        )
+        == 0
+    )
+    assert calls == [(release, digest, {"fixture": True})]
+    assert "result" not in hs.qualification(digest)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing",
+        "duplicate",
+        "swapped",
+        "foreign",
+        "version",
+        "release",
+        "symlink",
+        "files",
+        "manifest",
+        "fingerprint",
+        "archive",
+        "private",
+    ],
+)
+def test_paired_scope_refuses_unbound_or_changed_installation(
+    hs, monkeypatch, tmp_path, mutation
+):
+    path, scope, _, digest = qualification_scope_fixture(
+        hs, monkeypatch, tmp_path, paired=True
+    )
+    record = scope["packages"][digest]
+    installations = record["installations"]
+    second = Path(installations["b"])
+    if mutation == "missing":
+        installations.pop("b")
+    elif mutation == "duplicate":
+        installations["b"] = installations["a"]
+    elif mutation == "swapped":
+        installations["a"], installations["b"] = installations["b"], installations["a"]
+    elif mutation == "foreign":
+        installations["b"] = str(tmp_path / "foreign/lib/node_modules/9router")
+    elif mutation == "version":
+        installations["b"] = installations["b"].replace("/v1/b/", "/v2/b/")
+    elif mutation == "release":
+        record["release"] = installations["a"]
+    elif mutation == "symlink":
+        alias = second.parent / "alias"
+        alias.symlink_to(second, target_is_directory=True)
+        installations["b"] = str(alias)
+    elif mutation == "files":
+        (second / "package.json").write_text('{"version":"v1","changed":true}')
+    elif mutation == "manifest":
+        (second / "app/hotswap-manifest.json").write_text("{}")
+    elif mutation == "fingerprint":
+        record["persistenceFingerprint"] = "different"
+    elif mutation == "archive":
+        Path(record["tarball"]).write_bytes(b"changed")
+    else:
+        second.chmod(0o777)
+    private_json(path, scope)
+    assert (
+        hs.main(
+            [
+                "--qualification-scope",
+                str(path),
+                "deploy-installed",
+                installations["a"],
+                "--digest",
+                digest,
+            ]
+        )
+        == 1
+    )
+    assert hs.QUALIFICATION_SCOPE is None
+    assert hs.JOB_PREFIX == "com.lfenergy.9router"
+
+
+@pytest.mark.parametrize("paired", [False, True])
+def test_guest_scope_rejects_undeclared_copy_and_production_slot_layout(
+    hs, monkeypatch, tmp_path, paired
+):
+    path, scope, release, digest = qualification_scope_fixture(
+        hs, monkeypatch, tmp_path, paired=paired
+    )
+    releases = Path(scope["home"]) / ".9router/releases"
+    unbound = releases / "v1" / ("c" if paired else "b") / "lib/node_modules/9router"
+    for relative in scope["packages"][digest]["package_files"]:
+        target = unbound / relative
+        target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        target.write_bytes((release / relative).read_bytes())
+        target.chmod(0o600)
+    with pytest.raises(ValueError, match="confined"):
+        hs.concrete_release(unbound, releases=releases)
+    if paired:
+        with pytest.raises(ValueError, match="confined"):
+            hs.concrete_release(release, releases=releases)
+    hs.configure_qualification(path)
+    assert hs.validate_package(release, digest) == {"version": "v1"}
+    with pytest.raises(ValueError, match="confined"):
+        hs.validate_package(unbound, digest)
+
+
+@pytest.mark.parametrize("paired", [False, True])
+def test_digest_cannot_authorize_another_records_identical_installation(
+    hs, monkeypatch, tmp_path, paired
+):
+    path, scope, release, digest = qualification_scope_fixture(
+        hs, monkeypatch, tmp_path, paired=paired
+    )
+    releases = Path(scope["home"]) / ".9router/releases"
+    record = copy.deepcopy(scope["packages"][digest])
+    if paired:
+        record.pop("installations")
+        record["release"] = str(releases / "v1/lib/node_modules/9router")
+        destinations = [Path(record["release"])]
+    else:
+        record.pop("release")
+        record["installations"] = {
+            slot: str(releases / "v1" / slot / "lib/node_modules/9router")
+            for slot in hs.PORTS
+        }
+        destinations = [Path(value) for value in record["installations"].values()]
+    for dest in destinations:
+        for relative in record["package_files"]:
+            target = dest / relative
+            target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            target.write_bytes((release / relative).read_bytes())
+            target.chmod(0o600)
+    archive = Path(scope["home"]) / "other.tgz"
+    archive.write_bytes(b"another exact archive binding")
+    archive.chmod(0o600)
+    other_digest = hs.sha256(archive)
+    record["tarball"] = str(archive)
+    scope["packages"][other_digest] = record
+    private_json(path, scope)
+    hs.configure_qualification(path)
+    other_dest = destinations[-1]
+    assert hs.validate_package(other_dest, other_digest) == {"version": "v1"}
+    with pytest.raises(ValueError, match="not bound"):
+        hs.validate_package(other_dest, digest)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["pass", "home", "runtime", "namespace", "archive", "files"]
+)
+def test_guest_scope_refuses_forged_or_stale_inputs(
+    hs, monkeypatch, tmp_path, mutation
+):
+    path, scope, release, digest = qualification_scope_fixture(
+        hs, monkeypatch, tmp_path
+    )
+    if mutation == "pass":
+        scope["result"] = "pass"
+    elif mutation == "home":
+        scope["home"] = str(tmp_path / "foreign")
+    elif mutation == "runtime":
+        scope["runtime"] = "/tmp/foreign"
+    elif mutation == "namespace":
+        scope["namespace"] = {}
+    elif mutation == "archive":
+        Path(scope["packages"][digest]["tarball"]).write_bytes(b"changed")
+    else:
+        (release / "package.json").write_text('{"version":"v1","changed":true}')
+    private_json(path, scope)
+    with pytest.raises(ValueError):
+        hs.configure_qualification(path)
+    assert hs.QUALIFICATION_SCOPE is None
+    assert hs.JOB_PREFIX == "com.lfenergy.9router"
+
+
+def test_qualification_scope_refuses_failed_runtime_identity(hs, monkeypatch):
+    monkeypatch.setattr(
+        hs,
+        "QUALIFICATION_SCOPE",
+        {"runtime_sha256": {"worker": "a" * 64}, "packages": {"b" * 64: {}}},
+    )
+    monkeypatch.setattr(hs, "runtime_hashes", lambda: {"worker": "c" * 64})
+    with pytest.raises(ValueError, match="runtime changed"):
+        hs.qualification("b" * 64)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "mode",
+        "digest",
+        "configuration",
+        "stopped-digest",
+        "active-missing",
+        "active-stopped",
+        "active-draining",
+        "second-active",
+    ],
+)
+def test_restore_validates_every_slot_before_starting_jobs(hs, monkeypatch, mutation):
+    from contextlib import nullcontext
+
+    state = {
+        "enrollment": "complete",
+        "pending": None,
+        "active": "a",
+        "slots": {
+            "a": {"mode": "active", "release": "/fixture/a", "digest": "a" * 64},
+            "b": {"mode": "draining", "release": "/fixture/b", "digest": "b" * 64},
+        },
+    }
+    if mutation == "mode":
+        state["slots"]["b"]["mode"] = "ready"
+    elif mutation == "stopped-digest":
+        state["slots"]["b"]["mode"] = "stopped"
+    elif mutation == "active-missing":
+        state["slots"]["a"] = None
+    elif mutation.startswith("active-"):
+        state["slots"]["a"]["mode"] = mutation.removeprefix("active-")
+    elif mutation == "second-active":
+        state["slots"]["b"]["mode"] = "active"
+    events = []
+
+    def validate(release, digest):
+        events.append("validate:" + release.name)
+        if release.name == "b" and mutation in {"digest", "stopped-digest"}:
+            raise ValueError("fixture release digest mismatch")
+
+    def verify(slot, entry):
+        events.append("verify:" + slot)
+        if slot == "b" and mutation == "configuration":
+            raise ValueError("fixture configuration mismatch")
+
+    monkeypatch.setattr(hs, "QUALIFICATION_SCOPE", {"phase": "qualification"})
+    monkeypatch.setattr(hs, "read_state", lambda: copy.deepcopy(state))
+    monkeypatch.setattr(hs, "job_present", lambda _: False)
+    monkeypatch.setattr(hs, "deployment_lock", nullcontext)
+    monkeypatch.setattr(hs, "validate_release", validate)
+    monkeypatch.setattr(hs, "verify_configuration", verify)
+    for name in (
+        "start_worker",
+        "require_probe",
+        "replace_route",
+        "control",
+        "proxy_enrollment",
+    ):
+        monkeypatch.setattr(hs, name, lambda *args, name=name: events.append(name))
+    assert hs.main(["restore"]) == 1
+    assert not set(events) & {
+        "start_worker",
+        "require_probe",
+        "replace_route",
+        "control",
+        "proxy_enrollment",
+    }
+
+
+def test_restore_starts_jobs_only_after_complete_validation(hs, monkeypatch):
+    from contextlib import nullcontext
+
+    state = {
+        "enrollment": "complete",
+        "pending": None,
+        "active": "a",
+        "slots": {
+            "a": {
+                "mode": "active",
+                "release": "/fixture/a",
+                "digest": "a" * 64,
+                "version": "v1",
+            },
+            "b": {
+                "mode": "draining",
+                "release": "/fixture/b",
+                "digest": "b" * 64,
+                "version": "v2",
+            },
+        },
+    }
+    events = []
+    monkeypatch.setattr(hs, "QUALIFICATION_SCOPE", {"phase": "qualification"})
+    monkeypatch.setattr(hs, "read_state", lambda: copy.deepcopy(state))
+    monkeypatch.setattr(hs, "job_present", lambda _: False)
+    monkeypatch.setattr(hs, "deployment_lock", nullcontext)
+    monkeypatch.setattr(
+        hs,
+        "validate_release",
+        lambda release, digest: events.append("validate:" + release.name),
+    )
+    monkeypatch.setattr(
+        hs, "verify_configuration", lambda slot, entry: events.append("verify:" + slot)
+    )
+    monkeypatch.setattr(
+        hs, "start_worker", lambda slot, entry: events.append("start:" + slot)
+    )
+    monkeypatch.setattr(hs, "require_probe", lambda *args: events.append("probe"))
+    monkeypatch.setattr(hs, "replace_route", lambda *args: events.append("route"))
+    monkeypatch.setattr(hs, "control", lambda *args: events.append("drain"))
+    monkeypatch.setattr(hs, "proxy_enrollment", lambda: events.append("proxy"))
+    monkeypatch.setattr(hs, "verify_at", lambda *args: None)
+    assert hs.main(["restore"]) == 0
+    assert events == [
+        "validate:a",
+        "verify:a",
+        "validate:b",
+        "verify:b",
+        "start:a",
+        "start:b",
+        "probe",
+        "route",
+        "drain",
+        "proxy",
+    ]
+
+
+@pytest.mark.parametrize("outcome", ["delayed", "timeout", "unreadable"])
+def test_bootout_waits_for_positive_job_absence(hs, monkeypatch, outcome):
+    clock = [0.0]
+    observations = []
+    calls = []
+
+    def run(argv, **kwargs):
+        calls.append((argv, kwargs["timeout"]))
+        return SimpleNamespace(returncode=0)
+
+    def present(slot):
+        observations.append(slot)
+        if outcome == "unreadable":
+            raise ValueError("launchd job population unreadable")
+        return outcome == "timeout" or len(observations) < 3
+
+    monkeypatch.setattr(hs.subprocess, "run", run)
+    monkeypatch.setattr(hs, "job_present", present)
+    monkeypatch.setattr(hs.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(
+        hs.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds)
+    )
+    if outcome == "delayed":
+        hs.bootout_worker("b")
+        assert observations == ["b"] * 3
+    else:
+        with pytest.raises(ValueError, match="remains loaded|population unreadable"):
+            hs.bootout_worker("b")
+    assert calls == [
+        (["launchctl", "bootout", f"gui/{os.getuid()}/{hs.job_label('b')}"], 10)
+    ]
+
+
+def test_isolated_scope_never_stops_legacy_guest_baseline(hs, monkeypatch):
+    monkeypatch.setattr(hs, "QUALIFICATION_SCOPE", {"phase": "qualification"})
+    monkeypatch.setattr(
+        hs, "job_present", lambda _: pytest.fail("legacy job was inspected")
+    )
+    saved = []
+    monkeypatch.setattr(
+        hs, "write_state", lambda value: saved.append(copy.deepcopy(value))
+    )
+    state = {"enrollment": "maintenance-prepared"}
+    hs.stop_enrollment_legacy_service(state)
+    assert saved == [{"enrollment": "legacy-stopped"}]

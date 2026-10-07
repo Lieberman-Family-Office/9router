@@ -119,7 +119,7 @@ def api_key() -> str:
 
 def http(path: str, body: dict | None = None, timeout: float = 10, *, base: str = BASE):
     headers = {"Content-Type": "application/json"}
-    if body is not None:
+    if body is not None or path == "/v1/models":
         headers["Authorization"] = f"Bearer {api_key()}"
     req = urllib.request.Request(
         base + path,
@@ -231,7 +231,7 @@ def verify(version: str, ready_timeout: float = 120, *, base: str = BASE) -> str
         with http("/v1/models", base=base) as resp:
             if not json.load(resp).get("data"):
                 return "models: empty list"
-    except (urllib.error.URLError, OSError, ValueError) as exc:
+    except (urllib.error.URLError, OSError, ValueError, RuntimeError) as exc:
         return f"models: {exc}"
     return stream_probe(base=base)
 

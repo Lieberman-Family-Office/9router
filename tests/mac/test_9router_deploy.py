@@ -321,6 +321,42 @@ def test_http_explicit_base_does_not_change_global(dep, monkeypatch):
     assert dep.BASE == original_base
 
 
+@pytest.mark.parametrize(
+    "path, body, authenticated",
+    [
+        ("/api/version", None, False),
+        ("/v1/models", None, True),
+        ("/v1/chat/completions", {"stream": True}, True),
+    ],
+)
+def test_http_authenticates_models_without_changing_get_method(
+    dep, monkeypatch, path, body, authenticated
+):
+    seen = []
+    monkeypatch.setattr(dep, "api_key", lambda: "fixture-client-key")
+    monkeypatch.setattr(
+        dep.urllib.request, "urlopen", lambda req, timeout: seen.append(req)
+    )
+    dep.http(path, body, base="http://127.0.0.1:20128")
+    assert seen[0].get_header("Authorization") == (
+        "Bearer fixture-client-key" if authenticated else None
+    )
+    assert seen[0].get_method() == ("GET" if body is None else "POST")
+
+
+def test_verify_reports_missing_models_probe_key(dep, monkeypatch):
+    def urlopen(req, timeout):
+        assert req.full_url.endswith("/api/version")
+        return io.BytesIO(b'{"currentVersion":"v2"}')
+
+    def missing_key():
+        raise RuntimeError("no active API key for the stream probe")
+
+    monkeypatch.setattr(dep.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(dep, "api_key", missing_key)
+    assert dep.verify("v2") == "models: no active API key for the stream probe"
+
+
 def test_stream_probe_propagates_private_base_without_mutating_global(dep, monkeypatch):
     seen = []
     original_base = dep.BASE

@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { stripVTControlCharacters } from 'node:util';
 const root = path.resolve(import.meta.dirname, '../..');
 const installed = process.env.NINEROUTER_TEST_PACKAGES;
 assert.ok(installed, 'NINEROUTER_TEST_PACKAGES must name installed dependencies');
@@ -33,7 +34,7 @@ try {
   for (const file of files) fs.writeFileSync(path.join(temporary, file), execFileSync('git', ['show', `245de4a9:${file}`], { cwd: root }));
   const red = run();
   assert.equal(red.status, 1, 'baseline mirror must fail assertions, not launch or time out');
-  const output = red.stdout + red.stderr;
+  const output = stripVTControlCharacters(red.stdout + red.stderr);
   for (const subject of ['example.invalid', 'cloudcode-pa.googleapis.com', 'repeatable Copilot', 'usage real GET',
     'translator actual POST', 'provider actual PUT', 'reauth fences', 'durable completion']) {
     assert.ok(output.includes(`FAIL  tests/unit/managed-review-batch.test.js > ${subject}`) ||
