@@ -1,0 +1,1 @@
+{"cleanup": {"connections_closed": true, "observations": [{"at": 1791406535.559496, "instance_id": null, "monotonic": 531259.244167125, "state": "stopped"}, {"at": 1791406595.861619, "instance_id": null, "monotonic": 531319.546238083, "state": "stopped"}], "stop_succeeded": true, "verified": true}, "failure": "ValueError", "guest_result": "unrun", "result": "fail"}
