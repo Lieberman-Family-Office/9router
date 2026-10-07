@@ -1284,5 +1284,26 @@ class ConcurrentApiTest(unittest.TestCase):
         self.exercise(running=False)
 
 
+class NativeReviewIdentityTest(unittest.TestCase):
+    def test_existing_review_counterfactual_terminal_is_accepted_but_wrong_terminal_refuses(self):
+        entry = next(item for item in qualify.NATIVE if item[0] == "review-counterfactual")
+        terminal = "GREEN: unchanged mirror passes; RED: baseline mirror fails all eight named review mechanisms while pending/uncertain safety passes"
+        for emitted, accepted in ((terminal, True), ("PASS: unrelated check", False)):
+            with (
+                self.subTest(accepted=accepted),
+                patch.object(qualify, "NATIVE", (entry,)),
+                patch.object(qualify, "source_binding"),
+                patch.object(qualify, "guest_command", return_value=emitted),
+                patch.object(qualify, "record_check") as record,
+            ):
+                if accepted:
+                    qualify.prerequisite_native_checks({}, {}, Path("guest-evidence"), {}, {})
+                    self.assertEqual(record.call_count, 1)
+                else:
+                    with self.assertRaisesRegex(ValueError, "identity absent"):
+                        qualify.prerequisite_native_checks({}, {}, Path("guest-evidence"), {}, {})
+                    record.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

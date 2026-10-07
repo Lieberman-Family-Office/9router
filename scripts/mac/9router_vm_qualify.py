@@ -661,7 +661,7 @@ NATIVE = (
     (
         "review-counterfactual",
         ["node", "tests/unit/managed-review-counterfactual.check.mjs"],
-        "RED: baseline mirror 8 specific review assertions",
+        "RED: baseline mirror fails all eight named review mechanisms while pending/uncertain safety passes",
         360,
     ),
 )
