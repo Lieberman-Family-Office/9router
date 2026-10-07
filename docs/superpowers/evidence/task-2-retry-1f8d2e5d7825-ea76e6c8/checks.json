@@ -638,7 +638,8 @@
     },
     "validationFailure": {
       "type": "AssertionError",
-      "reason": "skipped native proof"
+      "reason": "skipped native proof",
+      "provenanceCorrection": "Historical validator rejected TAP zero skipped/todo summary counters. Command exit zero is retained; this was a validation failure, not a test failure. The corrected validator requires explicit zero counters. No new run is claimed."
     }
   },
   {
