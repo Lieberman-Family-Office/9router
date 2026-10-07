@@ -148,7 +148,7 @@ try:
         ],
         3000,
     )
-except BaseException as e:
+except Exception as e:
     (EVIDENCE / "orchestration-error.txt").write_text(repr(e))
     print(repr(e), flush=True)
 finally:
@@ -171,7 +171,7 @@ finally:
                 hashlib.sha256((SCRATCH / "evidence.tar").read_bytes()).hexdigest()
                 + "\n"
             )
-    except BaseException as e:
+    except Exception as e:
         (EVIDENCE / "export-error.txt").write_text(repr(e))
     finally:
         # Owned CLI processes were synchronously waited or group-closed.

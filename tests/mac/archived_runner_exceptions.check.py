@@ -1,4 +1,4 @@
-"""Check handler dispatch in five archived runners without executing their jobs."""
+"""Check archived handler dispatch without executing the runners' jobs."""
 
 import ast
 import copy
@@ -12,11 +12,21 @@ RUNS = [
     "task-2-retry-1f8d2e5d7825-ea76e6c8",
     "task-2-retry-f76093a4f8ec-de12e533",
     "task-4-red-959c577a870a-652526fc",
+    "task-4-green-959c577a870a-8a365ef0",
 ]
+PATHS = [
+    ROOT / "docs/superpowers/evidence" / run / "guest-runner.py" for run in RUNS
+] + [ROOT / "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/host-orchestrator.py"]
 
-for run in RUNS:
-    path = ROOT / "docs/superpowers/evidence" / run / "guest-runner.py"
+for path in PATHS:
     tree = ast.parse(path.read_text())
+    for handler in (
+        node for node in ast.walk(tree) if isinstance(node, ast.ExceptHandler)
+    ):
+        assert not any(
+            isinstance(node, ast.Name) and node.id == "BaseException"
+            for node in ast.walk(handler.type)
+        ), f"Broad handler: {path}:{handler.lineno}"
     blocks = [node for node in tree.body if isinstance(node, ast.Try) and node.handlers]
     assert blocks, f"No handler subject: {path}"
     block = copy.deepcopy(blocks[-1])
@@ -42,4 +52,4 @@ for run in RUNS:
         if isinstance(error, RuntimeError):
             assert events == ["handled", "cleanup"], path
 
-print(f"PASS: handler dispatch and cleanup in {len(RUNS)} archived runners; 15 cases")
+print(f"PASS: handler dispatch and cleanup in {len(PATHS)} archived runners; 21 cases")
