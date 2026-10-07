@@ -1,0 +1,1 @@
+{"blocker": "BLOCKED: existing guest-owned persistent baseline is absent; manual provider login needs separate authorization", "diagnostic": null, "type": "ValueError"}
