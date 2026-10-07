@@ -141,7 +141,7 @@ it('translator actual POST carries family generations to real repository and kee
 it('real Kiro managed refresh returns the supported OAuth family', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ accessToken: 'fake-kiro', refreshToken: 'fake-kiro-rotate', expiresIn: 3600 }) })));
   const { refreshKiroToken } = await import('../../open-sse/services/tokenRefresh.js');
-  const result = await refreshKiroToken('fake-kiro-old', { authMethod: 'social' });
+  const result = await refreshKiroToken('fake-kiro-old', { authMethod: 'social', profileArn: 'fake-profile' });
   expect(Object.keys(result.refreshGenerations)).toEqual(['oauth']);
   expect(result.refreshGenerations.oauth).toBeGreaterThan(0);
 });
