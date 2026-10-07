@@ -21,7 +21,10 @@ for manifest in manifests:
     for name, digest in payload.get("files", payload).items():
         if isinstance(digest, str) and len(digest) == 64:
             entries += 1
-            assert hashlib.sha256((manifest.parent / name).read_bytes()).hexdigest() == digest
+            assert (
+                hashlib.sha256((manifest.parent / name).read_bytes()).hexdigest()
+                == digest
+            )
 assert entries > 100, "Archive integrity population is incomplete"
 plugin_path = EVIDENCE / "task-4-red-959c577a870a-652526fc/checkpoint_plugin.py"
 spec = importlib.util.spec_from_file_location("checkpoint", plugin_path)
