@@ -26,7 +26,7 @@ try {
   const config = path.join(temporary, 'vitest.config.mjs');
   fs.writeFileSync(config, `export default ${JSON.stringify({ root: temporary, test: { environment: 'node' }, resolve: { alias: aliases } })};`);
   const run = () => spawnSync(process.execPath, [path.join(installed, 'tests/node_modules/vitest/vitest.mjs'), 'run',
-    '--config', config, 'tests/unit/managed-review-batch.test.js', '--reporter=dot', '--silent'],
+    '--config', config, 'tests/unit/managed-review-batch.test.js', '--reporter=verbose', '--silent'],
   { cwd: temporary, encoding: 'utf8', timeout: 30000 });
   const green = run();
   assert.equal(green.status, 0, `unchanged mirror must pass: ${green.stdout}\n${green.stderr}`);
@@ -44,6 +44,7 @@ try {
       output.split('\n').some(line => line.includes('FAIL  tests/unit/managed-review-batch.test.js >') && line.includes(subject)),
     `baseline must fail the specific assertion: ${subject}`);
   }
-  assert.ok(output.includes('8 failed | 1 passed'), 'pending/uncertain safety must remain green in the baseline');
-  console.log('GREEN: unchanged mirror 9 tests; RED: baseline mirror 8 specific review assertions, 1 pending/uncertain pass');
+  assert.ok(output.split('\n').some(line => line.includes('✓') && line.includes('uncertain and pending Copilot exchanges are never reclaimed')),
+    `pending/uncertain safety must remain green in the baseline: ${output}`);
+  console.log('GREEN: unchanged mirror passes; RED: baseline mirror fails all eight named review mechanisms while pending/uncertain safety passes');
 } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
