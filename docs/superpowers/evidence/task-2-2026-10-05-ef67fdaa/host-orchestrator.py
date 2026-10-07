@@ -5,20 +5,23 @@ import json
 import os
 import signal
 import subprocess
+import sys
 import tarfile
+import tempfile
+import time
 from pathlib import Path
 
 SOURCE = Path(__file__).resolve().parents[4]
-SCRATCH = Path("/tmp/task2-export-ef67fdaa-20261005-2215")
-SCRATCH.mkdir(exist_ok=False)
-EVIDENCE = SOURCE / "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa"
-EVIDENCE.mkdir(parents=True, exist_ok=False)
+SCRATCH = Path(tempfile.mkdtemp(prefix="task2-export-"))
+EVIDENCE = SCRATCH / "evidence"
+EVIDENCE.mkdir()
 REMOTE = "/Volumes/devbox/task2-ef67fdaa-20261005-2215"
 BOX = "9router-qualify-recovery"
 HEAD = "05b606931b824cf77dc3cc1164b75df88590ed24"
 BASE = "5fd82262218f5f00b4f987587318908e548ad65a"
 META = "/tmp/namespace-runtime-check-ef67fdaa/task2-metadata.mjs"
 records = []
+failed = False
 
 
 def run(name, args, timeout=120, cwd=SOURCE):
@@ -44,7 +47,7 @@ def run(name, args, timeout=120, cwd=SOURCE):
         "name": name,
         "command": args,
         "exit": rc,
-        "log": str(path.relative_to(SOURCE)),
+        "log": path.name,
         "at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
     records.append(r)
@@ -135,8 +138,9 @@ try:
         120,
     ):
         raise RuntimeError("runner upload failed")
-    run("metadata-running", ["node", META])
-    run(
+    if run("metadata-running", ["node", META]):
+        raise RuntimeError("running identity unverified")
+    if run(
         "guest-battery",
         [
             "devbox",
@@ -147,8 +151,10 @@ try:
             REMOTE + "/runner.py",
         ],
         3000,
-    )
+    ):
+        raise RuntimeError("guest battery failed")
 except Exception as e:
+    failed = True
     (EVIDENCE / "orchestration-error.txt").write_text(repr(e))
     print(repr(e), flush=True)
 finally:
@@ -164,6 +170,8 @@ finally:
             ],
             180,
         )
+        if rc != 0:
+            raise RuntimeError("required evidence export failed")
         if rc == 0:
             with tarfile.open(SCRATCH / "evidence.tar") as t:
                 t.extractall(EVIDENCE, filter="data")
@@ -172,9 +180,17 @@ finally:
                 + "\n"
             )
     except Exception as e:
+        failed = True
         (EVIDENCE / "export-error.txt").write_text(repr(e))
     finally:
         # Owned CLI processes were synchronously waited or group-closed.
-        run("stop-cli", ["devbox", "stop", BOX, "--force"], 120)
-        run("metadata-immediate", ["node", META, "verify"])
-        print("CLEANUP_INITIAL_OBSERVATION_COMPLETE", flush=True)
+        failed = (
+            bool(run("stop-cli", ["devbox", "stop", BOX, "--force"], 120)) or failed
+        )
+        failed = bool(run("metadata-immediate", ["node", META, "verify"])) or failed
+        time.sleep(60)
+        failed = (
+            bool(run("metadata-after-60-seconds", ["node", META, "verify"])) or failed
+        )
+        print("Cleanup observations recorded; inspect their exit codes", flush=True)
+sys.exit(2 if failed else 0)
