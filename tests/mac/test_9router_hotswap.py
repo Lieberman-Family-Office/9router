@@ -855,12 +855,13 @@ def test_route_slot_refuses_dangling_and_nonsocket_targets(hs):
         hs.route_slot()
 
 
-def test_real_validation_requires_receipt_even_in_guest(hs, tmp_path):
+def test_real_validation_requires_receipt_even_in_guest(hs, tmp_path, monkeypatch):
     release = hs.RELEASES / "v2/lib/node_modules/9router"
     release.mkdir(parents=True)
     private_json(release / "package.json", {"version": "v2"})
+    monkeypatch.setattr(hs, "concrete_release", lambda destination: "v2")
     with pytest.raises(FileNotFoundError) as missing:
-        hs.qualification("b" * 64)
+        hs.deploy_locked(release, "b" * 64, {})
     assert Path(missing.value.filename) == hs.QUALIFIED / f"{'b' * 64}.json"
     assert not hs.STATE_FILE.exists()
 
