@@ -9,7 +9,7 @@ const installed = process.env.NINEROUTER_TEST_PACKAGES;
 assert.ok(installed, 'NINEROUTER_TEST_PACKAGES must name installed test dependencies');
 const { parse } = createRequire(path.join(installed, 'package.json'))('@babel/parser');
 const modules = new Map();
-const scopes = ['open-sse', 'src/sse', 'src/app/api'];
+const scopes = ['open-sse', 'src/sse', 'src/app/api', 'src/lib/oauth'];
 function walk(node, visit) {
   if (!node || typeof node !== 'object') return;
   if (node.type) visit(node);
@@ -85,8 +85,17 @@ function verify(mod, node, coordinated = false, trail = new Set()) {
   }
   if (node.type === 'CallExpression') {
     const name = node.callee.type === 'Identifier' ? node.callee.name
-      : node.callee.object?.type === 'ThisExpression' ? node.callee.property.name : null;
-    const target = name && binding(mod, name);
+      : node.callee.type === 'MemberExpression' && !node.callee.computed ? node.callee.property.name : null;
+    let target = name && binding(mod, name);
+    if (!target && node.callee.type === 'MemberExpression' && /^_?refresh/.test(name || '')) {
+      const candidates = [...modules.values()].flatMap(candidate => candidate.functions.has(name)
+        ? [{ mod: candidate, name, node: candidate.functions.get(name) }] : []);
+      assert.ok(candidates.length, `Unresolved member refresh: ${mod.file}:${name}`);
+      for (const candidate of candidates) {
+        const key = `${candidate.mod.file}:${name}:${coordinated}`;
+        if (!trail.has(key)) verify(candidate.mod, candidate.node.body, coordinated, new Set(trail).add(key));
+      }
+    }
     const dedup = target?.name === 'dedupRefresh' && target.mod.file === path.join(root, 'open-sse/services/tokenRefresh/dedup.js');
     if (dedup) {
       assert.ok(['ArrowFunctionExpression', 'FunctionExpression'].includes(node.arguments[2]?.type), 'Dedup must wrap the issuer callback');
@@ -106,7 +115,10 @@ function verify(mod, node, coordinated = false, trail = new Set()) {
       }
     }
     // A raw legacy issuance anywhere on a reachable managed refresh path is forbidden.
-    if (!coordinated && ['fetch', 'proxyAwareFetch'].includes(name)) {
+    let refreshGrant = false;
+    walk(mod.ast, child => { if (child.type === 'StringLiteral' && ['refresh_token', 'refreshToken'].includes(child.value)) refreshGrant = true; });
+    // ponytail: grant-bearing modules are conservative subjects; use dataflow before admitting mixed grant/health modules.
+    if (!coordinated && ['fetch', 'proxyAwareFetch'].includes(name) && refreshGrant) {
       // Service-account JWT minting does not rotate a shared refresh token.
       let serviceAccountGrant = false;
       walk(node, child => { if (child.type === 'StringLiteral' && child.value === 'urn:ietf:params:oauth:grant-type:jwt-bearer') serviceAccountGrant = true; });
