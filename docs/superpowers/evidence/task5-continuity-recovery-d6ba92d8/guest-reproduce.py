@@ -67,7 +67,7 @@ try:
     record['manifest_sha256'] = package['manifest_sha256']
     record['persistenceFingerprint'] = manifest['persistenceFingerprint']
     fixture_env = q.isolated_environment(Path(scope['home']), source)
-    process = subprocess.Popen(['node', str(source / 'tests/mac/9router_packaged_hotswap.check.mjs'), str(source), str(tarball), binding['sha256'], str(evidence / 'packaged-result.json'), scope['home'], str(scope_path)], cwd=source, env=fixture_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
+    process = subprocess.Popen(['node', str(source / 'tests/mac/9router_packaged_hotswap.check.mjs'), str(source), package['tarball'], binding['sha256'], str(evidence / 'packaged-result.json'), scope['home'], str(scope_path)], cwd=source, env=fixture_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
     try:
         log, _ = process.communicate(timeout=1800)
     finally:
