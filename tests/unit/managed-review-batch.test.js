@@ -34,7 +34,9 @@ beforeEach(async () => {
     NINEROUTER_HOTSWAP_REFRESH_DB: refresh });
   delete global._dbAdapter;
   vi.resetModules();
-  vi.doMock('next/server', () => ({ NextResponse: { json: (body, init) => Response.json(body, init) } }));
+  vi.doMock('next/server', () => ({ NextResponse: { json: (body, init) => {
+    const response = Response.json(body, init); response.cookies = { set(name, value) { response.headers.append('Set-Cookie', `${name}=${value}`); } }; return response;
+  } } }));
   vi.doMock('@/lib/network/connectionProxy', () => ({ resolveConnectionProxyConfig: async () => ({}) }));
 });
 afterEach(() => {
@@ -188,9 +190,6 @@ it('Xiaomi browser status mints a bound proof only after provider verification',
     ensureServiceSession: async () => verified,
     attachSessionCookie: response => response,
   }));
-  vi.doMock('next/server', () => ({ NextResponse: { json: (body, init) => {
-    const response = Response.json(body, init); response.cookies = { set(name, value) { response.headers.append('Set-Cookie', `${name}=${value}`); } }; return response;
-  } } }));
   try {
     const { GET } = await import('@/app/api/oauth/xiaomi-mimo/login/status/route.js');
     const request = new Request('http://localhost/api/oauth/xiaomi-mimo/login/status?state=fixture-state');
