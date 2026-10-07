@@ -262,8 +262,24 @@ try:
                 "Task 4 controller is missing; fixture assertion before import"
             )
         else:
+            expected = {
+                "test_enrolled_dispatch_never_enters_legacy_mutation[deploy]",
+                "test_enrolled_dispatch_never_enters_legacy_mutation[rollback]",
+                *[
+                    "test_release_path_rejects_invalid_version_before_join["
+                    + value
+                    + "]"
+                    for value in ["../escape", "/absolute", "v2/nested", ".", "..", ""]
+                ],
+                "test_http_explicit_base_does_not_change_global",
+                "test_stream_probe_propagates_private_base_without_mutating_global",
+                "test_verify_propagates_private_base_to_all_probes",
+                "test_stream_once_uses_explicit_private_base",
+            }
+            assert {r["nodeid"].split("::")[-1] for r in failed} == expected
+            assert all(r["phase"] == "call" for r in failed) and not skipped
             checks[-1]["cause"] = (
-                "Task 4 deploy contracts; inspect individually bound report and log"
+                "Exact missing dispatch, confinement, and private-base contracts"
             )
         save(out / "checks.json", checks)
     for p, h in m["overlay"].items():
