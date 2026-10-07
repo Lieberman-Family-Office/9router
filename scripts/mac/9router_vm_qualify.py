@@ -30,6 +30,7 @@ import sys
 import tarfile
 import tempfile
 import time
+import traceback
 import urllib.error
 import urllib.request
 import uuid
@@ -1987,6 +1988,8 @@ def guest_failure_record(error):
         if isinstance(error, ValueError)
         else "guest execution failed",
         "diagnostic": str(error) if isinstance(error, GuestCheckFailure) else None,
+        "errno": error.errno if isinstance(error, OSError) else None,
+        "frames": [frame.name for frame in traceback.extract_tb(error.__traceback__)],
     }
 
 
@@ -2614,6 +2617,8 @@ def cmd_run(args):
             )
         )
         bind_guest_runtime(binding, binaries)
+        capacity = json.loads(devbox("exec", args.devbox_name, "--", "python3", "-c", "import json,shutil; d=shutil.disk_usage('/Volumes/devbox'); print(json.dumps({'total_bytes':d.total,'free_bytes':d.free}))"))
+        new_json(evidence / "guest-capacity.json", {"namespace": binding["namespace"], **capacity})
         new_json(stage / "input.json", binding)
         require(
             sha256(regular(HERE / "9router_vm_qualify.py"))
