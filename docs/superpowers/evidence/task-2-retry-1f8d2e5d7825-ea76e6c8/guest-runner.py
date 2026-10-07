@@ -218,7 +218,11 @@ def unit_summary(p, minimum, files):
         assert (
             j["numPendingTests"] == 0
             and j.get("numTodoTests", 0) == 0
-            and all(result["status"] == "passed" for suite in j["testResults"] for result in suite["assertionResults"])
+            and all(
+                result["status"] == "passed"
+                for suite in j["testResults"]
+                for result in suite["assertionResults"]
+            )
             and j["numFailedTests"] == 0
             and j["success"] is True
         ), "failed/skipped unit tests"
@@ -430,7 +434,9 @@ try:
         def validate(text):
             assert text.strip(), "empty native proof log"
             if name != "h2c-head":
-                assert not re.search(r"(?i)\b(?:skipped|todo)\b", text), "skipped native proof"
+                assert not re.search(r"(?i)\b(?:skipped|todo)\b", text), (
+                    "skipped native proof"
+                )
             for marker in markers.get(name, []):
                 assert marker in text, "missing native assertion identity"
             if name == "h2c-head":
