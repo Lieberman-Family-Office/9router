@@ -1,3 +1,5 @@
+# Archived diagnostic copy, not the executable guest string used by orchestrator.mjs.
+# This file grants no run identity or acceptance; original bytes remain in Git history.
 import hashlib
 import json
 import os

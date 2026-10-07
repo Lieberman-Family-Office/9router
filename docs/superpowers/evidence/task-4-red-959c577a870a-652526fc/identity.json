@@ -9,6 +9,7 @@
   "pluginSha256": "1a1fac417bc595de3fe172cd82ac142cb10d6bbc9d9f0bed231f74a97c7f1632",
   "devboxId": "2tc0b2eg4mveo",
   "instanceId": "tjd6l6mg03ou2",
-  "completedRedRuns": true,
+  "completedRedRuns": false,
+  "provenanceCorrection": "Setup/fixture failures do not prove intended RED mechanisms. The recorded overlay hashes are preserved at 94b4aa69ea24f98b55fd66f80c3043a94f204c0c:docs/superpowers/evidence/task-4-red-959c577a870a-652526fc/*.py.input. Current archive inputs contain labeled corrections. Neither version is final-head acceptance.",
   "scope": "Task 4 RED only; no controller implementation, lint, scans, or production qualification"
 }
