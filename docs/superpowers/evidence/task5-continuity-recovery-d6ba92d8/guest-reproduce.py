@@ -23,7 +23,7 @@ record = {'scope': 'focused current-source packaged continuity reproduction, not
 
 def check(name, argv, cwd, env, timeout, expected=0):
     try:
-        log = q.guest_command(argv, cwd, env, timeout, expected)
+        log = q.guest_command(argv, cwd, env, timeout, expected_exit=expected)
         results.append({'name': name, 'exit_code': expected, 'command': argv, 'where': str(cwd)})
         (evidence / (name + '.log')).write_text(log)
         return log
