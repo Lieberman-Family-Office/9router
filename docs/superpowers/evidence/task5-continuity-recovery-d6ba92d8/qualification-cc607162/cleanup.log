@@ -1,0 +1,1 @@
+PASS: native cleanup retains cancel/pump/persistence/refresh work independently of client closure and gates active ownership

@@ -1,0 +1,11 @@
+Checked guest source syntax: scripts/mac/9router_worker.cjs
+Checked guest source syntax: custom-server.js
+Checked guest source syntax: src/lib/db/managed.cjs
+Checked guest source syntax: src/lib/db/repos/settingsRepo.js
+Checked guest source syntax: src/shared/services/initializeApp.js
+Checked guest source syntax: tests/mac/9router_worker.check.cjs
+Checked guest source syntax: tests/mac/9router_hotswap_counterfactual.check.cjs
+Checked guest source syntax: tests/unit/managed-worker.test.js
+Checked guest source syntax: tests/unit/managed-credentials.test.js
+Checked guest source syntax: cli/scripts/build-cli.js
+Checked guest source syntax: tests/unit/cli-build-artifacts.test.js

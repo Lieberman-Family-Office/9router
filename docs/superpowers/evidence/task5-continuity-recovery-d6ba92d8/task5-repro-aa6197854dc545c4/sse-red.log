@@ -1,0 +1,52 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/baseline-mirror[39m
+
+[90mstdout[2m | tests/unit/passthrough-done.test.js[2m > [22m[2mnative Responses passthrough terminal framing[2m > [22m[2mpreserves one upstream terminal sentinel for "data: [DONE]\n\n"
+[22m[39m[20:03:18] 🐛 [DBG:SSE] flush | provider=fixture | model=null | recvLines=3 | emitted=0 | events=[response.completed=1]
+
+[90mstdout[2m | tests/unit/passthrough-done.test.js[2m > [22m[2mnative Responses passthrough terminal framing[2m > [22m[2mpreserves one upstream terminal sentinel for "data:[DONE]\n\n"
+[22m[39m[20:03:18] 🐛 [DBG:SSE] flush | provider=fixture | model=null | recvLines=3 | emitted=0 | events=[response.completed=1]
+
+[90mstdout[2m | tests/unit/passthrough-done.test.js[2m > [22m[2mnative Responses passthrough terminal framing[2m > [22m[2mpreserves one upstream terminal sentinel for "data: [DONE]"
+[22m[39m[20:03:18] 🐛 [DBG:SSE] flush | provider=fixture | model=null | recvLines=2 | emitted=0 | events=[response.completed=1]
+
+[90mstdout[2m | tests/unit/passthrough-done.test.js[2m > [22m[2mnative Responses passthrough terminal framing[2m > [22m[2madds one missing terminal sentinel
+[22m[39m[20:03:18] 🐛 [DBG:SSE] flush | provider=fixture | model=null | recvLines=1 | emitted=0 | events=[none]
+
+ [31m×[39m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22mpreserves one upstream terminal sentinel for "data: [DONE]\n\n"[32m 34[2mms[22m[39m
+[31m   → expected [ 'data: [DONE]', 'data: [DONE]' ] to have a length of 1 but got 2[39m
+ [31m×[39m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22mpreserves one upstream terminal sentinel for "data:[DONE]\n\n"[32m 1[2mms[22m[39m
+[31m   → expected [ 'data: [DONE]', 'data: [DONE]' ] to have a length of 1 but got 2[39m
+ [31m×[39m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22mpreserves one upstream terminal sentinel for "data: [DONE]"[32m 1[2mms[22m[39m
+[31m   → expected [ 'data: [DONE]', 'data: [DONE]' ] to have a length of 1 but got 2[39m
+ [32m✓[39m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22madds one missing terminal sentinel[32m 0[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 3 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22mpreserves one upstream terminal sentinel for "data: [DONE]\n\n"
+[41m[1m FAIL [22m[49m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22mpreserves one upstream terminal sentinel for "data:[DONE]\n\n"
+[41m[1m FAIL [22m[49m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22mpreserves one upstream terminal sentinel for "data: [DONE]"
+[31m[1mAssertionError[22m: expected [ 'data: [DONE]', 'data: [DONE]' ] to have a length of 1 but got 2[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 2[39m
+
+[36m [2m❯[22m tests/unit/passthrough-done.test.js:[2m16:47[22m[39m
+    [90m 14|[39m       const completed = 'event: response.completed\ndata: {"type":"res…
+    [90m 15|[39m       const output = await stream([completed, tail.slice(0, 5), tail.s…
+    [90m 16|[39m       [34mexpect[39m(output[33m.[39m[34mmatch[39m([36m/data: \[DONE\]/g[39m))[33m.[39m[34mtoHaveLength[39m([34m1[39m)[33m;[39m
+    [90m   |[39m                                               [31m^[39m
+    [90m 17|[39m       [34mexpect[39m(output)[33m.[39m[34mtoContain[39m([32m'"type":"response.completed"'[39m)[33m;[39m
+    [90m 18|[39m     })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 20:03:18
+[2m   Duration [22m 591ms[2m (transform 330ms, setup 0ms, import 465ms, tests 36ms, environment 0ms)[22m
+

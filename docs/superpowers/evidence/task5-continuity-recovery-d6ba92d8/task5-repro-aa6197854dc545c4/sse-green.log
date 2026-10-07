@@ -1,0 +1,25 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/source[39m
+
+[90mstdout[2m | tests/unit/passthrough-done.test.js[2m > [22m[2mnative Responses passthrough terminal framing[2m > [22m[2mpreserves one upstream terminal sentinel for "data: [DONE]\n\n"
+[22m[39m[20:03:19] 🐛 [DBG:SSE] flush | provider=fixture | model=null | recvLines=3 | emitted=0 | events=[response.completed=1]
+
+[90mstdout[2m | tests/unit/passthrough-done.test.js[2m > [22m[2mnative Responses passthrough terminal framing[2m > [22m[2mpreserves one upstream terminal sentinel for "data:[DONE]\n\n"
+[22m[39m[20:03:19] 🐛 [DBG:SSE] flush | provider=fixture | model=null | recvLines=3 | emitted=0 | events=[response.completed=1]
+
+[90mstdout[2m | tests/unit/passthrough-done.test.js[2m > [22m[2mnative Responses passthrough terminal framing[2m > [22m[2mpreserves one upstream terminal sentinel for "data: [DONE]"
+[22m[39m[20:03:19] 🐛 [DBG:SSE] flush | provider=fixture | model=null | recvLines=2 | emitted=0 | events=[response.completed=1]
+
+[90mstdout[2m | tests/unit/passthrough-done.test.js[2m > [22m[2mnative Responses passthrough terminal framing[2m > [22m[2madds one missing terminal sentinel
+[22m[39m[20:03:19] 🐛 [DBG:SSE] flush | provider=fixture | model=null | recvLines=1 | emitted=0 | events=[none]
+
+ [32m✓[39m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22mpreserves one upstream terminal sentinel for "data: [DONE]\n\n"[32m 15[2mms[22m[39m
+ [32m✓[39m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22mpreserves one upstream terminal sentinel for "data:[DONE]\n\n"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22mpreserves one upstream terminal sentinel for "data: [DONE]"[32m 0[2mms[22m[39m
+ [32m✓[39m tests/unit/passthrough-done.test.js[2m > [22mnative Responses passthrough terminal framing[2m > [22madds one missing terminal sentinel[32m 0[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 20:03:19
+[2m   Duration [22m 529ms[2m (transform 306ms, setup 0ms, import 433ms, tests 16ms, environment 0ms)[22m
+

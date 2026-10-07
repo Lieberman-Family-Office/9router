@@ -1,0 +1,9 @@
+(node:3954) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 beforeExit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:3954) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 SIGINT listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(node:3954) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 SIGTERM listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit
+(node:3962) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Volumes/devbox/9router/qualification/qualify-9b3966a9e3c449139b67a496f8f9dcb5/source/open-sse/handlers/responsesWs/index.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Volumes/devbox/9router/qualification/qualify-9b3966a9e3c449139b67a496f8f9dcb5/source/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+JSON report written to /Volumes/devbox/9router/qualification/qualify-9b3966a9e3c449139b67a496f8f9dcb5/evidence/task2-unit-report.json
