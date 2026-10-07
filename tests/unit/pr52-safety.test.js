@@ -4,9 +4,10 @@ import { GeminiCLIExecutor } from '../../open-sse/executors/gemini-cli.js';
 import { mergeRefreshedCredentials, refreshProviderCredentials } from '../../open-sse/services/oauthCredentialManager.js';
 vi.mock('@/lib/localDb', () => ({
   getProviderConnectionById: async () => ({ provider: 'claude', authType: 'oauth', accessToken: 'fixture-expired', refreshToken: 'fixture-old', expiresAt: '2000-01-01' }),
-  updateProviderConnection: vi.fn(),
+  updateProviderConnection: vi.fn(), getSettings: async () => ({}), updateSettings: vi.fn(),
 }));
 vi.mock('@/lib/network/connectionProxy', () => ({ resolveConnectionProxyConfig: async () => ({}) }));
+vi.mock('@/mitm/manager', () => ({ initDbHooks() {}, getCachedPassword() {}, loadEncryptedPassword() {} }));
 
 vi.mock('open-sse/services/oauthCredentialManager.js', async original => ({
   ...await original(), refreshProviderCredentials: vi.fn(async () => ({ accessToken: 'fixture-new' })),
@@ -20,6 +21,16 @@ it('managed connection test does not mark a refresh error as active', async () =
   const result = await testSingleConnection('fixture-id');
   expect(result.valid).toBe(false);
   expect(result.refreshed).toBe(false);
+});
+
+it('managed workers reject tunnel start operations before service side effects', async () => {
+  vi.stubEnv('NINEROUTER_MANAGED_WORKER', '1');
+  const { enableTunnel } = await import('@/lib/tunnel/cloudflare/manager.js');
+  const { enableTailscale } = await import('@/lib/tunnel/tailscale/manager.js');
+  const { startFunnel } = await import('@/lib/tunnel/tailscale/tailscale.js');
+  for (const start of [enableTunnel, enableTailscale, startFunnel]) {
+    await expect(start(20128)).rejects.toThrow('Managed workers cannot start app-owned ingress');
+  }
 });
 
 it('managed default refresh rejects configured proxy before issuing a token request', async () => {
