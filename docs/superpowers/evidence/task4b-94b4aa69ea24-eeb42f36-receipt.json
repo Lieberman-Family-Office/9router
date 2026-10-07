@@ -118,6 +118,18 @@
     "hostCredentialCleanup": true,
     "guestCredentialCleanup": true
   },
+  "durableEvidenceArchive": {
+    "kind": "private-non-git-byte-preserved-copy",
+    "homeRelativeDirectory": "dev/9router_evidence/task4b-94b4aa69ea24-eeb42f36",
+    "resolution": "Path.home() / homeRelativeDirectory, or $HOME/homeRelativeDirectory",
+    "archive": "raw-evidence.tar.gz",
+    "archiveSha256": "6ee41d67a99c76d083b20ae7336dca596fb8f1d8e0676faae43fb43d02ce5a50",
+    "extractedDirectory": "evidence",
+    "copiedAt": "2026-10-07",
+    "provenance": "Byte-preserved copy made after the original run. Later Task 5 subtrees keep their original paths and are not Task 4b evidence. Only files bound by the original Task 4b manifest are original-run artifacts.",
+    "verification": "Archive digest and seven raw digests independently verified. Parent verified extraction plus recursive byte comparison; tar -d was not supported and is not claimed.",
+    "permissions": "Root and extracted evidence directories 0700; compressed archive 0600; no group/other access. No raw bytes published to Git."
+  },
   "rawEvidenceHashes": {
     "manifest.json": "46305b5dedaccffa0aab36f37d23605ee62525f88d91b8230b2f9aa3a4e91f9c",
     "checks.json": "c575a680e7a2bf6f495141d3b32e451306c014187874da856ffbbde13b6d1614",
