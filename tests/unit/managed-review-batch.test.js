@@ -162,6 +162,7 @@ it('provider actual PUT preserves noncredential edits and refuses stale credenti
     { params: Promise.resolve({ id: 'fake-id' }) });
   expect((await call({ name: 'after' })).status).toBe(200);
   expect((await call({ providerSpecificData: { copilotToken: 'fake-stale' } })).status).toBe(400);
+  expect((await call({ apiKey: 'fake-new-key' })).status).toBe(400);
   expect((await call({ providerSpecificData: { usage: 8 } })).status).toBe(200);
   expect((await call({ connectionProxyEnabled: false, connectionProxyUrl: '', proxyPoolId: null })).status).toBe(200);
   const { getProviderConnectionById } = await import('@/lib/db/repos/connectionsRepo.js');

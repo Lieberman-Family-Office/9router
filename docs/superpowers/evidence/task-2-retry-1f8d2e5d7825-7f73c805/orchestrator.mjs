@@ -76,17 +76,15 @@ def clean(text):
 
 def stop_group(p):
     if p is None: return
-    if p.poll() is not None: return
     try: os.killpg(p.pid,signal.SIGTERM)
     except ProcessLookupError: return
     except PermissionError:
         print(json.dumps({'phase':'group-signal-denied','ownedPid':p.pid}),flush=True)
         p.terminate()
     time.sleep(1)
-    if p.poll() is None:
-        try: os.killpg(p.pid,signal.SIGKILL)
-        except ProcessLookupError: pass
-        except PermissionError: p.kill()
+    try: os.killpg(p.pid,signal.SIGKILL)
+    except ProcessLookupError: pass
+    except PermissionError: p.kill()
     try: p.wait(timeout=5)
     except subprocess.TimeoutExpired: raise RuntimeError('owned process did not exit')
     # ponytail: guest may deny group signaling; compute shutdown contains reparented descendants.
@@ -224,6 +222,7 @@ try:
                 assert re.search(r'^# tests 5$',text,re.M) and re.search(r'^# pass 5$',text,re.M) and re.search(r'^# fail 0$',text,re.M) and re.search(r'^# cancelled 0$',text,re.M) and re.search(r'^# skipped 0$',text,re.M) and re.search(r'^# todo 0$',text,re.M), 'incomplete h2c population'
             return {'logSha256':digest(out/(name+'.log')),'requiredMarkers':markers.get(name,[])}
         return validate
+    assert m['testScope'] in ('task2','h2c'), 'Unsupported test scope'
     for name,argv,limit in checks if m['testScope']=='task2' else []:
         all_ok=run(name,argv,head,limit,{'unit':'named native proof commands','count':1},native_summary(name)) and all_ok
     batches=[('task2-unit',66,['managed-buffer','managed-detached','managed-worker','background-token-refresh','quota-auto-ping','cli-build-artifacts','custom-server-peer-headers','managed-credentials','request-details-metadata-mode','responses-mid-turn-steering']),
@@ -279,6 +278,8 @@ finally:
     (out/'identity.json').write_text(json.dumps(identity,indent=2))
     identity['testScope']=m['testScope']
     (out/'identity.json').write_text(json.dumps(identity,indent=2))
+    for p in out.iterdir():
+        if p.is_file(): p.write_text(clean(p.read_text(errors='replace')))
     # Only these regular evidence files leave the guest. No databases, HOME, credentials, or dependency trees.
     hashes={p.name:digest(p) for p in out.iterdir() if p.is_file()}
     pending=out/'manifest.pending'
