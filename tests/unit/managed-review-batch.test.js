@@ -138,6 +138,14 @@ it('translator actual POST carries family generations to real repository and kee
   expect(row.expiresAt).toBe(expiry);
 });
 
+it('real Kiro managed refresh returns the supported OAuth family', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ accessToken: 'fake-kiro', refreshToken: 'fake-kiro-rotate', expiresIn: 3600 }) })));
+  const { refreshKiroToken } = await import('../../open-sse/services/tokenRefresh.js');
+  const result = await refreshKiroToken('fake-kiro-old', { authMethod: 'social' });
+  expect(Object.keys(result.refreshGenerations)).toEqual(['oauth']);
+  expect(result.refreshGenerations.oauth).toBeGreaterThan(0);
+});
+
 it('translator retains ephemeral Vertex service-account tokens without CAS persistence', async () => {
   const execute = vi.fn().mockResolvedValueOnce({ response: new Response('', { status: 401 }) })
     .mockResolvedValueOnce({ response: new Response('data: done\n\n') });
