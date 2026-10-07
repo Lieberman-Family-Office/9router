@@ -4,7 +4,7 @@ const net = require("node:net");
 const test = require("node:test");
 
 for (const framing of ["split", "coalesced", "chunked", "empty"]) {
-  test(`serves ${framing} h2c POST requests as HTTP/1.1`, { timeout: 5_000 }, async () => {
+  test(`serves ${framing} h2c POST requests as HTTP/1.1`, { timeout: 5_000 }, async (context) => {
     const originalCreateServer = http.createServer;
     delete require.cache[require.resolve("../../custom-server.js")];
     require("../../custom-server.js");
@@ -23,6 +23,11 @@ for (const framing of ["split", "coalesced", "chunked", "empty"]) {
       res.setHeader("Content-Type", "text/event-stream");
       res.end("data: [DONE]\n\n");
     });
+    if (framing === 'chunked' && typeof server.shouldUpgradeCallback !== 'function') {
+      http.createServer = originalCreateServer;
+      context.skip('Native h2c chunked parsing requires Node upgrade selection support');
+      return;
+    }
     server.on("connection", (socket) => {
       sockets.add(socket);
       socket.once("close", () => sockets.delete(socket));
@@ -78,7 +83,7 @@ for (const framing of ["split", "coalesced", "chunked", "empty"]) {
   });
 }
 
-test("preserves non-h2c upgrade selection", { timeout: 5_000 }, async () => {
+test("preserves non-h2c upgrade selection", { timeout: 5_000 }, async (context) => {
   const originalCreateServer = http.createServer;
   delete require.cache[require.resolve("../../custom-server.js")];
   require("../../custom-server.js");
@@ -89,6 +94,11 @@ test("preserves non-h2c upgrade selection", { timeout: 5_000 }, async () => {
     selected++;
     return req.headers.upgrade === "websocket";
   } }, (_req, res) => res.end("ordinary request"));
+  if (typeof server.shouldUpgradeCallback !== 'function') {
+    http.createServer = originalCreateServer;
+    context.skip('Upgrade selection is not available on this Node runtime');
+    return;
+  }
   server.on("connection", (socket) => {
     sockets.add(socket);
     socket.once("close", () => sockets.delete(socket));
