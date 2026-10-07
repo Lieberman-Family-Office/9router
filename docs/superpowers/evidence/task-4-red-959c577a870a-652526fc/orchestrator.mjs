@@ -14,7 +14,8 @@ const sha=b=>createHash('sha256').update(b).digest('hex');
 const git=(...args)=>{const p=spawnSync('git',['-C',tree,...args],{env:{...process.env,GIT_OPTIONAL_LOCKS:'0'},timeout:120000,maxBuffer:64*1024*1024}); assert(!p.error&&p.status===0,`Git read/transfer failed: ${args[0]}`);return p.stdout;};
 const runId=head.slice(0,12)+'-'+randomUUID().slice(0,8);
 const evidence=path.join(tree,'docs/superpowers/evidence','task-4-red-'+runId);
-const relative=path.relative(tree,evidence), staging=fs.mkdtempSync('/tmp/9router-task4-red-'), remote='/Volumes/devbox/r'+runId.slice(-8);
+const relative=path.relative(tree,evidence);
+let staging, remote;
 const claimPath='/tmp/namespace-owner-2tc0b2eg4mveo.lock';
 assert.equal(git('rev-parse','HEAD').toString().trim(),head);
 const indexPath=git('rev-parse','--path-format=absolute','--git-path','index').toString().trim();
@@ -27,6 +28,8 @@ const immutable=()=>{assert.equal(git('rev-parse','HEAD').toString().trim(),head
 const transcript=process.argv[3];
 assert(transcript && path.isAbsolute(transcript), 'Supply the authorization source');
 throw new Error('Historical transcript is evidence, not current execution authorization. Prepare a newly bound runner.');
+staging=fs.mkdtempSync('/tmp/9router-task4-red-');
+remote='/Volumes/devbox/r'+runId.slice(-8);
 const transcriptLines=fs.readFileSync(transcript,'utf8').split('\n');
 const authorization=[{line:3353,quote:'Yes—authorize Namespace startup and testing, with verified shutdown afterward (Recommended)'},{line:3541,quote:'APPROVED'},{line:3688,quote:'continue to next task on Implementation plan'}].map(x=>{const turn=JSON.parse(transcriptLines[x.line-1]);assert.equal(turn.role,'user');assert(turn.message.content.some(c=>c.text?.includes(x.quote)));return {...x,role:turn.role,turnSha256:sha(Buffer.from(transcriptLines[x.line-1]))};});
 const plugin=String.raw`import json, os

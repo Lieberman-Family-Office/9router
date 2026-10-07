@@ -253,7 +253,7 @@ fs.writeFileSync(path.join(evidence, 'orchestrator.mjs'), regular(new URL(import
 save();
 let metadata, claim, claimStat, owns = false, complete = false, interrupted = false, guestExported = false;
 const claimPath = path.join(os.tmpdir(), 'namespace-owner-2tc0b2eg4mveo.lock');
-const claimBytes = Buffer.from(JSON.stringify({ pid: process.pid, runId, head: expectedHead, nonce: randomUUID() }));
+const claimBytes = Buffer.from(JSON.stringify({ pid: process.pid, runId, head: expectedHead, nonce: (await import('node:crypto')).randomUUID() }));
 const claimOwned = () => {
   if (claim === undefined || !claimStat) return false;
   try { const s = fs.lstatSync(claimPath); const fd = fs.fstatSync(claim); return s.isFile() && s.dev === claimStat.dev && s.ino === claimStat.ino && fd.dev === s.dev && fd.ino === s.ino && fs.readFileSync(claimPath).equals(claimBytes); }
