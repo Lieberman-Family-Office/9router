@@ -70,5 +70,7 @@ try:
     q.new_json(local/'outcome.json',{'success':success,'run_id':run_id,'scope':'noncredential nested SQLite and marker retained after exact guest stop/reactivation','production_touched':False})
     print(json.dumps({'evidence':str(local),'success':success}))
     for fd,path in claims:path.unlink()
+    if not success:
+        raise SystemExit('RED: synced nested guest checkpoint missing or changed after stop/reactivation')
 finally:
     for fd,path in claims:os.close(fd)

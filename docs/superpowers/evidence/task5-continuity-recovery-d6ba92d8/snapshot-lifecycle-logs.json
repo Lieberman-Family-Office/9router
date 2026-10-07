@@ -1,0 +1,258 @@
+{
+  "at": "2026-10-07T22:05:50.091Z",
+  "scope": "existing specified instances storage/lifecycle log lines only",
+  "records": [
+    {
+      "instanceId": "c77ffjieqc6h2",
+      "subjects": 15,
+      "lines": [],
+      "complete": true,
+      "retentionDays": 7
+    },
+    {
+      "instanceId": "dia700cgv26vs",
+      "subjects": 15,
+      "lines": [],
+      "complete": true,
+      "retentionDays": 7
+    },
+    {
+      "instanceId": "2d9r1uv5bl6au",
+      "subjects": 222,
+      "lines": [
+        {
+          "timestamp": "2026-10-07T20:55:00.940Z",
+          "content": "\u001b[90m2026-10-07T20:54:55.911572Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"websocket: close sent\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-querystate",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:55:00.940Z",
+          "content": "\u001b[90m2026-10-07T20:54:55.810787Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"websocket: close sent\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-querystate",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:54:42.435Z",
+          "content": "\u001b[90m2026-10-07T20:54:37.613916Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36mcommand=\u001b[0m[\"/usr/bin/shasum\",\"-a\",\"256\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/baseline-complete.json\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m39.250792",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:54:42.435Z",
+          "content": "\u001b[90m2026-10-07T20:54:36.86369Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/baseline-complete.json\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0m8b6r7ut8181dsp4t3s5u0j1nms \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:54:13.632Z",
+          "content": "\u001b[90m2026-10-07T20:54:11.582029Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36mcommand=\u001b[0m[\"python3\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/guest-signin-complete.py\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m8635.362958",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:54:05.376Z",
+          "content": "\u001b[90m2026-10-07T20:54:04.961797Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"websocket: close sent\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-querystate",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:54:05.376Z",
+          "content": "\u001b[90m2026-10-07T20:54:04.882243Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"websocket: close sent\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-querystate",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:54:03.300Z",
+          "content": "\u001b[90m2026-10-07T20:54:02.178515Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat > /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/guest-signin-complete.py && chmod 644 /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/guest-signin-complete.py\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0mq3nnsn5f1j1esp3cq67ti2pd28 \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:54:03.300Z",
+          "content": "\u001b[90m2026-10-07T20:54:01.312309Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat > /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/confirmation.json && chmod 600 /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/confirmation.json\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0m7frif7k5pdooik8l75am07h75k \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:51:08.650Z",
+          "content": "\u001b[90m2026-10-07T20:51:07.402652Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"websocket: close sent\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-querystate",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:51:08.650Z",
+          "content": "\u001b[90m2026-10-07T20:51:07.335739Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"websocket: close sent\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-querystate",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:45:12.412Z",
+          "content": "\u001b[90m2026-10-07T20:45:06.237365Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/dependencies.log\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0mbu684q6dm0asnolkjntk177aas \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:45:12.412Z",
+          "content": "\u001b[90m2026-10-07T20:45:05.284527Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/checkpoint.json\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0mo1urb8ccrs9nutnmk6t4bm0ifc \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:45:12.412Z",
+          "content": "\u001b[90m2026-10-07T20:45:04.057847Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/export.json\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0m9adqpim965l8r1l06hag8uguas \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:45:12.412Z",
+          "content": "\u001b[90m2026-10-07T20:45:03.035153Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/test\",\"-s\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/export.json\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m2.374208",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:53.937Z",
+          "content": "\u001b[90m2026-10-07T20:44:53.554283Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36mcommand=\u001b[0m[\"python3\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/guest-signin.py\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mStartExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m46867.213875",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:52.893Z",
+          "content": "\u001b[90m2026-10-07T20:44:51.762604Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"exit status 1\"\u001b[0m\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/test\",\"-s\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/export.json\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m1.90875",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:48.771Z",
+          "content": "\u001b[90m2026-10-07T20:44:40.824749Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"exit status 1\"\u001b[0m\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/test\",\"-s\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/export.json\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m1.799",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:30.287Z",
+          "content": "\u001b[90m2026-10-07T20:44:29.975502Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"exit status 1\"\u001b[0m\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/test\",\"-s\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/export.json\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m1.768667",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:30.287Z",
+          "content": "\u001b[90m2026-10-07T20:44:29.138105Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mcommand done\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"signal: killed\"\u001b[0m\u001b[0m \u001b[36mid=\u001b[0mkdu9ag7vfkt012if1ofk57m1qo \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:30.287Z",
+          "content": "\u001b[90m2026-10-07T20:44:29.137641Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"wait: remote command exited without exit status or exit signal\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-ssh",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:26.143Z",
+          "content": "\u001b[90m2026-10-07T20:44:24.951493Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"websocket: close sent\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-querystate",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:26.143Z",
+          "content": "\u001b[90m2026-10-07T20:44:24.856318Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"websocket: close sent\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-querystate",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:26.143Z",
+          "content": "\u001b[90m2026-10-07T20:44:18.589578Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"exit status 1\"\u001b[0m\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/test\",\"-s\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/export.json\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m1.728084",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:07.655Z",
+          "content": "\u001b[90m2026-10-07T20:44:07.566947Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"exit status 1\"\u001b[0m\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/test\",\"-s\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/evidence/export.json\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m2.405792",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:07.128Z",
+          "content": "\u001b[90m2026-10-07T20:44:05.914995Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36mcommand=\u001b[0m[\"python3\",\"-c\",\"import hashlib,json,pathlib,subprocess,sys; r=pathlib.Path(sys.argv[1]); b=json.loads((r/'input.json').read_text()); assert hashlib.sha256((r/'source.bundle').read_bytes()).hexdigest()==b['bundle_sha256']; subprocess.run(['git','clone','--no-checkout',str(r/'source.bundle'),str(r/'source')],check=True); subprocess.run(['git','checkout','--detach',b['source_commit']],cwd=r/'source',check=True); p=r/'qualification.patch'; assert hashlib.sha256(p.read_bytes()).hexdigest()==b['source_patch_sha256']; p.stat().st_size and subprocess.run(['git','apply','--binary',str(p)],cwd=r/'source',check=True); (r/'source/qualification.patch').write_bytes(p.read_bytes())\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m7295.918542",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:00.956Z",
+          "content": "\u001b[90m2026-10-07T20:44:00.934354Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mcommand done\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"signal: killed\"\u001b[0m\u001b[0m \u001b[36mid=\u001b[0met1adqqk0tpr3bs5crscs7ir88 \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:44:00.956Z",
+          "content": "\u001b[90m2026-10-07T20:44:00.933949Z\u001b[0m \u001b[31mERR\u001b[0m \u001b[1mfailed\u001b[0m \u001b[36merror=\u001b[0m\u001b[31m\u001b[1m\"wait: remote command exited without exit status or exit signal\"\u001b[0m\u001b[0m \u001b[36mcomponent=\u001b[0mwebsocket-ssh",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:43:58.275Z",
+          "content": "\u001b[90m2026-10-07T20:43:57.983131Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat > /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/guest-signin.py && chmod 644 /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/guest-signin.py\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0mt776e19o7j6cs3e16o6rih82is \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:43:57.087Z",
+          "content": "\u001b[90m2026-10-07T20:43:57.084594Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat > /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/input.json && chmod 600 /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/input.json\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0mk58dpvjiqkmgdeddlo572d2hok \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:43:55.361Z",
+          "content": "\u001b[90m2026-10-07T20:43:55.107538Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat > /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/candidate.tgz && chmod 600 /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/candidate.tgz\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0m1mv9tqh33jdu05t016i7s728dg \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:43:54.312Z",
+          "content": "\u001b[90m2026-10-07T20:43:54.310454Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat > /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/qualification.patch && chmod 600 /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/qualification.patch\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0mobdgokdohuc7fjm95b927p85so \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:43:51.704Z",
+          "content": "\u001b[90m2026-10-07T20:43:51.617605Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat > /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/source.bundle && chmod 644 /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/source.bundle\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0m5g6opoejqf4rjg6n0bt5skrmhs \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:43:51.704Z",
+          "content": "\u001b[90m2026-10-07T20:43:50.765472Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36mcommand=\u001b[0m[\"python3\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/runtime.py\",\"runtime\",\"--tools\",\"/Volumes/devbox/9router/qualification/tools/9efb0af2d6cf09cfb5053c0e51721b9b3d4956d346234f39368d943d25a3c9a7\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m1474.385208",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:43:48.587Z",
+          "content": "\u001b[90m2026-10-07T20:43:48.353206Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/zsh\",\"-c\",\"cat > /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/runtime.py && chmod 644 /Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/runtime.py\"] \u001b[36mdir=\u001b[0m/Users/runner/workspaces \u001b[36mgid=\u001b[0m20 \u001b[36mid=\u001b[0mf36occ9cfead6vf0a81lsiumrc \u001b[36mremote_addr=\u001b[0m \u001b[36mservice=\u001b[0msshd \u001b[36muid=\u001b[0m501",
+          "source": "applications",
+          "stream": ""
+        },
+        {
+          "timestamp": "2026-10-07T20:43:47.532Z",
+          "content": "\u001b[90m2026-10-07T20:43:47.508526Z\u001b[0m \u001b[32mINF\u001b[0m \u001b[1mrun/exec\u001b[0m \u001b[36mcommand=\u001b[0m[\"/bin/mkdir\",\"-p\",\"-m\",\"700\",\"/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b\"] \u001b[36mcwd=\u001b[0m/Users/runner/workspaces \u001b[36mmethod=\u001b[0mRunExec \u001b[36mservice=\u001b[0mnamespace.private.devbox.wire.v1beta.AgentService \u001b[36mtook=\u001b[0m427.021291",
+          "source": "applications",
+          "stream": ""
+        }
+      ],
+      "complete": true,
+      "retentionDays": 7
+    },
+    {
+      "instanceId": "ptg0dv09olrn0",
+      "subjects": 17,
+      "lines": [],
+      "complete": true,
+      "retentionDays": 7
+    },
+    {
+      "instanceId": "9d6g9pu89jovg",
+      "subjects": 13,
+      "lines": [],
+      "complete": true,
+      "retentionDays": 7
+    }
+  ]
+}

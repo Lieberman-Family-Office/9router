@@ -1,0 +1,30 @@
+{
+  "scope": "Task5 persistence diagnosis; exact observed losses, differential successful checkpoints, and non-activating API lineage. Not a full Namespace reliability verdict.",
+  "default_storage_GB": 300,
+  "existing_devbox": {"id": "2tc0b2eg4mveo", "name": "9router-qualify-recovery", "sizeGB": 150, "ephemeral": false, "volume_tag": "devbox-2tc0b2eg4mveo", "physical_site": "iad4.nscluster.cloud", "volume_uuid": "E2A3AB3C-FDF7-4CD1-A887-A1A0649F5C13", "resize_restore_recreate": false},
+  "read_only_api_evidence": {"sdk": "@namespacelabs/sdk 1.4.0", "services": ["DevBoxService.Fetch", "DevBoxService.ListSnapshots", "StorageService.ListPersistentVolumeSnapshots", "StorageService.ListPersistentVolumes", "ComputeService.DescribeInstance", "ObservabilityService.FetchInstanceLogs"], "latest_snapshot_population": 131, "tagged_volume_population": 1, "ssh_credentials_requested": false},
+  "baseline_loss": {"create_instance": "2d9r1uv5bl6au", "read_instance": "oui3ubpjdu7ns", "independent_signin_counts": {"codex_oauth":1,"claude_oauth":1,"api_keys":1}, "create_completed_snapshot": "kvrj224gd9cqr3h2igtpbob2hs", "read_start_snapshot": "kvrj224gd9cqr3h2igtpbob2hs", "exact_bound_home_absent": true},
+  "nested_red": {"create_instance": "c77ffjieqc6h2", "read_instance": "dia700cgv26vs", "create_snapshot_id": "2mn9a3dq2cfno", "create_completed_snapshot": "bgom51nhldqc0fc8vjkfiqnhkc", "read_start_snapshot": "bgom51nhldqc0fc8vjkfiqnhkc", "file_directory_fsync_and_sync": true, "missing_checkpoint": true},
+  "differential_green": [
+    {"evidence":"boundary-f51a1da664fa", "create_instance":"ptg0dv09olrn0", "read_instance":"qqleonf6j7qcg", "paths":["volume-root","workspace"], "same_instance_readback":true, "post_stop_hashes_equal":true, "completed_snapshot":"nmck22v0qjnlp3srikebh3o22c", "read_start_snapshot":"nmck22v0qjnlp3srikebh3o22c"},
+    {"evidence":"boundary-09e393820ccf", "create_instance":"9d6g9pu89jovg", "read_instance":"ql94getvg6mgg", "paths":["volume-root","workspace","nested-9router-diagnostics-home-db"], "same_instance_readback":true, "post_stop_hashes_equal":true, "completed_snapshot":"31mrlqodipr612pe9ibscdkkik", "read_start_snapshot":"31mrlqodipr612pe9ibscdkkik"}
+  ],
+  "measured_timing_discriminator": "For the two selected lost-write create instances, API snapshot createdAt/releasedAt+committed are about 53-56 seconds BEFORE instance readyAt. For both selected passing create instances, releasedAt is about 15-32 seconds AFTER instance destroyedAt. Vendor timestamp causality is not documented; this is a falsifiable correlation, not the root cause.",
+  "hypothesis_results": {
+    "stale_snapshot_selected": "Disfavored for measured failures: read start_snapshot equals creator reported completedSnapshot.",
+    "snapshot_completed_metadata_but_excluded_later_writes": "Leading hypothesis based on before-ready release metadata; requires vendor/internal semantics or exact snapshot-byte corroboration.",
+    "configured_restore_template": "No ephemeral spec, blueprint reference, custom volumes or startup operations in fetched current DevBox spec. Not a universal historical configuration claim.",
+    "guest_startup_cleanup": "Scoped service census found only so.namespace.vmguest; observed exact existing startup entrypoint/start.sh/dashboard helper relevant lines do not identify deletion of these paths. Passing identical nested location disproves unconditional cleanup. Other cleanup unknown.",
+    "diagnostic_or_export_bug": "Path and hash observations bound to exact volume/hostname/instance; later independent same-instance and after-stop comparisons pass. Original RED remains valid; it was not deterministic across subsequent instances."
+  },
+  "tool_blocker": "StorageService.DescribePersistentVolume returns [not_found] volume not found even for a released ID returned by ListPersistentVolumes; snapshot and attachment metadata remain available. No API read exposes snapshot file contents or documents pre-ready commit semantics.",
+  "vendor_contract": {"url":"https://namespace.so/docs/architecture/storage/persistent-volumes", "governing_text":"Namespace Persistent Volumes provide durable block storage that is guaranteed to persist across instance lifetimes. Data is automatically snapshotted when an instance shuts down.", "stop_url":"https://namespace.so/docs/reference/devbox-cli/stop", "force_semantics":"skip confirmation; no documented snapshot bypass"},
+  "red_capable_command": "PYTHONDONTWRITEBYTECODE=1 python3 docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-persistence-proof.py",
+  "retrieval_command": "node docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/snapshot-metadata.mjs <existing-sdk-root> <new-evidence.json> <comma-separated-instance-ids>",
+  "falsifier": "Vendor evidence that these pre-ready snapshot fields are ordinary metadata unrelated to persisted bytes, plus a valid snapshot of the lost instance containing the exact checkpoint; or an independently traced guest writer deleting that checkpoint after restore.",
+  "safe_repair": "No documented safe configuration repair established. Do not resize, recreate, force a snapshot restore, substitute unknown-provenance credentials, or bypass live authentication. Request operator choice before vendor posting or any recovery infrastructure action.",
+  "cleanup": "Every guest experiment exported evidence and stopped/no-instance verified immediately and after60s; current compute stopped.",
+  "production_touched": false,
+  "authentication_receipt": "blocked; exact independently signed-in baseline absent",
+  "pr_or_push": "none; guest push scans remain pending"
+}

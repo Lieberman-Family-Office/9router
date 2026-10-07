@@ -1,0 +1,126 @@
+{
+  "scope": "five selected existing instances; timestamps are API metadata, not a snapshot byte-content oracle",
+  "records": [
+    {
+      "label": "sign-in",
+      "instanceId": "2d9r1uv5bl6au",
+      "observedWriteAt": 1791406451,
+      "retained": false,
+      "hardware": "mac-m5-max",
+      "instanceCreatedAt": 1791405695.1004672,
+      "instanceReadyAt": 1791405822.96421,
+      "instanceDestroyedAt": 1791406495.2388387,
+      "snapshotId": "be5cf3us8jpq8",
+      "snapshotParent": "rtg2oqnt9786c",
+      "snapshotCompleted": "kvrj224gd9cqr3h2igtpbob2hs",
+      "snapshotCreatedAt": 1791405766.79872,
+      "snapshotReleasedAt": 1791405766.79872,
+      "snapshotReleaseReason": "committed",
+      "snapshotReleaseMinusReadySeconds": -56.16549015045166,
+      "snapshotReleaseMinusDestroyedSeconds": -728.4401187896729,
+      "snapshotReleaseMinusWriteSeconds": -684.2012801170349,
+      "attachment": {
+        "volume_name": "devbox-2tc0b2eg4mveo",
+        "start_snapshot": "5s5lednqai15mm71tftuqffmk0",
+        "snapshot": "kvrj224gd9cqr3h2igtpbob2hs"
+      }
+    },
+    {
+      "label": "nested-checkpoint-create",
+      "instanceId": "c77ffjieqc6h2",
+      "observedWriteAt": null,
+      "retained": false,
+      "hardware": "mac-m5-max",
+      "instanceCreatedAt": 1791408769.8372107,
+      "instanceReadyAt": 1791408892.479381,
+      "instanceDestroyedAt": 1791408895.103536,
+      "snapshotId": "2mn9a3dq2cfno",
+      "snapshotParent": "mujpm5btaecqc",
+      "snapshotCompleted": "bgom51nhldqc0fc8vjkfiqnhkc",
+      "snapshotCreatedAt": 1791408839.001401,
+      "snapshotReleasedAt": 1791408839.001401,
+      "snapshotReleaseReason": "committed",
+      "snapshotReleaseMinusReadySeconds": -53.47798013687134,
+      "snapshotReleaseMinusDestroyedSeconds": -56.10213494300842,
+      "snapshotReleaseMinusWriteSeconds": null,
+      "attachment": {
+        "volume_name": "devbox-2tc0b2eg4mveo",
+        "start_snapshot": "fg26svp3sl4cr7fe3j3ss46ar8",
+        "snapshot": "bgom51nhldqc0fc8vjkfiqnhkc"
+      }
+    },
+    {
+      "label": "nested-checkpoint-read",
+      "instanceId": "dia700cgv26vs",
+      "observedWriteAt": null,
+      "retained": null,
+      "hardware": "mac-m4",
+      "instanceCreatedAt": 1791408988.710661,
+      "instanceReadyAt": 1791409035.290909,
+      "instanceDestroyedAt": 1791409038.2997742,
+      "snapshotId": "la4nr8e1sil2a",
+      "snapshotParent": "2mn9a3dq2cfno",
+      "snapshotCompleted": "ksds74cqfs6je0khrs7tvf8dlk",
+      "snapshotCreatedAt": 1791409069.647607,
+      "snapshotReleasedAt": 1791409069.647607,
+      "snapshotReleaseReason": "committed",
+      "snapshotReleaseMinusReadySeconds": 34.35669803619385,
+      "snapshotReleaseMinusDestroyedSeconds": 31.347832918167114,
+      "snapshotReleaseMinusWriteSeconds": null,
+      "attachment": {
+        "volume_name": "devbox-2tc0b2eg4mveo",
+        "start_snapshot": "bgom51nhldqc0fc8vjkfiqnhkc",
+        "snapshot": "ksds74cqfs6je0khrs7tvf8dlk"
+      }
+    },
+    {
+      "label": "root-workspace-create",
+      "instanceId": "ptg0dv09olrn0",
+      "observedWriteAt": 1791409881.886009,
+      "retained": true,
+      "hardware": "mac-m4",
+      "instanceCreatedAt": 1791409846.9865797,
+      "instanceReadyAt": 1791409872.776272,
+      "instanceDestroyedAt": 1791409884.2311285,
+      "snapshotId": "ff5ssm93t0f18",
+      "snapshotParent": "la4nr8e1sil2a",
+      "snapshotCompleted": "nmck22v0qjnlp3srikebh3o22c",
+      "snapshotCreatedAt": 1791409899.564082,
+      "snapshotReleasedAt": 1791409899.564082,
+      "snapshotReleaseReason": "committed",
+      "snapshotReleaseMinusReadySeconds": 26.7878098487854,
+      "snapshotReleaseMinusDestroyedSeconds": 15.332953453063965,
+      "snapshotReleaseMinusWriteSeconds": 17.678072929382324,
+      "attachment": {
+        "volume_name": "devbox-2tc0b2eg4mveo",
+        "start_snapshot": "ksds74cqfs6je0khrs7tvf8dlk",
+        "snapshot": "nmck22v0qjnlp3srikebh3o22c"
+      }
+    },
+    {
+      "label": "three-path-create",
+      "instanceId": "9d6g9pu89jovg",
+      "observedWriteAt": 1791410254.639478,
+      "retained": true,
+      "hardware": "mac-m5-max",
+      "instanceCreatedAt": 1791410219.522561,
+      "instanceReadyAt": 1791410242.899042,
+      "instanceDestroyedAt": 1791410257.2748024,
+      "snapshotId": "jquifouvgefno",
+      "snapshotParent": "3k4pillpp7els",
+      "snapshotCompleted": "31mrlqodipr612pe9ibscdkkik",
+      "snapshotCreatedAt": 1791410288.847602,
+      "snapshotReleasedAt": 1791410288.847602,
+      "snapshotReleaseReason": "committed",
+      "snapshotReleaseMinusReadySeconds": 45.94855999946594,
+      "snapshotReleaseMinusDestroyedSeconds": 31.57279944419861,
+      "snapshotReleaseMinusWriteSeconds": 34.20812392234802,
+      "attachment": {
+        "volume_name": "devbox-2tc0b2eg4mveo",
+        "start_snapshot": "hr2cpf85b5oolngo1qfi1tu01c",
+        "snapshot": "31mrlqodipr612pe9ibscdkkik"
+      }
+    }
+  ],
+  "diagnosis": "Lost-write instances have snapshot released/committed timestamps before instance readiness. Passing instances have release timestamps after instance destruction. Association is measured; vendor metadata semantics and causal mechanism remain unproven."
+}
