@@ -348,6 +348,7 @@ async function main() {
       const clientSocket = first.socket;
       const assetBefore = await request(port, '/_next/static/old-build.js');
       assert.equal(assetBefore.status, 200);
+      assert.equal(assetBefore.headers['cache-control'], 'public, max-age=31536000, immutable');
       assert.equal(assetBefore.body.toString(), 'immutable old chunk');
       const streamA = await openStream(port, '/stream');
       const wsA = await openWebSocket(port);
