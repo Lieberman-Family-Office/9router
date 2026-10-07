@@ -9,6 +9,8 @@ import subprocess
 import sys
 import time
 
+if not __debug__:
+    raise RuntimeError("Archived assertion-based runner refuses Python optimization")
 root = pathlib.Path(sys.argv[1])
 m = json.loads((root / "input.json").read_text())
 out = root / "evidence"
@@ -49,6 +51,9 @@ def stop_owned():
     if active is not None and active.poll() is None:
         try:
             os.killpg(active.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            # A raced exit is already stopped; wait below still reaps the owned child.
+            pass
         except PermissionError:
             active.terminate()
         try:
@@ -56,6 +61,9 @@ def stop_owned():
         except subprocess.TimeoutExpired:
             try:
                 os.killpg(active.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                # The process exited before escalation.
+                pass
             except PermissionError:
                 active.kill()
             active.wait(timeout=5)

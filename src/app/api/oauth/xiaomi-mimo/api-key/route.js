@@ -72,6 +72,9 @@ export async function POST(request) {
       ),
     );
     if (existing) {
+      if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+        return NextResponse.json({ error: "Credential edits require reauthorization" }, { status: 409 });
+      }
       const updated = await updateProviderConnection(existing.id, {
         accessToken: key || existing.accessToken,
         providerSpecificData: {
