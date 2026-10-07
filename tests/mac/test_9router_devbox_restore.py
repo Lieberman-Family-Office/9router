@@ -105,19 +105,24 @@ class RestoreTest(unittest.TestCase):
     def test_restore_dispatches_only_scoped_controller_without_resetting_database(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            database = root / "data.sqlite"
+            database = root / ".9router/db/data.sqlite"
+            database.parent.mkdir(parents=True)
             database.write_bytes(b"preserve guest credentials")
             scope = root / "scope.json"
             scope.write_text(json.dumps({"phase": "qualification", "home": str(root)}))
             scope.chmod(0o600)
             with (
                 patch.object(qualify, "guest_guard"),
-                patch.object(qualify, "controller_call") as controller,
+                patch.object(qualify, "output") as controller,
             ):
                 self.assertEqual(
                     qualify.cmd_restore(SimpleNamespace(scope=str(scope))), 0
                 )
-            controller.assert_called_once_with(scope, "restore")
+            controller.assert_called_once()
+            argv, cwd, environment = controller.call_args.args
+            self.assertEqual(argv, qualify.controller_argv(scope, "restore"))
+            self.assertEqual(cwd, qualify.ROOT)
+            self.assertEqual(environment["HOME"], str(root))
             self.assertEqual(database.read_bytes(), b"preserve guest credentials")
 
     def test_native_schema_seed_has_independent_secrets_and_never_resets_existing_state(
