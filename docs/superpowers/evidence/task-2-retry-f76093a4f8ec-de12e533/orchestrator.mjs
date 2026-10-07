@@ -4,7 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createDevboxClient } from '@namespacelabs/sdk';
 
@@ -464,7 +464,13 @@ try {
   assert(executionId, 'Detached CLI did not return an execution ID');
   record.executionId = executionId; save();
   // Progress is safe JSON only; test stdout is sanitized into separate evidence files.
-  const streamed = spawnSync(cli, ['logs', args['devbox-name'], executionId], { timeout: 600000, stdio: ['ignore', 'inherit', 'pipe'], encoding: 'utf8' });
+  const streamed = await new Promise(resolve => {
+    const transport = spawn(cli, ['logs', args['devbox-name'], executionId], { signal: abort.signal, timeout: 600000, stdio: ['ignore', 'ignore', 'pipe'] });
+    let stderr = '';
+    transport.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-4096); });
+    transport.once('error', error => resolve({ error, status: null, stderr }));
+    transport.once('close', status => resolve({ status, stderr }));
+  });
   record.guestLogCompleted = !streamed.error && streamed.status === 0;
   if (!record.guestLogCompleted) record.logTransportFailure = safeError(streamed.error || new Error('Guest log transport failed'));
   save();
@@ -517,6 +523,15 @@ finally {
       record.guestSuccess=identity.success;
       immutable();
     } catch (e) { complete = false; record.exportFailure = safeError(e); }
+    // Never act by name on an unverified replacement instance.
+    const cleanupInstance = await metadata.devboxes.get(args['devbox-id'], { timeoutMs: 15000 });
+    matches(cleanupInstance);
+    if (!record.instanceId || cleanupInstance.info.instanceId !== record.instanceId) {
+      complete = false;
+      record.cleanupOwnershipFailure = 'Owned instance identity unavailable or changed; external recovery required';
+      save();
+      throw new Error(record.cleanupOwnershipFailure);
+    }
     // Release the uploaded scanner credential even when setup or export fails.
     try { cliRun(['exec', args['devbox-name'], '--', '/opt/homebrew/bin/python3', '-c', 'import pathlib; pathlib.Path('+JSON.stringify(remote+'/scanner-credential')+').unlink(missing_ok=True)'],30000); }
     catch (e) { complete = false; record.credentialCleanupFailure = safeError(e); }
