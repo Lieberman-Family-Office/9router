@@ -1309,6 +1309,26 @@ class ContinuousSigninTest(unittest.TestCase):
         signin.assert_called_once_with(Path("candidate.tgz"), binding, Path("guest-run"), 1200)
         controller.assert_not_called()
 
+    def test_recently_closed_private_port_waits_but_loaded_listener_refuses(self):
+        import errno
+        with (
+            patch.object(qualify.socket, "socket") as socket,
+            patch.object(qualify.subprocess, "run", return_value=unittest.mock.Mock(returncode=1, stdout="", stderr="")),
+            patch.object(qualify.time, "sleep"),
+        ):
+            socket.return_value.__enter__.return_value.bind.side_effect = [OSError(errno.EADDRINUSE, "recent connection"), None]
+            qualify.wait_signin_port(21128, 120)
+            self.assertEqual(socket.return_value.__enter__.return_value.bind.call_count, 2)
+        with (
+            patch.object(qualify.socket, "socket") as socket,
+            patch.object(qualify.subprocess, "run", return_value=unittest.mock.Mock(returncode=0, stdout="listener", stderr="")),
+            patch.object(qualify.time, "sleep") as sleep,
+        ):
+            socket.return_value.__enter__.return_value.bind.side_effect = OSError(errno.EADDRINUSE, "occupied")
+            with self.assertRaisesRegex(ValueError, "occupied listener"):
+                qualify.wait_signin_port(21128, 120)
+            sleep.assert_not_called()
+
     def test_confirmation_binds_run_and_instance_and_refuses_nonconfirmation(self):
         binding = {"run_id": "current", "namespace": {"devbox_id": "box", "instance_id": "instance"}}
         good = {"run_id": "current", "namespace": binding["namespace"], "operator_quote": "Signed in independently", "operator_turn": "current actual turn"}

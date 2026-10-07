@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import errno
 import fcntl
 import hashlib
 import importlib.util
@@ -1899,8 +1900,27 @@ def validate_signin_confirmation(confirmation, binding):
     )
 
 
+def wait_signin_port(port, timeout):
+    """Wait out closed fixture TCP state, never terminate an occupied listener."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.socket() as reservation:
+                reservation.bind(("127.0.0.1", port))
+            return
+        except OSError as error:
+            if error.errno != errno.EADDRINUSE:
+                raise
+            listener = subprocess.run(["/usr/sbin/lsof", "-nP", "-iTCP:" + str(port), "-sTCP:LISTEN"], capture_output=True, text=True, timeout=10)
+            require(listener.returncode == 1 and not listener.stdout.strip() and not listener.stderr.strip(), "sign-in port has occupied listener or unknown owner")
+            time.sleep(1)
+    raise TimeoutError("recent fixture TCP state did not clear")
+
+
 def interactive_baseline(tgz, binding, run_root, timeout):
     """Prepare only this run's private worker after deterministic jobs close."""
+    for port in (20128, 21128, 21130):
+        wait_signin_port(port, 120)
     scope_path, scope, manifest = prepare_scope(
         tgz, binding, run_id=safe_run_id(binding["run_id"] + "-live")
     )
