@@ -605,7 +605,7 @@ class RuntimeBindingTest(unittest.TestCase):
                 if argv[1:3] == ["bundle", "create"]:
                     Path(argv[3]).write_bytes(b"fixture bundle")
                     return ""
-                self.fail("unexpected host command: " + repr(argv))
+                raise AssertionError("unexpected host command: " + repr(argv))
 
             with (
                 patch.object(qualify, "ROOT", source),
