@@ -359,7 +359,7 @@ try:
     )
     for name, checkout in [("h2c-baseline", base), ("h2c-head", head)]:
         run(name, ["node", "tests/unit/custom-server-h2c.test.cjs"], checkout, 60)
-except BaseException as e:
+except Exception as e:
     (OUT / "guest-error.txt").write_text(repr(e))
     print("GUEST ERROR", repr(e), flush=True)
 finally:

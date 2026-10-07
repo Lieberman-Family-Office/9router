@@ -261,7 +261,7 @@ try:
     for p, h in m["overlay"].items():
         assert digest(checkout / p) == h, "Test overlay mutated"
     complete = True
-except BaseException as e:
+except Exception as e:
     save(out / "failure.json", {"type": type(e).__name__, "message": str(e)})
 finally:
     stop_owned()
