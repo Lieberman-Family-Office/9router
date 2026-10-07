@@ -156,15 +156,13 @@ for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,onSignal);
 save();fs.writeFileSync(path.join(evidence,'guest-runner.py'),guest);fs.writeFileSync(path.join(evidence,'checkpoint_plugin.py'),plugin);fs.writeFileSync(path.join(evidence,'orchestrator.mjs'),fs.readFileSync(new URL(import.meta.url)));
 try{
     immutable();git('archive','--format=tar','--output='+path.join(staging,'source.tar'),head);record.sourceArchiveSha256=sha(fs.readFileSync(path.join(staging,'source.tar')));save();
-    const {createDevboxClient}=await import('@namespacelabs/sdk');
-    const {setTimeout:delay}=await import('node:timers/promises');
-    metadata=createDevboxClient({connectionTimeoutMs:20000});
+    metadata=(await import('@namespacelabs/sdk')).createDevboxClient({connectionTimeoutMs:20000});
     try{claim=fs.openSync(claimPath,'wx',0o600);}catch(e){
         if(e.code!=='EEXIST')throw e;
         const bytes=fs.readFileSync(claimPath);let prior;try{prior=JSON.parse(bytes);}catch{throw new Error('Existing claim unreadable: ownership unknown');}
         record.existingClaim=prior;save();assert(Number.isSafeInteger(prior.pid)&&prior.pid>1,'Existing owner PID uncertain');
         let dead=false;try{process.kill(prior.pid,0);}catch(x){if(x.code==='ESRCH')dead=true;else throw new Error('Existing owner state uncertain');}assert(dead,'Existing owner is live');
-        for(const phase of ['dead-claim-immediate','dead-claim-after-60-seconds']){if(phase.endsWith('60-seconds'))await delay(61000);const s=await observe(phase);assert(s.state==='stopped'&&!s.instanceId,'Dead claim compute not stopped');}
+        for(const phase of ['dead-claim-immediate','dead-claim-after-60-seconds']){if(phase.endsWith('60-seconds'))await new Promise(resolve=>setTimeout(resolve,61000));const s=await observe(phase);assert(s.state==='stopped'&&!s.instanceId,'Dead claim compute not stopped');}
         assert(fs.readFileSync(claimPath).equals(bytes),'Existing claim changed');fs.writeFileSync(path.join(evidence,'recovered-claim.json'),JSON.stringify({previous:prior,bytesSha256:sha(bytes),observations:record.lifecycle},null,2));fs.unlinkSync(claimPath);claim=fs.openSync(claimPath,'wx',0o600);
     }
     fs.writeFileSync(claim,JSON.stringify({pid:process.pid,runId,head,evidence}));
