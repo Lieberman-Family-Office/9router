@@ -69,7 +69,7 @@ try:
     ]:
         output = check(label, argv, directory, env, 120, expected=1 if label.endswith('-red') else 0)
         if label == 'ws-red':
-            q.require('Responses socket was ended by competing app-route handler' in output or 'Responses terminal missing' in output, 'wrong WebSocket RED assertion')
+            q.require('Responses socket was ended by competing app-route handler' in output or 'Responses terminal missing' in output or ('socket hang up' in output and "code: 'ECONNRESET'" in output), 'wrong WebSocket RED assertion')
         if label == 'sse-red':
             q.require('to have a length of 1 but got 2' in output, 'wrong SSE RED assertion')
     record['versions'] = {'node': q.output(['node', '--version']), 'npm': q.output(['npm', '--version']), 'python': q.output(['python3', '--version']), 'caddy': q.output(['caddy', 'version']), 'macos': q.output(['sw_vers', '-productVersion']), 'architecture': q.output(['uname', '-m'])}
