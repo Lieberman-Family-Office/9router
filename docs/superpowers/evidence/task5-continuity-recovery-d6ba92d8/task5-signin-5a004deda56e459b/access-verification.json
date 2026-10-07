@@ -1,0 +1,17 @@
+{
+  "phase": "manual-signin-required",
+  "observed_guest_endpoints": [{"path": "/login", "status": 200}, {"path": "/api/version", "status": 200}, {"path": "/dashboard/providers/codex", "status": 200, "final_path": "/login"}, {"path": "/dashboard/providers/claude", "status": 200, "final_path": "/login"}],
+  "host_listeners": ["127.0.0.1:32128", "127.0.0.1:1455"],
+  "forward_pid": 7485,
+  "supervisor_pid": 68369,
+  "guest_worker_pid": 930,
+  "devbox_id": "2tc0b2eg4mveo",
+  "instance_id": "2d9r1uv5bl6au",
+  "url": "http://localhost:32128/login",
+  "sign_in_deadline_epoch": 1791407107.87021,
+  "provider_probes_run": false,
+  "enrollment_checkpoint": "legacy-stopped; pinned worker ready; readiness provider probe still mandatory",
+  "baseline_receipt_written": false,
+  "production_touched": false,
+  "manual_confirmation_must_retain_supervisor_until_enrollment_completes": true
+}
