@@ -17,6 +17,7 @@ const require = createRequire(import.meta.url);
 const {
   assertRequiredApiArtifacts,
   copyStandaloneBuild,
+  copyResponsesWsArtifacts,
   mergeServerArtifacts,
 } = require("../../cli/scripts/build-cli.js");
 
@@ -95,6 +96,32 @@ describe("CLI build server artifacts", () => {
       );
     });
   }
+
+  it("resolves the copied WebSocket registry beside an isolated alternate output", () => {
+    const root = createTempDir();
+    const source = path.join(root, "source");
+    const output = path.join(root, "isolated", "release", "app");
+    const sessionSource = fs.readFileSync(new URL("../../open-sse/handlers/responsesWs/session.js", import.meta.url), "utf8");
+    const registryImport = sessionSource.match(/createRequire\(import\.meta\.url\)\('([^']+)'\)/);
+    assert.ok(registryImport, "actual session registry import must be found");
+    const wsSource = new URL('../../open-sse/handlers/responsesWs/', import.meta.url);
+    for (const name of fs.readdirSync(wsSource)) {
+      writeFixture(source, `open-sse/handlers/responsesWs/${name}`, fs.readFileSync(new URL(name, wsSource)));
+    }
+    writeFixture(source, "src/lib/db/managed.cjs", "module.exports = { isolatedRegistry: true };\n");
+
+    copyResponsesWsArtifacts(source, output);
+
+    assert.deepEqual(fs.readdirSync(path.join(output, 'handlers/responsesWs')).sort(), fs.readdirSync(wsSource).sort());
+    const packagedSession = path.join(output, "handlers/responsesWs/session.js");
+    assert.equal(fs.readFileSync(packagedSession, "utf8"), sessionSource);
+    assert.deepEqual(createRequire(packagedSession)(registryImport[1]), { isolatedRegistry: true });
+    assert.equal(fs.existsSync(path.join(source, "cli/src/lib/db/managed.cjs")), false);
+    assert.equal(
+      fs.readFileSync(path.join(root, "isolated/release/src/lib/db/managed.cjs"), "utf8"),
+      "module.exports = { isolatedRegistry: true };\n",
+    );
+  });
 
   it("merges idempotently without removing standalone-generated files", () => {
     const root = createTempDir();

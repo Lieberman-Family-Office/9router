@@ -1,0 +1,64 @@
+// Native proof: retained stream cancellation, detached persistence, WS tasks and slot gating.
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import net from 'node:net';
+import { once } from 'node:events';
+import managed from '../../src/lib/db/managed.cjs';
+import { createDisconnectAwareStream, createStreamController, pipeWithDisconnect } from '../../open-sse/utils/streamHandler.js';
+const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), '9rc-')));
+fs.chmodSync(root, 0o700);
+process.env.NINEROUTER_MANAGED_WORKER = '1';
+process.env.NINEROUTER_HOTSWAP_RUNTIME = root;
+process.env.NINEROUTER_SLOT = 'a';
+const state = managed.workState();
+const defer = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+const awaitCleanup = async () => {
+  const deadline = Date.now() + 3000;
+  while (state.cleanup > 0 && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
+  assert.equal(state.cleanup, 0);
+};
+const server = net.createServer();
+try {
+  server.listen(path.join(root, 'a.sock'));
+  await once(server, 'listening');
+  assert.equal(managed.isActiveSlot(), false);
+  fs.symlinkSync(path.join(root, 'a.sock'), path.join(root, 'active.sock'));
+  assert.equal(managed.isActiveSlot(), true);
+  state.draining = true;
+  assert.equal(managed.isActiveSlot(), false);
+  state.draining = false;
+  const persistence = defer();
+  const saved = managed.trackWork('persistence', () => persistence.promise);
+  assert.equal(state.persistence, 1);
+  persistence.resolve(); await saved;
+  assert.equal(state.persistence, 0);
+  const cancellation = defer();
+  const source = new ReadableStream({ cancel: () => cancellation.promise });
+  const controller = createStreamController();
+  const body = createDisconnectAwareStream({ readable: source, writable: { getWriter: () => ({ abort: async () => {} }) } }, controller);
+  const cancelled = body.cancel('test');
+  await Promise.resolve();
+  assert.ok(state.cleanup > 0, 'client cancel must retain source cleanup');
+  cancellation.resolve(); await cancelled;
+  await awaitCleanup();
+  const upstreamCancel = defer();
+  const upstream = new ReadableStream({ cancel: () => upstreamCancel.promise });
+  const output = pipeWithDisconnect(new Response(upstream), new TransformStream(), createStreamController(), null, 10000);
+  await output.cancel();
+  assert.ok(state.cleanup > 0, 'pump cancellation remains counted after downstream close');
+  upstreamCancel.resolve();
+  await awaitCleanup();
+  const refresh = defer();
+  const { withRefreshWork, getRefreshWorkStatus } = await import('../../open-sse/services/tokenRefresh/dedup.js');
+  const operation = withRefreshWork(() => refresh.promise);
+  assert.equal(getRefreshWorkStatus().activeRefreshOperations, 1);
+  assert.equal(state.refresh, 1);
+  refresh.resolve(); await operation;
+  assert.equal(state.refresh, 0);
+  console.log('PASS: native cleanup retains cancel/pump/persistence/refresh work independently of client closure and gates active ownership');
+} finally {
+  await new Promise(resolve => server.close(resolve));
+  fs.rmSync(root, { recursive: true, force: true });
+}

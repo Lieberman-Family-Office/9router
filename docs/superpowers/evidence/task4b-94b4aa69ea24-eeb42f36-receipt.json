@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "provenance": "Condensed from the exported guest manifest, checks, packaged report and host lifecycle record; source checks ran exclusively in Namespace.",
+  "runId": "task4b-94b4aa69ea24-eeb42f36",
+  "head": "94b4aa69ea24f98b55fd66f80c3043a94f204c0c",
+  "result": "task4b-pass-packaged-endpoints-only",
+  "sourceTreeBinding": "887d5ddaf5006d0721f3a9572de8f4e99b21f2d2",
+  "provenanceCorrection": "sourceHashes match the committed Task 4b overlay at sourceTreeBinding; head is the historical pre-overlay base. On 2026-10-07 all seven original raw artifact digests were independently verified in the macOS os.tmpdir output of the original runner. This remains historical package-endpoint-only evidence, not current-head or full hot-swap acceptance.",
+  "rawEvidenceLocator": {
+    "kind": "original-runner-local-os.tmpdir",
+    "directoryPattern": "9r-task4b-TTHa2H/evidence",
+    "resolution": "Resolve the original producer host's Node os.tmpdir(); append directoryPattern. Do not substitute /tmp on macOS.",
+    "guestDirectory": "/Volumes/devbox/t4beeb42f36/evidence",
+    "originalRunner": "task4b-approved.mjs",
+    "originalOwnerSession": "ef67fdaa-3d82-4a60-8a11-ccd6c0628733",
+    "verifiedAt": "2026-10-07",
+    "verifiedArtifacts": 7,
+    "allRecordedDigestsMatched": true,
+    "sensitiveLogHandling": "secrets.log was hashed as opaque bytes; its contents were not displayed."
+  },
+  "scope": "Task 4b managed update/shutdown dispatch and packaged endpoint refusals; not full hot-swap release qualification or a push license.",
+  "authorization": {
+    "quote": "Yes—run Task 4b validation in Namespace and verify both shutdown confirmations (Recommended)",
+    "turn": "Current chat_selection in agent ef67fdaa-3d82-4a60-8a11-ccd6c0628733 on 2026-10-06"
+  },
+  "devbox": {
+    "id": "2tc0b2eg4mveo",
+    "name": "9router-qualify-recovery",
+    "instanceId": "lem03ra182qcs",
+    "executionId": "exec_94s72q5jbn1diu4eh3u23vs9s8",
+    "os": "macos",
+    "architecture": "arm64"
+  },
+  "runtime": {
+    "node": "v26.10.0",
+    "npm": "11.19.1",
+    "python": "Python 3.14.7",
+    "macos": "26.6.2",
+    "vitest": "4.1.11",
+    "eslint": "9.39.5",
+    "esbuild": "0.25.12",
+    "sonar": "1.9.0",
+    "sonarSha256": "8de8ec62c3614a9abb7053114fda85b9460b6ebdbca7bb612c6e58dc88ab2015"
+  },
+  "sourceHashes": {
+    "src/app/api/version/update/route.js": "1bbea89cef7fce90383690945dd9c30cee0411e868113a8d56d99e959b314151",
+    "src/app/api/version/shutdown/route.js": "5f2986aa09d21df5336a6e3156edeae86e8aa30b04121687613aa6ddb1d42fb0",
+    "tests/unit/managed-update.test.js": "718d70bab1352e06ade3bf2dd83b636f367c2ea506d7b1a4558fb967e60897d7"
+  },
+  "patchHashes": {
+    "source-0.patch": "0b7dc2d5696b6e2e6d783c9f856cce462850edb3622118798b1dd64554ae9a09",
+    "source-1.patch": "ca370f231ee8011b6afcb6da9040d9f312b94c67df6f1f2ffcdc5b308719588a",
+    "source-2.patch": "a19b23b56e40e6c6a5553d706742010ddc236384aebb686c800857654d9d91f8"
+  },
+  "patchRoundTrip": true,
+  "sourceUnchangedDuringRun": true,
+  "checks": [
+    { "name": "dependencies-app", "exitCode": 0, "validated": true, "population": 1 },
+    { "name": "dependencies-tests", "exitCode": 0, "validated": true, "population": 1 },
+    { "name": "dependencies-cli", "exitCode": 0, "validated": true, "population": 1 },
+    { "name": "tool-versions", "exitCode": 0, "validated": true, "population": 3 },
+    { "name": "baseline-red", "exitCode": 1, "expectedExitCode": 1, "validated": true, "tests": 8, "passed": 4, "managedFailures": 4, "unmanagedFailures": 0, "skipped": 0 },
+    { "name": "green", "exitCode": 0, "validated": true, "tests": 8, "passed": 8, "failed": 0, "skipped": 0 },
+    { "name": "mutation-update", "exitCode": 1, "expectedExitCode": 1, "validated": true, "tests": 8, "passed": 6, "managedFailures": 2, "unmanagedFailures": 0, "skipped": 0 },
+    { "name": "mutation-shutdown", "exitCode": 1, "expectedExitCode": 1, "validated": true, "tests": 8, "passed": 6, "managedFailures": 2, "unmanagedFailures": 0, "skipped": 0 },
+    { "name": "syntax-0", "exitCode": 0, "validated": true, "population": 1 },
+    { "name": "syntax-1", "exitCode": 0, "validated": true, "population": 1 },
+    { "name": "syntax-2", "exitCode": 0, "validated": true, "population": 1 },
+    { "name": "eslint", "exitCode": 0, "validated": true, "files": 3, "errors": 0, "warnings": 0 },
+    { "name": "cli-pack", "exitCode": 0, "validated": true, "population": 1 },
+    { "name": "packaged-endpoints", "exitCode": 0, "validated": true, "httpChecks": 4, "authenticated409": 2, "unauthenticated401": 2, "skipped": 0 },
+    { "name": "scanner-download", "exitCode": 0, "validated": true, "population": 1 },
+    { "name": "scanner-version", "exitCode": 0, "validated": true, "population": 1 },
+    { "name": "secrets", "exitCode": 0, "validated": true, "files": 3, "leg": "secrets only; not code analysis" }
+  ],
+  "packagedEndpoints": {
+    "filename": "9router-0.5.91-lfenergy.7.tgz",
+    "sha256": "40d0ad8a153c93c0ad8ddcc7a7d7e22d7379e5a46564503445c3c3f086ae34b0",
+    "fixtureSha256": "9620d161ad583971d4a861f7718e9b8f117335e9b6c1a11b391478dbd1d7533b",
+    "reportSha256": "d7141bea3145f37a7d7077c3d090226de0596b6b32f7bb97a6db39e5fe6ce224",
+    "adapter": "node:sqlite",
+    "productionMode": true,
+    "auth": "Real dashboard HS256 auth_token cookie with an isolated random secret",
+    "workerPid": 1030,
+    "appPid": 1031,
+    "sentinelPid": 1029,
+    "pidsUnchanged": true,
+    "postResponseObservationMinimumMs": 1001.3520830000002,
+    "shutdownTimerMs": 500,
+    "authenticatedBody": {
+      "success": false,
+      "message": "Managed releases use 9router_deploy.py with a qualified tarball."
+    },
+    "unauthenticatedBody": { "error": "Unauthorized" },
+    "boundariesUnchanged": ["pidFilePreserved", "seedUnchanged", "packageEntriesUnchanged", "enrollmentUnchanged", "updaterArtifactsAbsent", "processIdentitiesUnchanged", "sentinelAlive"],
+    "remainingFixtureProcessCount": 0,
+    "credentialCleanup": true,
+    "providerCredentials": false
+  },
+  "shutdown": {
+    "method": "Force stop followed by non-activating SDK metadata reads",
+    "stopSucceeded": true,
+    "immediate": {
+      "at": "2026-10-06T18:35:45.218Z",
+      "monotonicMs": 174676.842459,
+      "state": "stopped",
+      "instanceId": null
+    },
+    "delayed": {
+      "at": "2026-10-06T18:36:45.296Z",
+      "monotonicMs": 234753.989667,
+      "state": "stopped",
+      "instanceId": null
+    },
+    "elapsedMs": 60077.147208,
+    "verified": true,
+    "claimReleased": true,
+    "hostCredentialCleanup": true,
+    "guestCredentialCleanup": true
+  },
+  "durableEvidenceArchive": {
+    "kind": "private-non-git-byte-preserved-copy",
+    "homeRelativeDirectory": "dev/9router_evidence/task4b-94b4aa69ea24-eeb42f36",
+    "resolution": "Path.home() / homeRelativeDirectory, or $HOME/homeRelativeDirectory",
+    "archive": "raw-evidence.tar.gz",
+    "archiveSha256": "6ee41d67a99c76d083b20ae7336dca596fb8f1d8e0676faae43fb43d02ce5a50",
+    "extractedDirectory": "evidence",
+    "copiedAt": "2026-10-07",
+    "provenance": "Byte-preserved copy made after the original run. Later Task 5 subtrees keep their original paths and are not Task 4b evidence. Only files bound by the original Task 4b manifest are original-run artifacts.",
+    "verification": "Archive digest and seven raw digests independently verified. Parent verified extraction plus recursive byte comparison; tar -d was not supported and is not claimed.",
+    "permissions": "Root and extracted evidence directories 0700; compressed archive 0600; no group/other access. No raw bytes published to Git."
+  },
+  "rawEvidenceHashes": {
+    "manifest.json": "46305b5dedaccffa0aab36f37d23605ee62525f88d91b8230b2f9aa3a4e91f9c",
+    "checks.json": "c575a680e7a2bf6f495141d3b32e451306c014187874da856ffbbde13b6d1614",
+    "identity.json": "c60e0a801742bca23f00dffdae2f89289be310e0a4929a6afe6a2139c980676c",
+    "source-binding.json": "766221b8608d4e6fa673f446ed2892e4d839bd3dbdae8f873388a74bf414278e",
+    "green.json": "9364ccc72d8cb8bd214be1835b18439c9f748a9a79336181821a1efdf7c5191a",
+    "packaged-endpoints.json": "d7141bea3145f37a7d7077c3d090226de0596b6b32f7bb97a6db39e5fe6ce224",
+    "secrets.log": "38aa6eaeaf60a0ed388b100fa611d5828da1d95fa317d851fa7a785e38b76d4c"
+  },
+  "notRun": {
+    "ruff": "No Python source changes; not run, not a pass",
+    "s3776": "Python-only self-check cannot cover these JavaScript changes; not run, not a pass",
+    "dependencyRisks": "No dependency manifest changes; not run, not a pass",
+    "sonarCodeAnalysis": "Not run; a clean secrets scan is not code analysis"
+  },
+  "fullHotSwapReleaseQualified": false,
+  "pushLicensed": false,
+  "productionTouched": false,
+  "followUp": "Task 5 full hot-swap qualification: cutover, drain, retirement, concurrent refresh and rollback."
+}

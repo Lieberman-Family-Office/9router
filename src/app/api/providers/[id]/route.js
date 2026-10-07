@@ -116,6 +116,10 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: proxyPoolResult.error }, { status: 400 });
     }
 
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1" && Object.hasOwn(body, "apiKey")) {
+      return NextResponse.json({ error: "Credential edits require reauthorization" }, { status: 400 });
+    }
+
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (priority !== undefined) updateData.priority = priority;
@@ -135,8 +139,13 @@ export async function PUT(request, { params }) {
         proxyPoolResult.hasProxyPoolField
       )
     ) {
+      if (process.env.NINEROUTER_MANAGED_WORKER === "1" &&
+          ["accessToken", "refreshToken", "idToken", "apiKey", "token", "expiresAt", "expiresIn", "tokenExpiresAt", "lastRefreshAt", "tokenType", "scope", "copilotToken", "copilotTokenExpiresAt"]
+            .some(key => Object.hasOwn(providerSpecificData || {}, key))) {
+        return NextResponse.json({ error: "Credential edits require reauthorization" }, { status: 400 });
+      }
       updateData.providerSpecificData = {
-        ...(existing.providerSpecificData || {}),
+        ...(process.env.NINEROUTER_MANAGED_WORKER !== "1" ? existing.providerSpecificData || {} : {}),
         ...(providerSpecificData || {}),
       };
 
@@ -148,7 +157,8 @@ export async function PUT(request, { params }) {
 
       if (proxyPoolResult.hasProxyPoolField) {
         if (proxyPoolResult.proxyPoolId === null) {
-          delete updateData.providerSpecificData.proxyPoolId;
+          if (process.env.NINEROUTER_MANAGED_WORKER === "1") updateData.providerSpecificData.proxyPoolId = null;
+          else delete updateData.providerSpecificData.proxyPoolId;
         } else {
           updateData.providerSpecificData.proxyPoolId = proxyPoolResult.proxyPoolId;
         }

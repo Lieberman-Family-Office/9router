@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import managed from "../managed.cjs";
 import { getAdapter } from "../driver.js";
 import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 import { getMeta, setMeta } from "../helpers/metaStore.js";
@@ -240,6 +241,7 @@ export async function getActiveRequests() {
 }
 
 export async function saveRequestUsage(entry) {
+  const done = managed.beginWork('persistence');
   try {
     const db = await getAdapter();
 
@@ -310,8 +312,9 @@ export async function saveRequestUsage(entry) {
       scheduleStatsEvent("update", 250);
     }
   } catch (e) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === '1') managed.workState().unknown = true;
     console.error("Failed to save usage stats:", e);
-  }
+  } finally { done(); }
 }
 
 export async function getUsageHistory(filter = {}) {

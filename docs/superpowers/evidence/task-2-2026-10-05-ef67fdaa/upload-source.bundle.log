@@ -1,0 +1,7 @@
+COMMAND: ["devbox", "upload", "9router-qualify-recovery", "/tmp/task2-export-ef67fdaa-20261005-2215/source.bundle", "/Volumes/devbox/task2-ef67fdaa-20261005-2215/source.bundle"]
+
+
+ A new version of devbox is available: 0.0.196. 
+
+ Run `devbox update` to upgrade.
+

@@ -1,4 +1,5 @@
 import { saveRequestUsage, appendRequestLog, saveRequestDetail } from "@/lib/usageDb.js";
+import managed from "../../../src/lib/db/managed.cjs";
 import { COLORS } from "../../utils/stream.js";
 import { canonicalizeUsage } from "../../utils/usageTracking.js";
 import { serviceTier } from "../../providers/shared.js";
@@ -126,7 +127,7 @@ export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, 
     completion_tokens: tokens.completion_tokens ?? tokens.output_tokens ?? 0
   };
 
-  saveRequestUsage({
+  managed.trackWork('persistence', () => saveRequestUsage({
     provider: provider || "unknown",
     model: model || "unknown",
     tokens: normalized,
@@ -134,5 +135,5 @@ export function saveUsageStats({ provider, model, tokens, connectionId, apiKey, 
     connectionId: connectionId || undefined,
     apiKey: apiKey || undefined,
     endpoint: endpoint || null
-  }).catch(() => {});
+  })).catch(() => {});
 }

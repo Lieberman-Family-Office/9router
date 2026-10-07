@@ -1,0 +1,301 @@
+[
+  {
+    "name": "caddy-download",
+    "argv": [
+      "/usr/bin/curl",
+      "--fail",
+      "--location",
+      "--retry",
+      "2",
+      "--max-time",
+      "120",
+      "--output",
+      "/Volumes/devbox/q7f73c805/caddy.tar.gz",
+      "https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_mac_arm64.tar.gz"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.248,
+    "population": {
+      "unit": "pinned guest runtime downloads",
+      "count": 1
+    }
+  },
+  {
+    "name": "caddy-extract",
+    "argv": [
+      "/usr/bin/tar",
+      "-xzf",
+      "/Volumes/devbox/q7f73c805/caddy.tar.gz",
+      "-C",
+      "/Volumes/devbox/q7f73c805/tools",
+      "caddy"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.079,
+    "population": {
+      "unit": "verified runtime extractions",
+      "count": 1
+    }
+  },
+  {
+    "name": "clone-head",
+    "argv": [
+      "git",
+      "clone",
+      "--no-checkout",
+      "/Volumes/devbox/q7f73c805/source.bundle",
+      "/Volumes/devbox/q7f73c805/head"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.298,
+    "population": {
+      "unit": "checkout",
+      "count": 1
+    }
+  },
+  {
+    "name": "checkout-head",
+    "argv": [
+      "git",
+      "checkout",
+      "--detach",
+      "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 2.289,
+    "population": {
+      "unit": "revision",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-head-app",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 11.944,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-head-tests",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.558,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "clone-baseline",
+    "argv": [
+      "git",
+      "clone",
+      "--no-checkout",
+      "/Volumes/devbox/q7f73c805/source.bundle",
+      "/Volumes/devbox/q7f73c805/baseline"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.248,
+    "population": {
+      "unit": "checkout",
+      "count": 1
+    }
+  },
+  {
+    "name": "checkout-baseline",
+    "argv": [
+      "git",
+      "checkout",
+      "--detach",
+      "5fd82262218f5f00b4f987587318908e548ad65a"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.186,
+    "population": {
+      "unit": "revision",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-baseline-app",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 4.919,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "dependencies-baseline-tests",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts",
+      "--include=dev",
+      "--include=optional",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.398,
+    "population": {
+      "unit": "lockfile installs",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-baseline",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 10.149,
+    "population": {
+      "unit": "original baseline h2c failing reproduction",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-diagnostic-baseline",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "/Volumes/devbox/q7f73c805/baseline/tests/unit/h2c-diagnostic.cjs"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 10.135,
+    "population": {
+      "unit": "instrumented test mirrors; not acceptance",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-coalesced-baseline",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "/Volumes/devbox/q7f73c805/baseline/tests/unit/h2c-diagnostic.cjs"
+    ],
+    "revision": "5fd82262218f5f00b4f987587318908e548ad65a",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 10.16,
+    "population": {
+      "unit": "coalesced-body counterfactual; not acceptance",
+      "count": 1
+    }
+  },
+  {
+    "name": "h2c-head",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 0,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 0.195,
+    "population": {
+      "unit": "h2c framing and upgrade regression cases",
+      "count": 5
+    },
+    "logSha256": "78d51857d689b2fecc8161544e5ebe2ae364bc143137e904bc94826f60c34bad",
+    "requiredMarkers": []
+  },
+  {
+    "name": "h2c-counterfactual",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "--test-timeout=10000",
+      "tests/unit/custom-server-h2c.test.cjs"
+    ],
+    "revision": "1f8d2e5d7825f3b1bb14183fee488a14774b0bcd",
+    "exitCode": 1,
+    "timeout": false,
+    "cleanupFailure": null,
+    "seconds": 4.233,
+    "population": {
+      "unit": "new regression suite on pre-fix server mirror; expected failure",
+      "count": 5
+    }
+  }
+]

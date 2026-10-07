@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createProviderConnection } from "@/models";
-
 /**
  * POST /api/oauth/xiaomi-mimo/api-key
  * Import a Xiaomi MiMo API key manually (or from auto-import).
@@ -72,6 +71,30 @@ export async function POST(request) {
       ),
     );
     if (existing) {
+      if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+        const { getDashboardAuthSession } = await import("@/lib/auth/dashboardSession");
+        const { createHash } = await import("node:crypto");
+        const reauthorizationProof = request.cookies?.get?.("9r_mimo_reauth")?.value
+          || request.headers.get("cookie")?.split(";").map(part => part.trim()).find(part => part.startsWith("9r_mimo_reauth="))?.slice("9r_mimo_reauth=".length);
+        const proof = await getDashboardAuthSession(reauthorizationProof);
+        if (!sessionOnly || typeof mimoPassToken !== "string" || !proof || proof.purpose !== "xiaomi-reauthorization"
+            || !Number.isFinite(proof.reauthorizationExpiresAt) || proof.reauthorizationExpiresAt <= Date.now()
+            || proof.userId !== mimoUserId || proof.userId !== uid || proof.region !== normRegion
+            || proof.credentialSha256 !== createHash("sha256").update(mimoPassToken).digest("hex")
+            || existing.authType !== "oauth" || existing.email !== `${proof.userId}@xiaomi`) {
+          return NextResponse.json({ error: "Credential edits require verified reauthorization" }, { status: 409 });
+        }
+        const connection = await createProviderConnection({
+          provider: "xiaomi-mimo", authType: "oauth", email: existing.email,
+          providerSpecificData: { mimoPassToken, mimoUserId, mimoCUserId,
+            region: normRegion, authMethod: "session" },
+          testStatus: "active",
+        });
+        const response = NextResponse.json({ success: true, validated: true, updated: true,
+          connection: { id: connection.id, provider: connection.provider, email: connection.email, displayName: connection.displayName } });
+        response.headers.append("Set-Cookie", "9r_mimo_reauth=; Path=/api/oauth/xiaomi-mimo/api-key; HttpOnly; SameSite=Strict; Max-Age=0");
+        return response;
+      }
       const updated = await updateProviderConnection(existing.id, {
         accessToken: key || existing.accessToken,
         providerSpecificData: {

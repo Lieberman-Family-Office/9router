@@ -22,6 +22,7 @@ function throwIfCancelled(token) {
 }
 
 export async function enableTailscale(localPort = 20128) {
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1") throw new Error("Managed workers cannot start app-owned ingress");
   console.log(`[Tailscale] enable start (port=${localPort})`);
   svc.cancelToken = { cancelled: false };
   svc.activeLocalPort = localPort;

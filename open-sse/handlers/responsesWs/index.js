@@ -15,7 +15,7 @@ import { createResponsesWsSession } from "./session.js";
 export function attachResponsesWebSocket(server, opts = {}) {
   const localPort = opts.localPort || Number(process.env.PORT) || 20128;
 
-  const fetchLocalResponses = async (path, headers, body) => {
+  const fetchLocalResponses = async (path, headers, body, signal) => {
     const url = `http://127.0.0.1:${localPort}${path}`;
     return fetch(url, {
       method: "POST",
@@ -24,6 +24,7 @@ export function attachResponsesWebSocket(server, opts = {}) {
         host: `127.0.0.1:${localPort}`,
       },
       body: JSON.stringify(body),
+      signal,
     });
   };
 

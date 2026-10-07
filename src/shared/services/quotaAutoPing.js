@@ -1,5 +1,6 @@
 // Quota auto-ping scheduler: warms 5h windows by sending tiny opt-in requests right after reset.
 import "open-sse/index.js";
+import managed from "../../lib/db/managed.cjs";
 
 import { getSettings, getProviderConnections, updateProviderConnection } from "@/lib/localDb";
 import { getClaudeUsage } from "open-sse/services/usage/claude.js";
@@ -259,8 +260,9 @@ function createDefaultDeps() {
 }
 
 export async function runQuotaAutoPingTick(deps = createDefaultDeps(), state = g) {
-  if (state.running) return;
+  if (state.running || !managed.isActiveSlot()) return;
   state.running = true;
+  const done = managed.beginWork('quota');
   try {
     const settings = await deps.getSettings();
 
@@ -286,6 +288,7 @@ export async function runQuotaAutoPingTick(deps = createDefaultDeps(), state = g
     console.warn("[AutoPing] tick error:", e.message);
   } finally {
     state.running = false;
+    done();
   }
 }
 

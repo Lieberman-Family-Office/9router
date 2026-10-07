@@ -1,6 +1,7 @@
 // Re-export from open-sse with local logger
 import * as log from "../utils/logger.js";
-import { updateProviderConnection } from "../../lib/localDb.js";
+import { withRefreshWork } from "open-sse/services/tokenRefresh/dedup.js";
+import { updateProviderConnection, getProviderConnectionById } from "../../lib/localDb.js";
 import {
   getProjectIdForConnection,
   invalidateProjectId,
@@ -131,10 +132,10 @@ function _refreshProjectId(provider, connectionId, accessToken) {
   // Eagerly fetching projectId across multiple accounts simultaneously triggers Google Cloud anti-abuse / rate limits.
   // Runtime handlers (e.g. chat handler) will lazily call getProjectIdForConnection() on demand.
   if (process.env.EAGER_PROJECT_ID_REFRESH === "true") {
-    getProjectIdForConnection(connectionId, accessToken, provider)
+    withRefreshWork(() => getProjectIdForConnection(connectionId, accessToken, provider)
       .then((projectId) => {
         if (!projectId) return;
-        updateProviderCredentials(connectionId, { projectId }).catch((err) => {
+        return updateProviderCredentials(connectionId, { projectId }).catch((err) => {
           log.debug("TOKEN_REFRESH", "Failed to persist refreshed projectId", {
             connectionId,
             error: err?.message ?? err,
@@ -146,7 +147,7 @@ function _refreshProjectId(provider, connectionId, accessToken) {
           connectionId,
           error: err?.message ?? err,
         });
-      });
+      }));
   }
 }
 
@@ -161,15 +162,20 @@ function _refreshProjectId(provider, connectionId, accessToken) {
  * @returns {Promise<boolean>}
  */
 export async function updateProviderCredentials(connectionId, newCredentials) {
+  return withRefreshWork(async () => {
   try {
     const updates = {};
+    const managed = process.env.NINEROUTER_MANAGED_WORKER === "1";
 
+    for (const field of ["apiKey", "token", "tokenExpiresAt", "tokenType", "scope"]) {
+      if (Object.hasOwn(newCredentials, field) && newCredentials[field] !== undefined) updates[field] = newCredentials[field];
+    }
     if (newCredentials.accessToken)         updates.accessToken  = newCredentials.accessToken;
     if (newCredentials.refreshToken)        updates.refreshToken = newCredentials.refreshToken;
     if (newCredentials.idToken)             updates.idToken = newCredentials.idToken;
     if (newCredentials.lastRefreshAt)       updates.lastRefreshAt = newCredentials.lastRefreshAt;
     if (newCredentials.expiresAt)           updates.expiresAt = newCredentials.expiresAt;
-    if (newCredentials.expiresIn) {
+    if (newCredentials.expiresIn && !(managed && newCredentials.expiresAt)) {
       updates.expiresAt = toExpiresAt(newCredentials.expiresIn);
       updates.expiresIn = newCredentials.expiresIn;
     } else if (newCredentials.expiresAt) {
@@ -181,32 +187,35 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
     }
     if (newCredentials.providerSpecificData) {
       updates.providerSpecificData = {
-        ...(newCredentials.existingProviderSpecificData || {}),
+        ...(!managed ? newCredentials.existingProviderSpecificData || {} : {}),
         ...newCredentials.providerSpecificData,
       };
     }
     if (newCredentials.copilotToken || newCredentials.copilotTokenExpiresAt) {
       updates.providerSpecificData = {
-        ...(updates.providerSpecificData || newCredentials.existingProviderSpecificData || {}),
+        ...(updates.providerSpecificData || (!managed ? newCredentials.existingProviderSpecificData : {}) || {}),
         ...(newCredentials.copilotToken ? { copilotToken: newCredentials.copilotToken } : {}),
         ...(newCredentials.copilotTokenExpiresAt ? { copilotTokenExpiresAt: newCredentials.copilotTokenExpiresAt } : {}),
       };
     }
     if (newCredentials.projectId)            updates.projectId = newCredentials.projectId;
 
-    const result = await updateProviderConnection(connectionId, updates);
+    const result = await updateProviderConnection(connectionId, updates,
+      managed ? newCredentials.refreshGenerations : undefined);
     log.info("TOKEN_REFRESH", "Credentials updated in localDb", {
       connectionId,
       success: !!result
     });
     return !!result;
   } catch (error) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") throw new Error("Managed credential persistence refused");
     log.error("TOKEN_REFRESH", "Error updating credentials in localDb", {
       connectionId,
       error: error.message,
     });
     return false;
   }
+  });
 }
 
 // ─── Local-specific: proactive token refresh ─────────────────────────────────
@@ -221,10 +230,20 @@ export async function updateProviderCredentials(connectionId, newCredentials) {
  *   (used by background scheduler which applies a larger lead). Request path omits this.
  * @returns {Promise<object>} updated credentials object
  */
-export async function checkAndRefreshToken(provider, credentials, options = {}) {
+export function checkAndRefreshToken(provider, credentials, options = {}) {
+  return withRefreshWork(() => checkAndRefreshTokenImpl(provider, credentials, options));
+}
+async function checkAndRefreshTokenImpl(provider, credentials, options) {
   let creds = { ...credentials };
   if (!creds.connectionId && creds.id) {
     creds.connectionId = creds.id;
+  }
+
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+    if (!creds.connectionId) throw new Error("Managed refresh requires a persisted connection");
+    const current = await getProviderConnectionById(creds.connectionId);
+    if (!current) throw new Error("Managed refresh connection missing");
+    creds = { ...creds, ...current };
   }
 
   const force = options?.force === true;
@@ -255,7 +274,7 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
       creds = {
         ...creds,
         ...newCreds,
-        expiresAt: newCreds.expiresIn
+        expiresAt: newCreds.expiresIn && !(process.env.NINEROUTER_MANAGED_WORKER === "1" && newCreds.expiresAt)
           ? toExpiresAt(newCreds.expiresIn)
           : normalizeExpiresAt(newCreds.expiresAt) || newCreds.expiresAt || creds.expiresAt,
         providerSpecificData: newCreds.providerSpecificData
@@ -263,6 +282,9 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
           : creds.providerSpecificData,
       };
 
+      if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+        creds = { ...creds, ...await getProviderConnectionById(creds.connectionId) };
+      }
       // Non-blocking: refresh projectId with the new access token
       _refreshProjectId(provider, creds.connectionId, creds.accessToken);
     }
@@ -292,11 +314,20 @@ export async function checkAndRefreshToken(provider, credentials, options = {}) 
         };
 
         await updateProviderCredentials(creds.connectionId, {
-          providerSpecificData: updatedSpecific,
+          refreshGenerations: copilotTokenResult.refreshGenerations,
+          providerSpecificData: {
+            copilotToken: copilotTokenResult.token,
+            copilotTokenExpiresAt: copilotTokenResult.expiresAt,
+          },
         });
 
-        creds.providerSpecificData = updatedSpecific;
-        creds.copilotToken = copilotTokenResult.token;
+        if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+          creds = { ...creds, ...await getProviderConnectionById(creds.connectionId) };
+          creds.copilotToken = creds.providerSpecificData?.copilotToken;
+        } else {
+          creds.providerSpecificData = updatedSpecific;
+          creds.copilotToken = copilotTokenResult.token;
+        }
       }
     }
   }
@@ -322,6 +353,9 @@ export async function refreshGitHubAndCopilotTokens(credentials) {
 
   return {
     ...newGitHubCreds,
+    ...(process.env.NINEROUTER_MANAGED_WORKER === "1" ? {
+      refreshGenerations: { ...newGitHubCreds.refreshGenerations, ...copilotToken.refreshGenerations },
+    } : {}),
     providerSpecificData: {
       copilotToken:          copilotToken.token,
       copilotTokenExpiresAt: copilotToken.expiresAt,

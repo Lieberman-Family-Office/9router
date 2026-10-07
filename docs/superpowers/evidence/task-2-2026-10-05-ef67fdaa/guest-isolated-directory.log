@@ -1,0 +1,7 @@
+COMMAND: ["devbox", "exec", "9router-qualify-recovery", "--", "/bin/mkdir", "/Volumes/devbox/task2-ef67fdaa-20261005-2215"]
+
+
+ A new version of devbox is available: 0.0.196. 
+
+ Run `devbox update` to upgrade.
+

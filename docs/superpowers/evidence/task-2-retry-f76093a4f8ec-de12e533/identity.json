@@ -1,0 +1,39 @@
+{
+  "head": "f76093a4f8ecbf59d6b242c477293af897f02951",
+  "patchFiles": {
+    "tests/unit/custom-server-h2c-managed.test.cjs": "430eb2e923543f8b73a603f43f6e0bd097c266fcb9d4eb8fa352a2502c25288f",
+    "tests/mac/test_9router_worker_templates.py": "37d46e574fb99f29aaecf4b971cf90db6fb3ba7164e456a70e7349e4e02cda5a"
+  },
+  "baseline": "5fd82262218f5f00b4f987587318908e548ad65a",
+  "counterfactualBaseline": "245de4a9df6e62a3134d67c30c017a2ef6b43376",
+  "h2cCounterfactualBaseline": "e08fa1a43d89caeefa880a612db445c68d578d01",
+  "bundleSha256": "953d83555e72e6e40f1fabfaa5f71301da4fe6796a6ff2e581383a556ac060e9",
+  "runnerSha256": "369b5f52e3626be0e7b4a23788786e7bdaf6d147ecef4c318fa2dc98bf9c105c",
+  "lockHashes": {
+    "head": {
+      "package-lock.json": "f1d1aad476398e11e2cc3164c0802fb8ec8f76509f2042a98854b426d1e7aed8",
+      "tests/package-lock.json": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff"
+    },
+    "baseline": {
+      "package-lock.json": "f1d1aad476398e11e2cc3164c0802fb8ec8f76509f2042a98854b426d1e7aed8",
+      "tests/package-lock.json": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff"
+    }
+  },
+  "authorization": {
+    "quote": "Yes\u2014run Task 2 checks and scans in Namespace; verify shutdown twice; leave production untouched (Recommended)",
+    "provenance": "Current AskQuestion response namespace_task2_validation selected authorize. The question specifies immediate and 60+ second stopped/no-instance verification. No production authorization."
+  },
+  "devboxId": "2tc0b2eg4mveo",
+  "instanceId": "sjma0do2lpdme",
+  "success": true,
+  "interrupted": false,
+  "scope": "Task 2 deterministic source checks and routing prerequisites only; NOT packaging/launchd/production qualification",
+  "unrun": [
+    "Sonar code analysis",
+    "build/package",
+    "native Caddy-to-real-worker",
+    "launchd",
+    "Task 4/5 lifecycle fault-injection proofs"
+  ],
+  "testScope": "task2"
+}

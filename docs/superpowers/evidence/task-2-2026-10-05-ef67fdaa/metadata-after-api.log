@@ -1,0 +1,3 @@
+["node", "/tmp/namespace-runtime-check-ef67fdaa/task2-metadata.mjs", "verify"]
+{"checkedAt":"2026-10-05T22:17:35.743Z","id":"2tc0b2eg4mveo","name":"9router-qualify-recovery","state":"stopped","instanceId":null,"sdkVersion":"1.4.0"}
+EXIT: 0

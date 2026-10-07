@@ -1,0 +1,2 @@
+COMMAND: ["node", "/tmp/namespace-runtime-check-ef67fdaa/task2-metadata.mjs"]
+{"checkedAt":"2026-10-05T22:15:23.883Z","id":"2tc0b2eg4mveo","name":"9router-qualify-recovery","state":"running","instanceId":"a982pej3g2ilg","sdkVersion":"1.4.0"}

@@ -1,0 +1,11 @@
+{
+  "blocker": "guest execution failed",
+  "type": "GuestCheckFailure",
+  "diagnostic": "Packaged continuity failed: Old WebSocket truncated; SSE DONE marker missing. The MODULE_TYPELESS_PACKAGE_JSON warning is not the failure cause.",
+  "failureEvidence": "packaged-result.json",
+  "failures": [
+    { "phase": "fixture", "type": "Error", "reason": "Old WebSocket truncated" },
+    { "phase": "session-cleanup", "reason": "SSE DONE marker missing\n\n2 !== 1\n" }
+  ],
+  "provenanceCorrection": "Failure details copied from the preserved packaged-result.json. No new qualification was run."
+}

@@ -1,0 +1,27 @@
+["devbox", "upload", "9router-qualify-recovery", "/Users/jasonlieberman/dev/9router/tests/package-lock.json", "/Volumes/devbox/task2-ef67fdaa-20261005-2215/head/tests/package-lock.json"]
+
+
+ A new version of devbox is available: 0.0.196. 
+
+ Run `devbox update` to upgrade.
+
+["devbox", "exec", "9router-qualify-recovery", "--", "/bin/sh", "-c", "cd /Volumes/devbox/task2-ef67fdaa-20261005-2215/head && HOME=/Volumes/devbox/task2-ef67fdaa-20261005-2215/fake-home PATH=/opt/homebrew/bin:/usr/bin:/bin /opt/homebrew/bin/npm ci --prefix tests --no-audit --no-fund && shasum -a 256 tests/package-lock.json"]
+
+added 45 packages in 533ms
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+npm notice
+npm notice New major version of npm available! 11.19.1 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
+8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff  tests/package-lock.json
+
+
+ A new version of devbox is available: 0.0.196. 
+
+ Run `devbox update` to upgrade.
+
+EXIT: 0

@@ -6,6 +6,10 @@
  */
 
 import { SteerConnectionState, STEER_FAIL } from "./steerState.js";
+import { createRequire } from 'node:module';
+// Unmanaged hot-patch copies need no source-tree dependency.
+const managed = process.env.NINEROUTER_MANAGED_WORKER === '1'
+  ? createRequire(import.meta.url)('../../../src/lib/db/managed.cjs') : null;
 import { buildSteerContinuationCreate } from "./continuation.js";
 import { modelSupportsSteering, steerUpstreamMode } from "./models.js";
 import { encodeTextFrame, encodeCloseFrame, WsFrameReader } from "./wsFrames.js";
@@ -137,6 +141,7 @@ export function createResponsesWsSession({ socket, req, fetchLocalResponses, res
 
     if (activeAbort) activeAbort.abort();
     activeAbort = new AbortController();
+    const signal = activeAbort.signal;
 
     const headers = {};
     const auth = req.headers.authorization;
@@ -151,7 +156,7 @@ export function createResponsesWsSession({ socket, req, fetchLocalResponses, res
     const requiredInput = [];
 
     try {
-      const res = await fetchLocalResponses("/v1/responses", headers, createBody);
+      const res = await fetchLocalResponses("/v1/responses", headers, createBody, signal);
       if (!res.ok) {
         const text = await res.text().catch(() => "");
         send({
@@ -174,19 +179,25 @@ export function createResponsesWsSession({ socket, req, fetchLocalResponses, res
         return;
       }
 
-      const dec = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const { done, value } = await readerBody.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const parts = buf.split("\n");
-        buf = parts.pop() || "";
-        for (const line of parts) {
-          await onSseLine(line);
+      const cancelReader = () => { readerBody.cancel().catch(() => {}); };
+      signal.addEventListener("abort", cancelReader, { once: true });
+      try {
+        if (signal.aborted) { await readerBody.cancel(); return; }
+        const dec = new TextDecoder();
+        let buf = "";
+        while (true) {
+          const { done, value } = await readerBody.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const parts = buf.split("\n");
+          buf = parts.pop() || "";
+          for (const line of parts) await onSseLine(line);
         }
+        if (buf) await onSseLine(buf);
+      } finally {
+        signal.removeEventListener("abort", cancelReader);
+        readerBody.releaseLock();
       }
-      if (buf) await onSseLine(buf);
     } catch (err) {
       if (err?.name === "AbortError") return;
       send({
@@ -298,7 +309,7 @@ export function createResponsesWsSession({ socket, req, fetchLocalResponses, res
         });
         continue;
       }
-      Promise.resolve(handleClientEvent(event)).catch((err) => {
+      (managed ? managed.trackWork('websocket', () => handleClientEvent(event)) : Promise.resolve(handleClientEvent(event))).catch((err) => {
         send({
           type: "error",
           status: 500,

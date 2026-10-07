@@ -1,4 +1,5 @@
 import { BaseExecutor } from "./base.js";
+import { refreshCopilotToken, refreshGitHubToken } from "../services/tokenRefresh.js";
 import { PROVIDERS } from "../config/providers.js";
 import { OAUTH_ENDPOINTS, GITHUB_COPILOT } from "../config/appConstants.js";
 import { HTTP_STATUS } from "../config/runtimeConfig.js";
@@ -7,7 +8,7 @@ import { openaiResponsesToOpenAIResponse } from "../translator/response/openai-r
 import { initState, translateRequest, translateResponse } from "../translator/index.js";
 import { FORMATS } from "../translator/formats.js";
 import { parseSSELine, formatSSE } from "../utils/streamHelpers.js";
-import { proxyAwareFetch } from "../utils/proxyFetch.js";
+import { proxyAwareFetch, hasEnabledProxy } from "../utils/proxyFetch.js";
 import { stripUnsupportedParams } from "../translator/concerns/paramSupport.js";
 import { SSE_DONE } from "../utils/sseConstants.js";
 import { ANTHROPIC_API_VERSION } from "../providers/shared.js";
@@ -341,6 +342,10 @@ export class GithubExecutor extends BaseExecutor {
   }
 
   async refreshCopilotToken(githubAccessToken, log, proxyOptions = null) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      if (hasEnabledProxy(proxyOptions)) throw new Error("Managed refresh proxy contract unavailable");
+      return refreshCopilotToken(githubAccessToken, null);
+    }
     try {
       const response = await proxyAwareFetch("https://api.github.com/copilot_internal/v2/token", {
         headers: {
@@ -367,6 +372,10 @@ export class GithubExecutor extends BaseExecutor {
   }
 
   async refreshGitHubToken(refreshToken, log, proxyOptions = null) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      if (hasEnabledProxy(proxyOptions)) throw new Error("Managed refresh proxy contract unavailable");
+      return refreshGitHubToken(refreshToken, null);
+    }
     try {
       const params = {
         grant_type: "refresh_token",
@@ -400,14 +409,21 @@ export class GithubExecutor extends BaseExecutor {
       if (githubTokens?.accessToken) {
         copilotResult = await this.refreshCopilotToken(githubTokens.accessToken, log, proxyOptions);
         if (copilotResult) {
-          return { ...githubTokens, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+          return { ...githubTokens,
+            ...(process.env.NINEROUTER_MANAGED_WORKER === "1" ? { refreshGenerations: { ...githubTokens.refreshGenerations, ...copilotResult.refreshGenerations } } : {}),
+            copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
         }
         return githubTokens;
       }
     }
 
     if (copilotResult) {
-      return { accessToken: credentials.accessToken, refreshToken: credentials.refreshToken, copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt };
+      return {
+        ...(process.env.NINEROUTER_MANAGED_WORKER === "1"
+          ? { refreshGenerations: copilotResult.refreshGenerations }
+          : { accessToken: credentials.accessToken, refreshToken: credentials.refreshToken }),
+        copilotToken: copilotResult.token, copilotTokenExpiresAt: copilotResult.expiresAt,
+      };
     }
 
     return null;

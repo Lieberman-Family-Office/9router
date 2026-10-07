@@ -1,0 +1,2 @@
+COMMAND: ["devbox", "download", "9router-qualify-recovery", "/Volumes/devbox/task2-ef67fdaa-20261005-2215/evidence.tar", "/tmp/task2-export-ef67fdaa-20261005-2215/evidence.tar"]
+could not download /Volumes/devbox/task2-ef67fdaa-20261005-2215/evidence.tar: cat: /Volumes/devbox/task2-ef67fdaa-20261005-2215/evidence.tar: No such file or directory

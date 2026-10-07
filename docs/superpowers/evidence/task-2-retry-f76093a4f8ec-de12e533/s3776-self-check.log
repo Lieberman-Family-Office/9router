@@ -1,0 +1,3 @@
+self-check (heuristic — NOT the Sonar gate): 1 file(s), no S3776 hit (cognitive ≤ 15), no C901 hit (cyclomatic ≤ 5)
+  ERROR BAND (PI-335): this scorer is calibrated to ±1 against SonarPython on 7 functions (PI-236's two plus the five engine PR #98 gate failures, fixtures in tests/data/s3776_pr98/). Zero divergence was observed on all seven, but the sets are small: treat a score of 14–15 as AT RISK, not clear. Unmeasured shapes may diverge further.
+  A clean self-check licenses a PUSH, never a merge. The authoritative verdict is `sonar_pr_issues.py <PR> --require-clean` AFTER CI reports.

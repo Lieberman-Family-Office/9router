@@ -1,0 +1,15 @@
+Warning: you are leaving 7 commits behind, not connected to
+any of your branches:
+
+  1f8d2e5d fix(server): keep h2c bodies on the native HTTP request path
+  e08fa1a4 docs(mac): record incomplete Namespace worker validation
+  05b60693 fix(mac): own failed worker controls and package registry
+  8abc824c fix(mac): refuse retirement after observability failures
+ ... and 3 more.
+
+If you want to keep them by creating a new branch, this may be a good time
+to do so with:
+
+ git branch <new-branch-name> 1f8d2e5d
+
+HEAD is now at 5fd82262 docs(mac): define complete drain accounting and shutdown ownership

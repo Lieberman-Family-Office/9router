@@ -230,6 +230,10 @@ async function refreshOAuthToken(connection) {
   if (!refreshToken) return null;
 
   try {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      const refreshed = await refreshProviderCredentials(provider, connection, console);
+      return refreshed?.error ? null : refreshed;
+    }
     if (provider === "gemini-cli" || provider === "antigravity") {
       const config = provider === "gemini-cli" ? GEMINI_CONFIG : ANTIGRAVITY_CONFIG;
       const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -904,20 +908,21 @@ export async function testSingleConnection(id) {
     if (result.newTokens.idToken) updateData.idToken = result.newTokens.idToken;
     if (result.newTokens.lastRefreshAt) updateData.lastRefreshAt = result.newTokens.lastRefreshAt;
     if (result.newTokens.expiresIn) updateData.expiresIn = result.newTokens.expiresIn;
-    if (result.newTokens.expiresIn) {
+    if (result.newTokens.expiresIn && !(process.env.NINEROUTER_MANAGED_WORKER === "1" && result.newTokens.expiresAt)) {
       updateData.expiresAt = new Date(Date.now() + result.newTokens.expiresIn * 1000).toISOString();
     } else if (result.newTokens.expiresAt) {
       updateData.expiresAt = result.newTokens.expiresAt;
     }
     if (result.newTokens.providerSpecificData) {
       updateData.providerSpecificData = {
-        ...(connection.providerSpecificData || {}),
+        ...(process.env.NINEROUTER_MANAGED_WORKER !== "1" ? connection.providerSpecificData || {} : {}),
         ...result.newTokens.providerSpecificData,
       };
     }
   }
 
-  await updateProviderConnection(id, updateData);
+  await updateProviderConnection(id, updateData,
+    process.env.NINEROUTER_MANAGED_WORKER === "1" ? result.newTokens?.refreshGenerations : undefined);
 
   return { valid: result.valid, error: result.error, refreshed: !!result.refreshed, latencyMs, testedAt: new Date().toISOString() };
 }

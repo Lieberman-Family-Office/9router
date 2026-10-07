@@ -73,6 +73,19 @@ async function readRaw() {
   return row ? parseJson(row.data, {}) : {};
 }
 
+// Managed startup must validate stored bytes before legacy parsing/defaults can hide corruption.
+export async function getManagedIngressSettings() {
+  const db = await getAdapter();
+  const row = db.get(`SELECT data FROM settings WHERE id = 1`);
+  if (row === undefined || row === null) return {};
+  if (typeof row.data !== "string") throw new Error("Invalid managed settings JSON");
+  const raw = JSON.parse(row.data);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("Invalid managed settings JSON");
+  }
+  return raw;
+}
+
 // Merge raw settings with defaults; backward-compat for missing keys
 export function mergeWithDefaults(raw) {
   const merged = { ...DEFAULT_SETTINGS, ...(raw || {}) };

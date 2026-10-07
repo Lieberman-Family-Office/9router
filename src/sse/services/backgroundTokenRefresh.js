@@ -2,6 +2,7 @@
 // Fail-open everywhere: tick errors and per-connection failures never kill the interval.
 
 import * as log from "../utils/logger.js";
+import managed from "../../lib/db/managed.cjs";
 import { getRefreshLeadMs } from "open-sse/services/tokenRefresh.js";
 import { getCredentialExpiryMs } from "open-sse/services/oauthCredentialManager.js";
 
@@ -88,8 +89,9 @@ async function refreshOne(connection) {
  * @param {{ loadConnections?: Function, refreshConnection?: Function }} [deps]
  */
 export async function runBackgroundTokenRefreshTick(deps = {}) {
-  if (tickRunning) return;
+  if (tickRunning || !managed.isActiveSlot()) return;
   tickRunning = true;
+  const done = managed.beginWork('background');
   try {
     const load = deps.loadConnections || loadActiveConnections;
     const refresh = deps.refreshConnection || refreshOne;
@@ -135,6 +137,7 @@ export async function runBackgroundTokenRefreshTick(deps = {}) {
     });
   } finally {
     tickRunning = false;
+    done();
   }
 }
 

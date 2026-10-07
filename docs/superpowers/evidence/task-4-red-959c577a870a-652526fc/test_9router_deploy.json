@@ -1,0 +1,597 @@
+{
+  "exitCode": 1,
+  "collected": [
+    "tests/mac/test_9router_deploy.py::test_stream_terminal_detection",
+    "tests/mac/test_9router_deploy.py::test_probe_retries_transient_then_passes",
+    "tests/mac/test_9router_deploy.py::test_probe_wedged_release_still_fails",
+    "tests/mac/test_9router_deploy.py::test_probe_non_transient_fails_without_retry",
+    "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc0-True]",
+    "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:503-True]",
+    "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:429-True]",
+    "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:401-False]",
+    "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc4-False]",
+    "tests/mac/test_9router_deploy.py::test_adopt_moves_real_dir_behind_symlink",
+    "tests/mac/test_9router_deploy.py::test_deploy_ok_switches_pointer",
+    "tests/mac/test_9router_deploy.py::test_deploy_refuses_existing_version",
+    "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[None]",
+    "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[fail]",
+    "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-bytes]",
+    "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-deploy]",
+    "tests/mac/test_9router_deploy.py::test_deploy_inside_vm_needs_no_record",
+    "tests/mac/test_9router_deploy.py::test_failed_verify_rolls_back",
+    "tests/mac/test_9router_deploy.py::test_rollback_targets_what_live_version_replaced",
+    "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[deploy]",
+    "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[rollback]",
+    "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[../escape]",
+    "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[/absolute]",
+    "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[v2/nested]",
+    "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[.]",
+    "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[..]",
+    "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[]",
+    "tests/mac/test_9router_deploy.py::test_http_explicit_base_does_not_change_global",
+    "tests/mac/test_9router_deploy.py::test_stream_probe_propagates_private_base_without_mutating_global",
+    "tests/mac/test_9router_deploy.py::test_verify_propagates_private_base_to_all_probes",
+    "tests/mac/test_9router_deploy.py::test_stream_once_uses_explicit_private_base"
+  ],
+  "collectionFailures": [],
+  "reports": [
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_terminal_detection",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_terminal_detection",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_terminal_detection",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_probe_retries_transient_then_passes",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_probe_retries_transient_then_passes",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_probe_retries_transient_then_passes",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_probe_wedged_release_still_fails",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_probe_wedged_release_still_fails",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_probe_wedged_release_still_fails",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_probe_non_transient_fails_without_retry",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_probe_non_transient_fails_without_retry",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_probe_non_transient_fails_without_retry",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc0-True]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc0-True]",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc0-True]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:503-True]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:503-True]",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:503-True]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:429-True]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:429-True]",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:429-True]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:401-False]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:401-False]",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[http:401-False]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc4-False]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc4-False]",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_classifies_failures[exc4-False]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_adopt_moves_real_dir_behind_symlink",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_adopt_moves_real_dir_behind_symlink",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_adopt_moves_real_dir_behind_symlink",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_ok_switches_pointer",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_ok_switches_pointer",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_ok_switches_pointer",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_existing_version",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_existing_version",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_existing_version",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[None]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[None]",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[None]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[fail]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[fail]",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[fail]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-bytes]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-bytes]",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-bytes]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-deploy]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-deploy]",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_refuses_without_vm_pass[other-deploy]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_inside_vm_needs_no_record",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_inside_vm_needs_no_record",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_deploy_inside_vm_needs_no_record",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_failed_verify_rolls_back",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_failed_verify_rolls_back",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_failed_verify_rolls_back",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_rollback_targets_what_live_version_replaced",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_rollback_targets_what_live_version_replaced",
+      "phase": "call",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_rollback_targets_what_live_version_replaced",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[deploy]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[deploy]",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\ntmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_deploy/tmp/pytest-of-runner/pytest-0/test_enrolled_dispatch_never_e0')\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad3ad50>\noperation = 'deploy'\n\n    @pytest.mark.parametrize(\"operation\", [\"deploy\", \"rollback\"])\n    def test_enrolled_dispatch_never_enters_legacy_mutation(dep, tmp_path, monkeypatch, operation):\n        calls = []\n        fake = type(\"Controller\", (), {\n            \"deploy_tarball\": staticmethod(lambda tgz: calls.append((\"deploy\", tgz)) or 17),\n            \"rollback_release\": staticmethod(lambda version: calls.append((\"rollback\", version)) or 19),\n        })\n        (dep.HOME / \"hotswap\").mkdir()\n        (dep.HOME / \"hotswap/state.json\").write_text(\"{corrupted-but-enrolled\")\n>       monkeypatch.setattr(dep, \"load_hotswap\", lambda: fake)\nE       AttributeError: <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'> has no attribute 'load_hotswap'\n\ntests/mac/test_9router_deploy.py:225: AttributeError"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[deploy]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[rollback]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[rollback]",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\ntmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_deploy/tmp/pytest-of-runner/pytest-0/test_enrolled_dispatch_never_e1')\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10acb62d0>\noperation = 'rollback'\n\n    @pytest.mark.parametrize(\"operation\", [\"deploy\", \"rollback\"])\n    def test_enrolled_dispatch_never_enters_legacy_mutation(dep, tmp_path, monkeypatch, operation):\n        calls = []\n        fake = type(\"Controller\", (), {\n            \"deploy_tarball\": staticmethod(lambda tgz: calls.append((\"deploy\", tgz)) or 17),\n            \"rollback_release\": staticmethod(lambda version: calls.append((\"rollback\", version)) or 19),\n        })\n        (dep.HOME / \"hotswap\").mkdir()\n        (dep.HOME / \"hotswap/state.json\").write_text(\"{corrupted-but-enrolled\")\n>       monkeypatch.setattr(dep, \"load_hotswap\", lambda: fake)\nE       AttributeError: <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'> has no attribute 'load_hotswap'\n\ntests/mac/test_9router_deploy.py:225: AttributeError"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[rollback]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[../escape]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[../escape]",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nversion = '../escape'\n\n    @pytest.mark.parametrize(\"version\", [\"../escape\", \"/absolute\", \"v2/nested\", \".\", \"..\", \"\"])\n    def test_release_path_rejects_invalid_version_before_join(dep, version):\n>       with pytest.raises(ValueError):\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       Failed: DID NOT RAISE <class 'ValueError'>\n\ntests/mac/test_9router_deploy.py:244: Failed"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[../escape]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[/absolute]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[/absolute]",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nversion = '/absolute'\n\n    @pytest.mark.parametrize(\"version\", [\"../escape\", \"/absolute\", \"v2/nested\", \".\", \"..\", \"\"])\n    def test_release_path_rejects_invalid_version_before_join(dep, version):\n>       with pytest.raises(ValueError):\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       Failed: DID NOT RAISE <class 'ValueError'>\n\ntests/mac/test_9router_deploy.py:244: Failed"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[/absolute]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[v2/nested]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[v2/nested]",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nversion = 'v2/nested'\n\n    @pytest.mark.parametrize(\"version\", [\"../escape\", \"/absolute\", \"v2/nested\", \".\", \"..\", \"\"])\n    def test_release_path_rejects_invalid_version_before_join(dep, version):\n>       with pytest.raises(ValueError):\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       Failed: DID NOT RAISE <class 'ValueError'>\n\ntests/mac/test_9router_deploy.py:244: Failed"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[v2/nested]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[.]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[.]",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nversion = '.'\n\n    @pytest.mark.parametrize(\"version\", [\"../escape\", \"/absolute\", \"v2/nested\", \".\", \"..\", \"\"])\n    def test_release_path_rejects_invalid_version_before_join(dep, version):\n>       with pytest.raises(ValueError):\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       Failed: DID NOT RAISE <class 'ValueError'>\n\ntests/mac/test_9router_deploy.py:244: Failed"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[.]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[..]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[..]",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nversion = '..'\n\n    @pytest.mark.parametrize(\"version\", [\"../escape\", \"/absolute\", \"v2/nested\", \".\", \"..\", \"\"])\n    def test_release_path_rejects_invalid_version_before_join(dep, version):\n>       with pytest.raises(ValueError):\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       Failed: DID NOT RAISE <class 'ValueError'>\n\ntests/mac/test_9router_deploy.py:244: Failed"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[..]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[]",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[]",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nversion = ''\n\n    @pytest.mark.parametrize(\"version\", [\"../escape\", \"/absolute\", \"v2/nested\", \".\", \"..\", \"\"])\n    def test_release_path_rejects_invalid_version_before_join(dep, version):\n>       with pytest.raises(ValueError):\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       Failed: DID NOT RAISE <class 'ValueError'>\n\ntests/mac/test_9router_deploy.py:244: Failed"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[]",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_http_explicit_base_does_not_change_global",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_http_explicit_base_does_not_change_global",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad7bbd0>\n\n    def test_http_explicit_base_does_not_change_global(dep, monkeypatch):\n        seen = []\n        original_base = dep.BASE\n        monkeypatch.setattr(dep.urllib.request, \"urlopen\", lambda req, timeout: seen.append(req.full_url))\n>       dep.http(\"/api/version\", base=\"http://127.0.0.1:21130\")\nE       TypeError: http() got an unexpected keyword argument 'base'\n\ntests/mac/test_9router_deploy.py:252: TypeError"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_http_explicit_base_does_not_change_global",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_probe_propagates_private_base_without_mutating_global",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_probe_propagates_private_base_without_mutating_global",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad7bf50>\n\n    def test_stream_probe_propagates_private_base_without_mutating_global(dep, monkeypatch):\n        seen = []\n        original_base = dep.BASE\n    \n        def stream_once(timeout, *, base=dep.BASE):\n            seen.append(base)\n            return None, False\n    \n        monkeypatch.setattr(dep, \"stream_once\", stream_once)\n>       assert dep.stream_probe(base=\"http://127.0.0.1:21130\") is None\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: stream_probe() got an unexpected keyword argument 'base'\n\ntests/mac/test_9router_deploy.py:266: TypeError"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_probe_propagates_private_base_without_mutating_global",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_verify_propagates_private_base_to_all_probes",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_verify_propagates_private_base_to_all_probes",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad78ec0>\n\n    def test_verify_propagates_private_base_to_all_probes(dep, monkeypatch):\n        seen = []\n    \n        def http(path, body=None, timeout=10, *, base=dep.BASE):\n            seen.append((path, base))\n            value = {\"currentVersion\": \"v2\"} if path == \"/api/version\" else {\"data\": [{}]}\n            return io.BytesIO(json.dumps(value).encode())\n    \n        def stream_probe(timeout=90, *, base=dep.BASE):\n            seen.append((\"stream\", base))\n            return None\n    \n        monkeypatch.setattr(dep, \"http\", http)\n        monkeypatch.setattr(dep, \"stream_probe\", stream_probe)\n>       assert dep.verify(\"v2\", base=\"http://127.0.0.1:21130\") is None\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: verify() got an unexpected keyword argument 'base'\n\ntests/mac/test_9router_deploy.py:284: TypeError"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_verify_propagates_private_base_to_all_probes",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_uses_explicit_private_base",
+      "phase": "setup",
+      "outcome": "passed",
+      "message": null
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_uses_explicit_private_base",
+      "phase": "call",
+      "outcome": "failed",
+      "message": "dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad37d90>\n\n    def test_stream_once_uses_explicit_private_base(dep, monkeypatch):\n        seen = []\n    \n        def http(path, body=None, timeout=10, *, base=dep.BASE):\n            seen.append(base)\n            return io.BytesIO(b\"data: [DONE]\\n\")\n    \n        monkeypatch.setattr(dep, \"http\", http)\n>       assert dep.stream_once(1, base=\"http://127.0.0.1:21130\") == (None, False)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: stream_once() got an unexpected keyword argument 'base'\n\ntests/mac/test_9router_deploy.py:298: TypeError"
+    },
+    {
+      "nodeid": "tests/mac/test_9router_deploy.py::test_stream_once_uses_explicit_private_base",
+      "phase": "teardown",
+      "outcome": "passed",
+      "message": null
+    }
+  ]
+}

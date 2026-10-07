@@ -1,0 +1,50 @@
+task4-self-check-population: 4 file(s)
+self-check: 2 function(s) above C901 cyclomatic limit 5 (secondary heuristic):
+  NOT diff-scoped and NOT the Sonar metric. ruff has no baseline mode here, so this list is whole-file and may be entirely pre-existing debt; S3776 above is the scoped, gate-relevant one (PI-335).
+
+  scripts/mac/9router_deploy.py:151:5: C901 `stream_once` is too complex (9 > 5)
+  scripts/mac/9router_deploy.py:338:5: C901 `cmd_deploy` is too complex (7 > 5)
+
+self-check: 1 PRE-EXISTING function(s) above the C901 cyclomatic limit 5 — unchanged from the merge base.
+  C901 is a secondary heuristic, not Sonar's metric; these are context only and do not block this new-code-scoped push.
+
+  scripts/mac/9router_deploy.py:215:5: C901 `verify` is too complex (6 > 5)
+
+self-check: 33 C901 finding(s) have no readable baseline at `959c577a870a6a598afe05745a8b649f6624f368` — UNKNOWN (advisory):
+
+  scripts/mac/9router_hotswap.py:100:5: C901 `private_directory` is too complex (6 > 5)
+  scripts/mac/9router_hotswap.py:189:5: C901 `concrete_release` is too complex (7 > 5)
+  scripts/mac/9router_hotswap.py:251:5: C901 `qualification` is too complex (8 > 5)
+  scripts/mac/9router_hotswap.py:355:5: C901 `installed_package_hashes` is too complex (7 > 5)
+  scripts/mac/9router_hotswap.py:405:5: C901 `stage_assets` is too complex (6 > 5)
+  scripts/mac/9router_hotswap.py:478:5: C901 `control` is too complex (6 > 5)
+  scripts/mac/9router_hotswap.py:509:5: C901 `read_control_response` is too complex (8 > 5)
+  scripts/mac/9router_hotswap.py:562:5: C901 `worker_status` is too complex (7 > 5)
+  scripts/mac/9router_hotswap.py:599:5: C901 `read_state` is too complex (7 > 5)
+  scripts/mac/9router_hotswap.py:743:5: C901 `cleanup_slot` is too complex (6 > 5)
+  scripts/mac/9router_hotswap.py:789:5: C901 `shared_environment` is too complex (6 > 5)
+  scripts/mac/9router_hotswap.py:835:5: C901 `start_worker` is too complex (12 > 5)
+  scripts/mac/9router_hotswap.py:1046:5: C901 `slot_needs_recovery` is too complex (6 > 5)
+  scripts/mac/9router_hotswap.py:1127:5: C901 `reconcile_locked` is too complex (9 > 5)
+  scripts/mac/9router_hotswap.py:1206:5: C901 `retire_slot` is too complex (8 > 5)
+  scripts/mac/9router_hotswap.py:1252:5: C901 `rollback_locked` is too complex (7 > 5)
+  scripts/mac/9router_hotswap.py:1296:5: C901 `deploy_locked` is too complex (6 > 5)
+  scripts/mac/9router_hotswap.py:1354:5: C901 `deploy_tarball` is too complex (8 > 5)
+  scripts/mac/9router_hotswap.py:1475:5: C901 `enroll` is too complex (8 > 5)
+  scripts/mac/9router_hotswap.py:1568:5: C901 `prepare_enrollment` is too complex (6 > 5)
+  scripts/mac/9router_hotswap.py:1616:5: C901 `resume_enrollment` is too complex (10 > 5)
+  scripts/mac/9router_hotswap.py:1660:5: C901 `proxy_enrollment` is too complex (6 > 5)
+  tests/mac/test_9router_hotswap.py:68:5: C901 `fixture_control` is too complex (6 > 5)
+  tests/mac/test_9router_hotswap.py:89:5: C901 `controller` is too complex (7 > 5)
+  tests/mac/test_9router_hotswap.py:402:5: C901 `test_deployment_commit_crash_boundaries_reconcile` is too complex (9 > 5)
+  tests/mac/test_9router_hotswap.py:1126:5: C901 `lifecycle_controller` is too complex (8 > 5)
+  tests/mac/test_9router_hotswap.py:1213:5: C901 `test_startup_boundaries_preserve_route_and_recover_only_owned_candidates` is too complex (9 > 5)
+  tests/mac/test_9router_hotswap.py:1268:5: C901 `assert_startup_recovery` is too complex (6 > 5)
+  tests/mac/test_9router_hotswap.py:1350:5: C901 `test_retirement_boundaries_recover_without_touching_serving_worker` is too complex (8 > 5)
+  tests/mac/test_9router_hotswap.py:1538:5: C901 `test_interrupted_deployment_recovers_or_preserves_both_targets` is too complex (7 > 5)
+  tests/mac/test_9router_hotswap.py:1574:5: C901 `enrollment_launchctl` is too complex (6 > 5)
+  tests/mac/test_9router_hotswap.py:1613:5: C901 `enrollment_controller` is too complex (6 > 5)
+  tests/mac/test_9router_hotswap.py:1755:5: C901 `test_enrollment_dispatch_resumes_every_maintenance_boundary` is too complex (12 > 5)
+
+Extract-function before pushing; a CI round-trip costs a push and a wait per round.
+NOTE: self-check does NOT cover non-complexity rules (S2083, S5864, etc.) — run `sonar_pr_issues.py <PR>` once the CI scan completes.

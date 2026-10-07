@@ -1,0 +1,17 @@
+{"name": "extract", "argv": ["/usr/bin/tar", "-xf", "/Volumes/devbox/r652526fc/source.tar", "-C", "/Volumes/devbox/r652526fc/source"], "exitCode": 0, "timeout": false, "startedAt": 1791260393.308516, "finishedAt": 1791260403.366966, "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
+{"name": "pytest-probe-0", "argv": ["/opt/homebrew/opt/python@3.14/bin/python3.14", "-c", "import pytest; print(pytest.__version__)"], "exitCode": 1, "timeout": false, "startedAt": 1791260403.368347, "finishedAt": 1791260403.4100502, "logSha256": "cb8fbb901b1683ce6b84df491cfaf5df04eb48f60dd6b17b22b3f60bcc8afabe"}
+{"name": "pytest-probe-1", "argv": ["/opt/homebrew/bin/python3", "-c", "import pytest; print(pytest.__version__)"], "exitCode": 1, "timeout": false, "startedAt": 1791260403.41058, "finishedAt": 1791260403.452374, "logSha256": "cb8fbb901b1683ce6b84df491cfaf5df04eb48f60dd6b17b22b3f60bcc8afabe"}
+{"name": "pytest-probe-2", "argv": ["/usr/bin/python3", "-c", "import pytest; print(pytest.__version__)"], "exitCode": 1, "timeout": false, "startedAt": 1791260403.45264, "finishedAt": 1791260404.886515, "logSha256": "c87267d74d6f6b880a502e9ecfe756819ae9beb898bfbe8ab5100bdfa79c2dcf"}
+{"name": "venv", "argv": ["/opt/homebrew/opt/python@3.14/bin/python3.14", "-m", "venv", "/Volumes/devbox/r652526fc/venv"], "exitCode": 0, "timeout": false, "startedAt": 1791260404.886821, "finishedAt": 1791260409.979193, "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
+{"name": "pytest-install", "argv": ["/Volumes/devbox/r652526fc/venv/bin/python3", "-m", "pip", "install", "--disable-pip-version-check", "pytest==8.4.2"], "exitCode": 0, "timeout": false, "startedAt": 1791260409.979872, "finishedAt": 1791260413.774372, "logSha256": "798d8c1b8216799b92ad37fface3ef80fc6c05172a7ad52d82d1e0f4f5029632"}
+{"name": "runtime", "argv": ["/Volumes/devbox/r652526fc/venv/bin/python3", "-c", "import sys,pytest,importlib.metadata,json;print(json.dumps({\"python\":sys.version,\"pytest\":pytest.__version__,\"packages\":{d.metadata[\"Name\"]:d.version for d in importlib.metadata.distributions()}},indent=2))"], "exitCode": 0, "timeout": false, "startedAt": 1791260413.789099, "finishedAt": 1791260413.930874, "logSha256": "6323ebd5190e0445191c577ff5d07a2821ee8fa7df81f6916bad1e600e4a9340"}
+{"name": "test_9router_hotswap", "argv": ["/Volumes/devbox/r652526fc/venv/bin/python3", "-m", "pytest", "tests/mac/test_9router_hotswap.py", "-q"], "exitCode": 1, "timeout": false, "startedAt": 1791260413.9313989, "finishedAt": 1791260414.3445928, "logSha256": "dbff597475e2c732a3054b21ac6f188c7eab9cad7829bbd075d5aadc49a0d0df"}
+{"name": "test_9router_deploy", "argv": ["/Volumes/devbox/r652526fc/venv/bin/python3", "-m", "pytest", "tests/mac/test_9router_deploy.py", "-q"], "exitCode": 1, "timeout": false, "startedAt": 1791260414.345572, "finishedAt": 1791260414.640172, "logSha256": "fc936dcb30a52e62c7774a26e7aea4c6306a077ce536ca1af2060b94940228fa"}
+{"completedRedRuns": true}
+
+
+
+ A new version of devbox is available: 0.0.196. 
+
+ Run `devbox update` to upgrade.
+

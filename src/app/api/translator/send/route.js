@@ -1,14 +1,18 @@
 import { getProviderConnections, updateProviderConnection } from "@/lib/localDb.js";
 import { getExecutor } from "open-sse/index.js";
+import { parseVertexSaJson } from "open-sse/services/tokenRefresh.js";
 
 async function persistRefreshedCredentials(connection, newCredentials) {
+  // Service-account JWT tokens are process-local, repeatable mints, not rotating shared grants.
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1" && ["vertex", "vertex-partner"].includes(connection.provider)
+      && parseVertexSaJson(connection.apiKey)) return null;
   const updateData = {};
 
   if (newCredentials.accessToken) updateData.accessToken = newCredentials.accessToken;
   if (newCredentials.refreshToken) updateData.refreshToken = newCredentials.refreshToken;
   if (newCredentials.idToken) updateData.idToken = newCredentials.idToken;
   if (newCredentials.lastRefreshAt) updateData.lastRefreshAt = newCredentials.lastRefreshAt;
-  if (newCredentials.expiresIn) {
+  if (newCredentials.expiresIn && !(process.env.NINEROUTER_MANAGED_WORKER === "1" && newCredentials.expiresAt)) {
     updateData.expiresIn = newCredentials.expiresIn;
     updateData.expiresAt = new Date(Date.now() + newCredentials.expiresIn * 1000).toISOString();
   } else if (newCredentials.expiresAt) {
@@ -22,13 +26,14 @@ async function persistRefreshedCredentials(connection, newCredentials) {
   };
   if (Object.keys(providerSpecificUpdates).length > 0) {
     updateData.providerSpecificData = {
-      ...(connection.providerSpecificData || {}),
+      ...(process.env.NINEROUTER_MANAGED_WORKER !== "1" ? connection.providerSpecificData || {} : {}),
       ...providerSpecificUpdates,
     };
   }
 
   if (Object.keys(updateData).length > 0) {
-    await updateProviderConnection(connection.id, updateData);
+    return updateProviderConnection(connection.id, updateData,
+      process.env.NINEROUTER_MANAGED_WORKER === "1" ? newCredentials.refreshGenerations : undefined);
   }
 }
 
@@ -69,7 +74,13 @@ export async function POST(request) {
       const newCredentials = await executor.refreshCredentials(credentials, console);
       if (newCredentials?.accessToken || newCredentials?.copilotToken) {
         Object.assign(credentials, newCredentials);
-        await persistRefreshedCredentials(connection, newCredentials);
+        const persisted = await persistRefreshedCredentials(connection, newCredentials);
+        if (process.env.NINEROUTER_MANAGED_WORKER === "1" && persisted) {
+          Object.assign(credentials, persisted, {
+            copilotToken: persisted.providerSpecificData?.copilotToken,
+            copilotTokenExpiresAt: persisted.providerSpecificData?.copilotTokenExpiresAt,
+          });
+        }
         ({ response } = await executor.execute({ model, body, stream, credentials }));
       }
     }

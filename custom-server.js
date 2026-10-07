@@ -5,6 +5,23 @@ const crypto = require("crypto");
 const { pathToFileURL } = require("url");
 
 const origCreate = http.createServer.bind(http);
+const managed = process.env.NINEROUTER_MANAGED_WORKER === "1"
+  ? require("./src/lib/db/managed.cjs") : null;
+let ingressServer;
+if (managed && process.send) {
+  process.on("message", (message) => {
+    if (message?.type !== "9router-managed" || !Number.isSafeInteger(message.id)) return;
+    if (message.op === "drain") {
+      managed.workState().draining = true;
+      ingressServer?.closeIdleConnections();
+    }
+    if (message.op === "resume") managed.workState().draining = false;
+    const work = { ...managed.workState() };
+    work.initialized = work.initialized === true && work.responsesWsAttached === true;
+    work.listenerPort = ingressServer?.address()?.port ?? null;
+    process.send({ type: "9router-managed", id: message.id, work }, () => {});
+  });
+}
 
 // Per-process secret proving x-9r-real-ip was stamped below rather than sent by the client.
 // A bare `next start` / `next dev` never loads this file, so it cannot produce a matching
@@ -15,8 +32,14 @@ process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
 
 let backgroundRefreshStarted = false;
 let responsesWsStarted = false;
+let completeResponsesWsReady;
+if (managed) {
+  managed.setResponsesWsReady(new Promise((resolve, reject) => { completeResponsesWsReady = { resolve, reject }; }));
+}
 
 function startBackgroundTokenRefreshFromCustomServer() {
+  // Managed initialization validates settings before either gated scheduler starts.
+  if (managed) return;
   if (backgroundRefreshStarted) return;
   // Unit tests require() this module without wanting the scheduler open-handle.
   if (process.env.NINEROUTER_SKIP_BACKGROUND_REFRESH === "1") return;
@@ -53,20 +76,20 @@ function startBackgroundTokenRefreshFromCustomServer() {
 /**
  * Mid-turn steering: accept WebSocket upgrades on /v1/responses.
  * Loads open-sse ESM when present (repo/dev); falls back to ~/.9router/lib/responses-ws
- * for the published CLI install hot-patch.
- * Set NINEROUTER_SKIP_RESPONSES_WS=1 to disable (e.g. unit tests that require this module).
+ * for the unmanaged published CLI install hot-patch. Managed readiness requires pinned attachment.
+ * Set NINEROUTER_SKIP_RESPONSES_WS=1 to disable only in unmanaged mode.
  */
 function startResponsesWsFromCustomServer(server) {
   if (responsesWsStarted || !server) return;
-  if (process.env.NINEROUTER_SKIP_RESPONSES_WS === "1") return;
+  if (!managed && process.env.NINEROUTER_SKIP_RESPONSES_WS === "1") return;
   // Always attach on the live Next server. Unit tests that require() this module
   // without wanting WS should set NINEROUTER_SKIP_RESPONSES_WS=1.
   responsesWsStarted = true;
   const candidates = [
     path.join(__dirname, "open-sse", "handlers", "responsesWs", "index.js"),
     path.join(__dirname, "handlers", "responsesWs", "index.js"),
-    path.join(process.env.HOME || "", ".9router", "lib", "responses-ws", "index.mjs"),
   ];
+  if (!managed) candidates.push(path.join(process.env.HOME || "", ".9router", "lib", "responses-ws", "index.mjs"));
   const tryAttach = async () => {
     let lastErr = null;
     for (const modPath of candidates) {
@@ -74,21 +97,28 @@ function startResponsesWsFromCustomServer(server) {
       try {
         const m = await import(pathToFileURL(modPath).href);
         const attach = m.attachResponsesWebSocket || m.installOnServer || m.default?.attachResponsesWebSocket;
-        if (typeof attach !== "function") continue;
+        if (typeof attach !== "function") {
+          if (managed) throw new Error("Invalid pinned WebSocket module");
+          continue;
+        }
         const addr = server.address();
         const localPort = addr && typeof addr === "object" ? addr.port : Number(process.env.PORT) || 20128;
-        attach(server, { localPort });
+        await attach(server, { localPort });
         console.log(`[ResponsesWS] mid-turn steering enabled on /v1/responses (port ${localPort})`);
         return;
       } catch (e) {
+        if (managed) throw e;
         lastErr = e;
       }
     }
+    if (managed) throw new Error("Pinned WebSocket module missing");
     if (process.env.DEBUG_RESPONSES_WS || lastErr) {
       console.error("[ResponsesWS] attach skipped:", lastErr && lastErr.message ? lastErr.message : "module not found");
     }
   };
-  tryAttach().catch((e) => {
+  const attachment = tryAttach();
+  if (managed) attachment.then(completeResponsesWsReady.resolve, completeResponsesWsReady.reject);
+  attachment.catch((e) => {
     console.error("[ResponsesWS] attach failed:", e && e.message ? e.message : e);
   });
 }
@@ -100,7 +130,24 @@ http.createServer = (...args) => {
   const handler = args.find((a) => typeof a === "function");
   const rest = args.filter((a) => typeof a !== "function");
   if (!handler) return origCreate(...args);
+  let ingress = !managed;
   const wrapped = (req, res) => {
+    if (managed && !ingress) return handler(req, res);
+    if (String(req.headers.upgrade || "").toLowerCase() === "h2c") {
+      delete req.headers.upgrade;
+      delete req.headers["http2-settings"];
+      req.headers.connection = "close";
+      res.shouldKeepAlive = false;
+    }
+    if (managed) {
+      if (managed.workState().draining) res.shouldKeepAlive = false;
+      const responseDone = managed.beginWork("responses");
+      res.once("finish", () => {
+        responseDone();
+        if (managed.workState().draining) ingressServer.closeIdleConnections();
+      });
+      res.once("close", responseDone);
+    }
     const socketIp = req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : "";
     const xff = req.headers["x-forwarded-for"];
     const xRealIp = req.headers["x-real-ip"];
@@ -117,10 +164,36 @@ http.createServer = (...args) => {
     req.headers["x-9r-real-ip"] = ip;
     req.headers["x-9r-peer-token"] = PEER_TOKEN;
     if (viaProxy) req.headers["x-9r-via-proxy"] = "1";
-    return handler(req, res);
+    if (!managed) return handler(req, res);
+    const done = managed.beginWork("handlers");
+    try {
+      const result = handler(req, res);
+      // A void handler exposes no post-close completion contract. Retire only if known.
+      if (!result || typeof result.then !== "function") {
+        managed.workState().unknown = true;
+        done();
+        return result;
+      }
+      return Promise.resolve(result).finally(done);
+    } catch (error) { done(); throw error; }
   };
   const server = origCreate(...rest, wrapped);
+  // Keep h2c in the native HTTP parser: Node 26 separates request bodies from upgrade streams.
+  if (typeof server.shouldUpgradeCallback === "function") {
+    const shouldUpgrade = server.shouldUpgradeCallback;
+    server.shouldUpgradeCallback = function (req) {
+      return String(req.headers.upgrade || "").toLowerCase() !== "h2c"
+        && shouldUpgrade.call(this, req);
+    };
+  }
+  // ponytail: older Node runtimes lack upgrade selection; retain the legacy replay below until support ends.
   server.once("listening", () => {
+    if (managed) {
+      const address = server.address();
+      ingress = address && typeof address === "object" && address.port === Number(process.env.PORT);
+      if (!ingress) return;
+      ingressServer = server;
+    }
     startBackgroundTokenRefreshFromCustomServer();
     startResponsesWsFromCustomServer(server);
   });
@@ -130,6 +203,10 @@ http.createServer = (...args) => {
   // and are handled by attachResponsesWebSocket listeners.
   server.emit = function (event, ...eventArgs) {
     const [req, socket, head] = eventArgs;
+    if (event === "upgrade" && managed && ingress) {
+      const done = managed.beginWork("upgrades");
+      socket.once("close", done);
+    }
     if (event !== "upgrade" || String(req.headers.upgrade || "").toLowerCase() !== "h2c") {
       return origEmit.call(this, event, ...eventArgs);
     }

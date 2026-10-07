@@ -72,6 +72,7 @@ export function mergeRefreshedCredentials(provider, currentCredentials, refreshe
   if (isUnrecoverableRefreshError(refreshedCredentials)) return refreshedCredentials;
 
   const next = {};
+  if (refreshedCredentials.refreshGenerations !== undefined) next.refreshGenerations = refreshedCredentials.refreshGenerations;
   const nowIso = new Date(nowMs).toISOString();
 
   if (refreshedCredentials.accessToken) next.accessToken = refreshedCredentials.accessToken;
@@ -84,7 +85,7 @@ export function mergeRefreshedCredentials(provider, currentCredentials, refreshe
   const idToken = refreshedCredentials.idToken ?? currentCredentials?.idToken;
   if (idToken) next.idToken = idToken;
 
-  if (refreshedCredentials.expiresIn) {
+  if (refreshedCredentials.expiresIn && !(process.env.NINEROUTER_MANAGED_WORKER === "1" && refreshedCredentials.expiresAt)) {
     next.expiresIn = refreshedCredentials.expiresIn;
     next.expiresAt = toExpiresAt(refreshedCredentials.expiresIn, nowMs);
   } else if (refreshedCredentials.expiresAt) {
@@ -117,6 +118,9 @@ export function mergeRefreshedCredentials(provider, currentCredentials, refreshe
     next.lastRefreshAt = refreshedCredentials.lastRefreshAt || nowIso;
   }
 
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1" && !next.refreshGenerations?.oauth) {
+    for (const field of ["accessToken", "refreshToken", "idToken", "apiKey", "token", "expiresAt", "expiresIn", "lastRefreshAt"]) delete next[field];
+  }
   return next;
 }
 

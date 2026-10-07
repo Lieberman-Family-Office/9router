@@ -148,7 +148,30 @@ function assertRequiredApiArtifacts(cliAppDir) {
   }
 }
 
-function buildCliPackage() {
+async function emitCompatibilityManifest(source, destination) {
+  const { createManifest } = require("../../src/lib/db/managed.cjs");
+  const manifest = await createManifest(source);
+  fs.writeFileSync(path.join(destination, "hotswap-manifest.json"), JSON.stringify(manifest) + "\n", { mode: 0o600 });
+  return manifest;
+}
+
+function copyResponsesWsArtifacts(source, destination) {
+  const responsesWsSrc = path.join(source, "open-sse", "handlers", "responsesWs");
+  if (!fs.existsSync(path.join(responsesWsSrc, "index.js"))) {
+    throw new Error("open-sse/handlers/responsesWs/index.js not found — mid-turn steering would not ship.");
+  }
+  const responsesWsDest = path.join(destination, "handlers", "responsesWs");
+  copyRecursive(responsesWsSrc, responsesWsDest);
+  // Resolve the copied session module's source-relative dependency from its output location.
+  const registryDest = path.resolve(responsesWsDest, "../../../src/lib/db/managed.cjs");
+  fs.mkdirSync(path.dirname(registryDest), { recursive: true });
+  fs.copyFileSync(path.join(source, "src/lib/db/managed.cjs"), registryDest);
+}
+
+async function buildCliPackage() {
+  // Match the package engine requirement before creating any build artifacts.
+  const [major, minor] = process.versions.node.split('.').map(Number);
+  if (major < 22 || (major === 22 && minor < 5)) throw new Error('CLI packaging requires Node >=22.5 for the compatibility manifest');
   console.log("📦 Building 9Router CLI package with Next.js...\n");
 
   fs.mkdirSync(buildHomeDir, { recursive: true });
@@ -220,14 +243,13 @@ function buildCliPackage() {
     console.error("   so the packaged CLI would demand an API key for its own dashboard and /v1.");
     process.exit(1);
   }
+  // Managed IPC shares a process-global registry with the bundled application.
+  fs.mkdirSync(path.join(cliAppDir, 'src/lib/db'), { recursive: true });
+  fs.copyFileSync(path.join(appDir, 'src/lib/db/managed.cjs'), path.join(cliAppDir, 'src/lib/db/managed.cjs'));
+
   // Step 3a2: Ship mid-turn steering beside custom-server.js; its loader checks handlers/responsesWs.
   // Without this the published CLI only attaches it from a hot-patched ~/.9router/lib copy.
-  const responsesWsSrc = path.join(appDir, "open-sse", "handlers", "responsesWs");
-  if (!fs.existsSync(path.join(responsesWsSrc, "index.js"))) {
-    console.error("❌ open-sse/handlers/responsesWs/index.js not found — mid-turn steering would not ship.");
-    process.exit(1);
-  }
-  copyRecursive(responsesWsSrc, path.join(cliAppDir, "handlers", "responsesWs"));
+  copyResponsesWsArtifacts(appDir, cliAppDir);
   console.log("✅ Copied handlers/responsesWs\n");
 
   // Step 3b: Ensure sql.js (pure JS fallback) bundled in app/cli/app/node_modules.
@@ -340,6 +362,7 @@ function buildCliPackage() {
     process.exit(1);
   }
 
+  await emitCompatibilityManifest(appDir, cliAppDir);
   console.log("✨ CLI package build completed!");
   console.log(`📁 Output: ${cliAppDir}`);
 
@@ -353,11 +376,13 @@ function buildCliPackage() {
 }
 
 module.exports = {
+  emitCompatibilityManifest,
   assertRequiredApiArtifacts,
   copyStandaloneBuild,
+  copyResponsesWsArtifacts,
   mergeServerArtifacts,
 };
 
 if (require.main === module) {
-  buildCliPackage();
+  buildCliPackage().catch(error => { console.error("CLI compatibility build failed", error); process.exitCode = 1; });
 }

@@ -80,7 +80,7 @@ export async function refreshAndUpdateCredentials(connection, force = false, pro
   }
 
   // Update token expiry
-  if (refreshResult.expiresIn) {
+  if (refreshResult.expiresIn && !(process.env.NINEROUTER_MANAGED_WORKER === "1" && refreshResult.expiresAt)) {
     updateData.expiresAt = new Date(Date.now() + refreshResult.expiresIn * 1000).toISOString();
     updateData.expiresIn = refreshResult.expiresIn;
   } else if (refreshResult.expiresAt) {
@@ -95,13 +95,14 @@ export async function refreshAndUpdateCredentials(connection, force = false, pro
   };
   if (Object.keys(providerSpecificUpdates).length > 0) {
     updateData.providerSpecificData = {
-      ...(connection.providerSpecificData || {}),
+      ...(process.env.NINEROUTER_MANAGED_WORKER !== "1" ? connection.providerSpecificData || {} : {}),
       ...providerSpecificUpdates,
     };
   }
 
   // Update database
-  await updateProviderConnection(connection.id, updateData);
+  const persisted = await updateProviderConnection(connection.id, updateData,
+    process.env.NINEROUTER_MANAGED_WORKER === "1" ? refreshResult.refreshGenerations : undefined);
 
   // Return updated connection
   const updatedConnection = {
@@ -111,7 +112,7 @@ export async function refreshAndUpdateCredentials(connection, force = false, pro
   };
 
   return {
-    connection: updatedConnection,
+    connection: process.env.NINEROUTER_MANAGED_WORKER === "1" ? persisted : updatedConnection,
     refreshed: true,
   };
 }

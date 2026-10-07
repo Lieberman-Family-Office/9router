@@ -291,6 +291,12 @@ async function createBypassRequest(parsedUrl, realIP, options) {
   });
 }
 
+export function hasEnabledProxy(proxyOptions) {
+  return !!normalizeString(proxyOptions?.vercelRelayUrl) ||
+    ((proxyOptions?.connectionProxyEnabled === true || proxyOptions?.enabled === true) &&
+      !!normalizeString(proxyOptions?.url ?? proxyOptions?.connectionProxyUrl));
+}
+
 export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
   const targetUrl = typeof url === "string" ? url : url.toString();
 
@@ -306,12 +312,19 @@ export async function proxyAwareFetch(url, options = {}, proxyOptions = null) {
       "x-relay-target": `${parsed.protocol}//${parsed.host}`,
       "x-relay-path": `${parsed.pathname}${parsed.search}`,
     };
-    return originalFetch(vercelRelayUrl, { ...options, headers: relayHeaders });
+    return originalFetch(vercelRelayUrl, { ...options, headers: relayHeaders,
+      ...(process.env.NINEROUTER_MANAGED_WORKER === "1" ? { redirect: "error" } : {}) });
   }
 
   const connectionProxyUrl = resolveConnectionProxyUrl(targetUrl, proxyOptions);
   const envProxyUrl = connectionProxyUrl ? null : normalizeProxyUrl(getEnvProxyUrl(targetUrl));
   const proxyUrl = connectionProxyUrl || envProxyUrl;
+
+  // Managed workers never replay an ambiguously transmitted request, including DNS bypass.
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+    const dispatcher = proxyUrl ? await getDispatcher(proxyUrl) : undefined;
+    return originalFetch(url, { ...options, ...(dispatcher ? { dispatcher } : {}), redirect: "error" });
+  }
 
   // MITM DNS bypass: for known MITM-intercepted hosts, resolve real IP to avoid DNS spoof
   if (shouldBypassMitmDns(targetUrl)) {

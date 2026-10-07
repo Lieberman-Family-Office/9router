@@ -71,6 +71,7 @@ const LIVE_MODEL_RESOLVERS = {
       log: console,
       onCredentialsRefreshed: async (refreshed) => {
         await updateProviderCredentials(conn.id, {
+          refreshGenerations: refreshed.refreshGenerations,
           copilotToken: refreshed.copilotToken,
           copilotTokenExpiresAt: refreshed.copilotTokenExpiresAt,
           existingProviderSpecificData: conn.providerSpecificData || {},

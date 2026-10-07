@@ -1,0 +1,396 @@
+"""Historical input deployed as tests/mac/test_9router_hotswap.py in the guest. Not runnable in the archive; fixture defects are preserved and grant no final-head proof."""
+
+from __future__ import annotations
+
+import copy
+import fcntl
+import importlib.util
+import json
+import os
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+SCRIPT = Path(__file__).resolve().parents[2] / "scripts/mac/9router_hotswap.py"
+WORK_KEYS = (
+    "responses", "handlers", "upgrades", "cleanup", "persistence", "refresh",
+    "background", "quota", "websocket",
+)
+
+
+def private_json(path, value):
+    path.write_text(json.dumps(value))
+    path.chmod(0o600)
+
+
+@pytest.fixture
+def hs(tmp_path, monkeypatch):
+    assert SCRIPT.is_file(), "Task 4 controller is missing"
+    spec = importlib.util.spec_from_file_location("task4_hotswap", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    home = tmp_path / "home/.9router"
+    state = home / "hotswap"
+    runtime = tmp_path / "runtime"
+    releases = home / "releases"
+    for directory in (home, state, runtime, releases, home / "qualified", home / "db"):
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        directory.chmod(0o700)
+    for name, value in {
+        "HOME": home, "STATE_DIR": state, "STATE_FILE": state / "state.json",
+        "LOCK_FILE": state / "deploy.lock", "RUNTIME": runtime,
+        "RELEASES": releases, "QUALIFIED": home / "qualified",
+        "DB": home / "db/data.sqlite", "LINK": tmp_path / "package-link",
+    }.items():
+        monkeypatch.setattr(mod, name, value)
+    return mod
+
+
+@pytest.fixture
+def controller(hs, monkeypatch):
+    events = []
+    releases = {}
+    for version in ("v1", "v2", "v3"):
+        release = hs.RELEASES / version / "lib/node_modules/9router"
+        release.mkdir(parents=True)
+        private_json(release / "package.json", {"version": version})
+        releases[version] = release
+    slots = {
+        "a": {"release": str(releases["v1"]), "version": "v1", "digest": "a" * 64, "mode": "active"},
+        "b": None,
+    }
+    private_json(hs.STATE_FILE, {"schema": 1, "active": "a", "slots": slots, "pending": None})
+    hs.LINK.symlink_to(releases["v1"])
+    (hs.RUNTIME / "active.sock").symlink_to("a.sock")
+    live = {
+        "a": {"slot": "a", "version": "v1", "mode": "active", "connections": 1,
+              "appPid": 123, "appWork": {"initialized": True, "unknown": False,
+                                        **dict.fromkeys(WORK_KEYS, 0)}},
+    }
+    config = {
+        "slot": "a", "version": "v1", "release": str(releases["v1"]),
+        "port": 21128, "runtime": str(hs.RUNTIME), "dataDir": str(hs.DB.parent.parent),
+    }
+    private_json(hs.STATE_DIR / "a.json", config)
+    failures = set()
+
+    def control(slot, op):
+        events.append(f"{op}:{slot}")
+        if (slot, op) in failures:
+            raise OSError("injected control failure")
+        response = live.get(slot)
+        if not isinstance(response, dict):
+            return response
+        if op == "stop":
+            assert slot != os.readlink(hs.RUNTIME / "active.sock")[0]
+            assert response["connections"] == 0
+            assert response["appWork"]["unknown"] is False
+            assert all(response["appWork"][key] == 0 for key in WORK_KEYS)
+            response["mode"] = "stopped"
+        elif op == "drain":
+            response["mode"] = "draining"
+        elif op == "resume":
+            response["mode"] = "ready"
+        return copy.deepcopy(response)
+
+    def start_worker(slot, entry):
+        events.append(f"start:{slot}")
+        live[slot] = {"slot": slot, "version": entry["version"], "mode": "ready",
+                      "connections": 0, "appPid": 456,
+                      "appWork": {"initialized": True, "unknown": False,
+                                  **dict.fromkeys(WORK_KEYS, 0)}}
+        private_json(hs.STATE_DIR / f"{slot}.json", {
+            **config, "slot": slot, "version": entry["version"],
+            "release": entry["release"], "port": 21128 if slot == "a" else 21130,
+        })
+
+    def verify_at(base, version):
+        scope = "public" if base.endswith(":20128") else "a" if base.endswith(":21128") else "b"
+        events.append(f"verified:{scope}:{version}")
+        return "injected authentication failure" if (scope, version) in failures else None
+
+    def replace_route(runtime, slot):
+        events.append(f"route:{slot}")
+        assert runtime == hs.RUNTIME
+        temporary = runtime / "route.tmp"
+        temporary.symlink_to(f"{slot}.sock")
+        os.replace(temporary, runtime / "active.sock")
+
+    def bootout_worker(slot):
+        assert live[slot]["mode"] == "stopped", "Controller must receive stopped acknowledgement before bootout"
+        events.append(f"bootout:{slot}")
+        del live[slot]
+
+    monkeypatch.setattr(hs, "control", control)
+    monkeypatch.setattr(hs, "start_worker", start_worker)
+    monkeypatch.setattr(hs, "bootout_worker", bootout_worker)
+    monkeypatch.setattr(hs, "verify_job", lambda slot, entry: None)
+    monkeypatch.setattr(hs, "verify_at", verify_at)
+    monkeypatch.setattr(hs, "replace_route", replace_route)
+    # Transaction checks replace qualification, not its independent refusal checks below.
+    monkeypatch.setattr(hs, "validate_release", lambda dest, digest: {"version": dest.parents[2].name})
+    monkeypatch.setattr(hs, "snapshot_db", lambda dest: events.append("snapshot"))
+    monkeypatch.setattr(hs, "stage_assets", lambda dest: events.append("assets"))
+    return SimpleNamespace(mod=hs, events=events, releases=releases, live=live, failures=failures)
+
+
+def active(c):
+    return os.readlink(c.mod.RUNTIME / "active.sock")[0]
+
+
+def deploy(c, version="v2"):
+    return c.mod.deploy_release(c.releases[version], "b" * 64)
+
+
+def test_failed_candidate_never_changes_route(controller):
+    c = controller
+    c.failures.add(("b", "v2"))
+    assert deploy(c) != 0
+    assert active(c) == "a" and "a" in c.live
+    assert not any(event.startswith("route:") for event in c.events)
+    assert "bootout:a" not in c.events
+
+
+def test_success_switches_only_after_verification(controller):
+    c = controller
+    assert deploy(c) == 0
+    assert c.events.index("verified:b:v2") < c.events.index("route:b")
+    assert c.events.index("route:b") < c.events.index("drain:a")
+    assert active(c) == "b" and "a" in c.live
+    assert c.mod.LINK.resolve() == c.releases["v2"]
+    assert json.loads(c.mod.STATE_FILE.read_text())["slots"]["a"]["mode"] == "draining"
+    assert "proxy-restart" not in c.events and "bootout:a" not in c.events
+
+
+def test_busy_inactive_slot_refuses_next_deploy(controller):
+    c = controller
+    assert deploy(c) == 0
+    c.events.clear()
+    assert deploy(c, "v3") != 0
+    assert active(c) == "b" and "a" in c.live
+    assert "start:a" not in c.events and "bootout:a" not in c.events
+
+
+@pytest.mark.parametrize("key", WORK_KEYS)
+def test_positive_app_work_preserves_inactive_worker(controller, key):
+    c = controller
+    assert deploy(c) == 0
+    c.live["a"]["connections"] = 0
+    c.live["a"]["appWork"][key] = 1
+    assert deploy(c, "v3") != 0
+    assert "a" in c.live and "bootout:a" not in c.events
+
+
+@pytest.mark.parametrize("response", [None, {}, {"slot": "a", "error": "unavailable"}])
+def test_missing_or_malformed_status_refuses_mutation(controller, response):
+    c = controller
+    c.live["a"] = response
+    assert deploy(c) != 0
+    assert active(c) == "a"
+    assert not any(event.startswith(("route:", "start:", "stop:", "bootout:")) for event in c.events)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("connections", True), ("connections", -1), ("connections", None),
+    ("appWork", None), ("version", "foreign"), ("slot", "b"),
+    ("appPid", None), ("mode", "failed"),
+])
+def test_unknown_worker_identity_preserves_both_workers(controller, field, value):
+    c = controller
+    c.live["a"][field] = value
+    assert deploy(c) != 0
+    assert active(c) == "a"
+    assert not any(event.startswith(("route:", "start:", "stop:", "bootout:")) for event in c.events)
+
+
+def test_controller_bootouts_only_after_worker_acknowledges_stopped(controller):
+    c = controller
+    assert deploy(c) == 0
+    c.live["a"]["connections"] = 0
+    c.events.clear()
+    assert deploy(c, "v3") == 0
+    assert c.events.index("stop:a") < c.events.index("bootout:a") < c.events.index("start:a")
+
+
+def test_stop_refusal_preserves_slot_and_route(controller):
+    c = controller
+    assert deploy(c) == 0
+    c.live["a"]["connections"] = 0
+    c.failures.add(("a", "stop"))
+    assert deploy(c, "v3") != 0
+    assert active(c) == "b" and "a" in c.live
+    assert "bootout:a" not in c.events
+
+
+def test_public_failure_resumes_old_slot_before_switching_back(controller):
+    c = controller
+    c.failures.add(("public", "v2"))
+    assert deploy(c) != 0
+    assert c.events.index("resume:a") < c.events.index("verified:a:v1") < c.events.index("route:a")
+    assert c.events.index("route:a") < c.events.index("verified:public:v1")
+    assert active(c) == "a" and "b" in c.live
+    assert "drain:b" in c.events and "bootout:b" not in c.events
+
+
+def test_failed_rollback_keeps_last_serving_route(controller):
+    c = controller
+    c.failures.update({("public", "v2"), ("a", "resume")})
+    assert deploy(c) != 0
+    assert active(c) == "b" and set(c.live) == {"a", "b"}
+    assert "route:a" not in c.events
+
+
+def test_manual_rollback_reuses_draining_worker_without_restart(controller):
+    c = controller
+    assert deploy(c) == 0
+    c.events.clear()
+    assert c.mod.rollback_release("v1") == 0
+    assert active(c) == "a" and set(c.live) == {"a", "b"}
+    assert c.events.index("resume:a") < c.events.index("route:a") < c.events.index("drain:b")
+    assert not any(event.startswith(("start:", "bootout:")) for event in c.events)
+
+
+def test_flock_refuses_concurrent_deployment(controller):
+    c = controller
+    with c.mod.LOCK_FILE.open("a") as lock:
+        c.mod.LOCK_FILE.chmod(0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        assert deploy(c) != 0
+    assert active(c) == "a" and c.events == []
+
+
+def test_lock_covers_retirement_and_every_route_mutation(controller, monkeypatch):
+    c = controller
+    assert deploy(c) == 0
+    c.live["a"]["connections"] = 0
+    for name in ("control", "replace_route"):
+        original = getattr(c.mod, name)
+
+        def guarded(*args, original=original):
+            with c.mod.LOCK_FILE.open("a") as lock:
+                with pytest.raises(BlockingIOError):
+                    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return original(*args)
+
+        monkeypatch.setattr(c.mod, name, guarded)
+    assert deploy(c, "v3") == 0
+
+
+def test_corrupted_journal_refuses_without_worker_mutations(controller):
+    c = controller
+    c.mod.STATE_FILE.write_text("{incomplete")
+    assert c.mod.reconcile() != 0
+    assert active(c) == "a" and c.events == []
+
+
+def test_status_remains_diagnostic_when_worker_probe_fails(controller):
+    c = controller
+    c.failures.add(("a", "status"))
+    result = c.mod.status()
+    assert isinstance(result, dict)
+    assert result.get("errors"), "Unknown status must not render as a healthy verdict"
+    assert active(c) == "a"
+
+
+class SimulatedCrash(BaseException):
+    pass
+
+
+@pytest.mark.parametrize("checkpoint", ["prepared", "verified", "switched", "committed"])
+def test_crash_recovery_uses_socket_route_authority(controller, monkeypatch, checkpoint):
+    c = controller
+    original = c.mod.write_state
+
+    def crash_after(state):
+        original(state)
+        phase = state.get("pending", {}).get("phase") if state.get("pending") else "committed"
+        if phase == checkpoint:
+            raise SimulatedCrash(checkpoint)
+
+    monkeypatch.setattr(c.mod, "write_state", crash_after)
+    with pytest.raises(SimulatedCrash):
+        deploy(c)
+    route = active(c)
+    monkeypatch.setattr(c.mod, "write_state", original)
+    assert c.mod.reconcile() == 0
+    state = json.loads(c.mod.STATE_FILE.read_text())
+    assert state["active"] == route == active(c)
+    assert c.mod.LINK.resolve() == c.releases["v1" if route == "a" else "v2"]
+    assert "bootout:a" not in c.events
+
+
+def test_crash_between_route_rename_and_state_commit_recovers_new_route(controller, monkeypatch):
+    c = controller
+    original = c.mod.replace_route
+
+    def crash_after(runtime, slot):
+        original(runtime, slot)
+        raise SimulatedCrash("route replacement")
+
+    monkeypatch.setattr(c.mod, "replace_route", crash_after)
+    with pytest.raises(SimulatedCrash):
+        deploy(c)
+    monkeypatch.setattr(c.mod, "replace_route", original)
+    assert active(c) == "b"
+    assert c.mod.reconcile() == 0
+    assert json.loads(c.mod.STATE_FILE.read_text())["active"] == "b"
+    assert "drain:a" in c.events and "bootout:a" not in c.events
+
+
+def test_recovery_with_unknown_new_identity_preserves_workers(controller, monkeypatch):
+    c = controller
+    original = c.mod.replace_route
+
+    def crash_after(runtime, slot):
+        original(runtime, slot)
+        raise SimulatedCrash("route replacement")
+
+    monkeypatch.setattr(c.mod, "replace_route", crash_after)
+    with pytest.raises(SimulatedCrash):
+        deploy(c)
+    monkeypatch.setattr(c.mod, "replace_route", original)
+    c.live["b"]["version"] = "foreign"
+    c.events.clear()
+    assert c.mod.reconcile() != 0
+    assert active(c) == "b" and set(c.live) == {"a", "b"}
+    assert not any(event.startswith(("route:", "stop:", "bootout:", "drain:")) for event in c.events)
+
+
+@pytest.mark.parametrize("boundary", ["replace_route", "write_state"])
+def test_route_or_state_io_failure_never_bootouts_healthy_worker(controller, monkeypatch, boundary):
+    c = controller
+
+    def fail(*args):
+        raise OSError("injected rename or fsync failure")
+
+    monkeypatch.setattr(c.mod, boundary, fail)
+    assert deploy(c) != 0
+    assert "a" in c.live and "bootout:a" not in c.events
+
+
+def test_real_validation_requires_receipt_even_in_guest(hs, tmp_path):
+    release = hs.RELEASES / "v2/lib/node_modules/9router"
+    release.mkdir(parents=True)
+    private_json(release / "package.json", {"version": "v2"})
+    with pytest.raises((ValueError, OSError, RuntimeError)):
+        hs.validate_release(release, "b" * 64)
+    assert not hs.STATE_FILE.exists()
+
+
+@pytest.mark.parametrize("version", ["../escape", "/absolute", "v2/child", "", ".", ".."])
+def test_invalid_versions_refuse_before_side_effects(hs, version):
+    assert hs.rollback_release(version) != 0
+    assert not hs.STATE_FILE.exists()
+
+
+def test_enrollment_requires_explicit_maintenance_acknowledgement(hs):
+    assert hs.main(["enroll"]) != 0
+    assert not hs.STATE_FILE.exists()
+
+
+def test_enrollment_acknowledgement_is_not_a_qualification_bypass(hs):
+    assert hs.main(["enroll", "--acknowledge-maintenance"]) != 0
+    assert not hs.STATE_FILE.exists()

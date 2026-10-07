@@ -1,4 +1,5 @@
 import { FORMATS } from "../../translator/formats.js";
+import managed from "../../../src/lib/db/managed.cjs";
 import { needsTranslation } from "../../translator/index.js";
 import { createSSETransformStreamWithLogger, createPassthroughStreamWithLogger } from "../../utils/stream.js";
 import { pipeWithDisconnect } from "../../utils/streamHandler.js";
@@ -47,8 +48,7 @@ function buildTransformStream({ provider, sourceFormat, targetFormat, userAgent,
  */
 export async function handleStreamingResponse({ providerResponse, provider, model, sourceFormat, targetFormat, userAgent, body, stream, translatedBody, finalBody, requestStartTime, connectionId, apiKey, clientRawRequest, onRequestSuccess, reqLogger, toolNameMap, customToolNames, asyncToolNames, streamController, onStreamComplete, streamDetailId, pxpipe, reqTag, log, credentials }) {
   if (onRequestSuccess) {
-    Promise.resolve()
-      .then(onRequestSuccess)
+    managed.trackWork('persistence', () => Promise.resolve().then(onRequestSuccess))
       .catch(err => {
         console.error("[ChatCore] onRequestSuccess failed:", err?.message || err);
       });

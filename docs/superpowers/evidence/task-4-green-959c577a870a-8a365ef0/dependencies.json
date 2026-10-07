@@ -1,0 +1,9 @@
+{
+  "dependencyHashes": {
+    "package.json": "5784dd13ee10e2e3b74fd15e58d1b86900d0988e73c65b181058cd52ff02ce48",
+    "package-lock.json": "f1d1aad476398e11e2cc3164c0802fb8ec8f76509f2042a98854b426d1e7aed8",
+    "tests/package.json": "320deca1e8563b1f70a33bca22530c549069174c8b8f6c8cb08fcf5c0f9e3f9f"
+  },
+  "testLockSha256": "8fdd1fae2e024e1b4c25cd3649dcc20ec802c031d67b8ff02587273a1d6c3fff",
+  "install": "guest-only npm ci --ignore-scripts; no host dependencies"
+}

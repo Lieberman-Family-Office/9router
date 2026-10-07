@@ -1,10 +1,11 @@
 import { BaseExecutor } from "./base.js";
+import { refreshProviderCredentials } from "../services/oauthCredentialManager.js";
 import { PROVIDERS, PROVIDER_OAUTH } from "../config/providers.js";
 import { ANTHROPIC_API_VERSION, OPENAI_COMPAT_BASE, ANTHROPIC_COMPAT_BASE, OPENAI_ULTRAFAST_ROUTE, selectAnthropicBeta, mergeAnthropicBeta } from "../providers/shared.js";
 import { resolveOpenAICompatibleApiType } from "../services/provider.js";
 import { OAUTH_ENDPOINTS, buildKimiHeaders } from "../config/appConstants.js";
 import { buildClineHeaders } from "../shared/clineAuth.js";
-import { proxyAwareFetch } from "../utils/proxyFetch.js";
+import { proxyAwareFetch, hasEnabledProxy } from "../utils/proxyFetch.js";
 import { injectReasoningContent } from "../utils/reasoningContentInjector.js";
 import { stripUnsupportedParams } from "../translator/concerns/paramSupport.js";
 import { extractClaudeSessionIdFromUserId } from "../utils/claudeCloaking.js";
@@ -236,6 +237,10 @@ export class DefaultExecutor extends BaseExecutor {
   }
 
   async refreshCredentials(credentials, log, proxyOptions = null) {
+    if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+      if (hasEnabledProxy(proxyOptions)) throw new Error("Managed refresh proxy contract unavailable");
+      return refreshProviderCredentials(this.provider, credentials, null);
+    }
     if (!credentials.refreshToken) return null;
 
     const refreshers = {

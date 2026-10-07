@@ -1,0 +1,202 @@
+...................FFFFFFFFFFFF                                          [100%]
+=================================== FAILURES ===================================
+_________ test_enrolled_dispatch_never_enters_legacy_mutation[deploy] __________
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_deploy/tmp/pytest-of-runner/pytest-0/test_enrolled_dispatch_never_e0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad3ad50>
+operation = 'deploy'
+
+    @pytest.mark.parametrize("operation", ["deploy", "rollback"])
+    def test_enrolled_dispatch_never_enters_legacy_mutation(dep, tmp_path, monkeypatch, operation):
+        calls = []
+        fake = type("Controller", (), {
+            "deploy_tarball": staticmethod(lambda tgz: calls.append(("deploy", tgz)) or 17),
+            "rollback_release": staticmethod(lambda version: calls.append(("rollback", version)) or 19),
+        })
+        (dep.HOME / "hotswap").mkdir()
+        (dep.HOME / "hotswap/state.json").write_text("{corrupted-but-enrolled")
+>       monkeypatch.setattr(dep, "load_hotswap", lambda: fake)
+E       AttributeError: <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'> has no attribute 'load_hotswap'
+
+tests/mac/test_9router_deploy.py:225: AttributeError
+________ test_enrolled_dispatch_never_enters_legacy_mutation[rollback] _________
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+tmp_path = PosixPath('/Volumes/devbox/r652526fc/isolated/test_9router_deploy/tmp/pytest-of-runner/pytest-0/test_enrolled_dispatch_never_e1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10acb62d0>
+operation = 'rollback'
+
+    @pytest.mark.parametrize("operation", ["deploy", "rollback"])
+    def test_enrolled_dispatch_never_enters_legacy_mutation(dep, tmp_path, monkeypatch, operation):
+        calls = []
+        fake = type("Controller", (), {
+            "deploy_tarball": staticmethod(lambda tgz: calls.append(("deploy", tgz)) or 17),
+            "rollback_release": staticmethod(lambda version: calls.append(("rollback", version)) or 19),
+        })
+        (dep.HOME / "hotswap").mkdir()
+        (dep.HOME / "hotswap/state.json").write_text("{corrupted-but-enrolled")
+>       monkeypatch.setattr(dep, "load_hotswap", lambda: fake)
+E       AttributeError: <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'> has no attribute 'load_hotswap'
+
+tests/mac/test_9router_deploy.py:225: AttributeError
+_______ test_release_path_rejects_invalid_version_before_join[../escape] _______
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+version = '../escape'
+
+    @pytest.mark.parametrize("version", ["../escape", "/absolute", "v2/nested", ".", "..", ""])
+    def test_release_path_rejects_invalid_version_before_join(dep, version):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/mac/test_9router_deploy.py:244: Failed
+_______ test_release_path_rejects_invalid_version_before_join[/absolute] _______
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+version = '/absolute'
+
+    @pytest.mark.parametrize("version", ["../escape", "/absolute", "v2/nested", ".", "..", ""])
+    def test_release_path_rejects_invalid_version_before_join(dep, version):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/mac/test_9router_deploy.py:244: Failed
+_______ test_release_path_rejects_invalid_version_before_join[v2/nested] _______
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+version = 'v2/nested'
+
+    @pytest.mark.parametrize("version", ["../escape", "/absolute", "v2/nested", ".", "..", ""])
+    def test_release_path_rejects_invalid_version_before_join(dep, version):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/mac/test_9router_deploy.py:244: Failed
+___________ test_release_path_rejects_invalid_version_before_join[.] ___________
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+version = '.'
+
+    @pytest.mark.parametrize("version", ["../escape", "/absolute", "v2/nested", ".", "..", ""])
+    def test_release_path_rejects_invalid_version_before_join(dep, version):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/mac/test_9router_deploy.py:244: Failed
+__________ test_release_path_rejects_invalid_version_before_join[..] ___________
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+version = '..'
+
+    @pytest.mark.parametrize("version", ["../escape", "/absolute", "v2/nested", ".", "..", ""])
+    def test_release_path_rejects_invalid_version_before_join(dep, version):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/mac/test_9router_deploy.py:244: Failed
+___________ test_release_path_rejects_invalid_version_before_join[] ____________
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+version = ''
+
+    @pytest.mark.parametrize("version", ["../escape", "/absolute", "v2/nested", ".", "..", ""])
+    def test_release_path_rejects_invalid_version_before_join(dep, version):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/mac/test_9router_deploy.py:244: Failed
+________________ test_http_explicit_base_does_not_change_global ________________
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad7bbd0>
+
+    def test_http_explicit_base_does_not_change_global(dep, monkeypatch):
+        seen = []
+        original_base = dep.BASE
+        monkeypatch.setattr(dep.urllib.request, "urlopen", lambda req, timeout: seen.append(req.full_url))
+>       dep.http("/api/version", base="http://127.0.0.1:21130")
+E       TypeError: http() got an unexpected keyword argument 'base'
+
+tests/mac/test_9router_deploy.py:252: TypeError
+______ test_stream_probe_propagates_private_base_without_mutating_global _______
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad7bf50>
+
+    def test_stream_probe_propagates_private_base_without_mutating_global(dep, monkeypatch):
+        seen = []
+        original_base = dep.BASE
+    
+        def stream_once(timeout, *, base=dep.BASE):
+            seen.append(base)
+            return None, False
+    
+        monkeypatch.setattr(dep, "stream_once", stream_once)
+>       assert dep.stream_probe(base="http://127.0.0.1:21130") is None
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: stream_probe() got an unexpected keyword argument 'base'
+
+tests/mac/test_9router_deploy.py:266: TypeError
+______________ test_verify_propagates_private_base_to_all_probes _______________
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad78ec0>
+
+    def test_verify_propagates_private_base_to_all_probes(dep, monkeypatch):
+        seen = []
+    
+        def http(path, body=None, timeout=10, *, base=dep.BASE):
+            seen.append((path, base))
+            value = {"currentVersion": "v2"} if path == "/api/version" else {"data": [{}]}
+            return io.BytesIO(json.dumps(value).encode())
+    
+        def stream_probe(timeout=90, *, base=dep.BASE):
+            seen.append(("stream", base))
+            return None
+    
+        monkeypatch.setattr(dep, "http", http)
+        monkeypatch.setattr(dep, "stream_probe", stream_probe)
+>       assert dep.verify("v2", base="http://127.0.0.1:21130") is None
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: verify() got an unexpected keyword argument 'base'
+
+tests/mac/test_9router_deploy.py:284: TypeError
+_________________ test_stream_once_uses_explicit_private_base __________________
+
+dep = <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ad37d90>
+
+    def test_stream_once_uses_explicit_private_base(dep, monkeypatch):
+        seen = []
+    
+        def http(path, body=None, timeout=10, *, base=dep.BASE):
+            seen.append(base)
+            return io.BytesIO(b"data: [DONE]\n")
+    
+        monkeypatch.setattr(dep, "http", http)
+>       assert dep.stream_once(1, base="http://127.0.0.1:21130") == (None, False)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: stream_once() got an unexpected keyword argument 'base'
+
+tests/mac/test_9router_deploy.py:298: TypeError
+=========================== short test summary info ============================
+FAILED tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[deploy] - AttributeError: <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'> has no attribute 'load_hotswap'
+FAILED tests/mac/test_9router_deploy.py::test_enrolled_dispatch_never_enters_legacy_mutation[rollback] - AttributeError: <module 'og_9router_deploy' from '/Volumes/devbox/r652526fc/source/scripts/mac/9router_deploy.py'> has no attribute 'load_hotswap'
+FAILED tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[../escape] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[/absolute] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[v2/nested] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[.] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[..] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/mac/test_9router_deploy.py::test_release_path_rejects_invalid_version_before_join[] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/mac/test_9router_deploy.py::test_http_explicit_base_does_not_change_global - TypeError: http() got an unexpected keyword argument 'base'
+FAILED tests/mac/test_9router_deploy.py::test_stream_probe_propagates_private_base_without_mutating_global - TypeError: stream_probe() got an unexpected keyword argument 'base'
+FAILED tests/mac/test_9router_deploy.py::test_verify_propagates_private_base_to_all_probes - TypeError: verify() got an unexpected keyword argument 'base'
+FAILED tests/mac/test_9router_deploy.py::test_stream_once_uses_explicit_private_base - TypeError: stream_once() got an unexpected keyword argument 'base'
+12 failed, 19 passed in 0.14s

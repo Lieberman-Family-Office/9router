@@ -21,6 +21,7 @@ def dep(tmp_path, monkeypatch):
     mod = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
+    monkeypatch.setattr(mod, "HOME", tmp_path)
     monkeypatch.setattr(mod, "RELEASES", tmp_path / "releases")
     monkeypatch.setattr(mod, "LOG", tmp_path / "deploys.log")
     monkeypatch.setattr(mod, "LINK", tmp_path / "node_modules" / "9router")
@@ -67,6 +68,25 @@ def fake_npm(dep, monkeypatch):
     monkeypatch.setattr(dep.subprocess, "run", run)
 
 
+def test_release_build_metadata_stays_confined(dep):
+    assert (
+        dep.release_dir("1.2.3+arm64").relative_to(dep.RELEASES).parts[0]
+        == "1.2.3+arm64"
+    )
+
+
+def test_status_skips_invalid_release_entries(dep, monkeypatch, capsys):
+    release = make_release(dep, "v1")
+    dep.LINK.symlink_to(release)
+    (dep.RELEASES / "invalid entry").mkdir()
+    (dep.RELEASES / "v2").write_text("partial metadata")
+    monkeypatch.setattr(dep, "http", lambda *args, **kwargs: io.BytesIO(b"{}"))
+    dep.cmd_status(None)
+    output = capsys.readouterr().out
+    assert "v1" in output
+    assert "invalid entry" not in output
+
+
 def test_stream_terminal_detection(dep):
     assert dep.is_terminal(b"data: [DONE]\n")
     assert dep.is_terminal(b'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n')
@@ -75,6 +95,39 @@ def test_stream_terminal_detection(dep):
     )
     assert not dep.is_terminal(b"\n")
     assert not dep.is_terminal(b"data: {not json\n")
+
+
+@pytest.mark.parametrize(
+    "frame",
+    [
+        b"event: error\n",
+        b'data: {"error":{"message":"failed"}}\n',
+        b'data: {"type":"error","error":null}\n',
+        b"event: response.failed\n",
+        b'data: {"type":"response.incomplete"}\n',
+    ],
+)
+def test_stream_once_rejects_error_before_done_without_retry(dep, monkeypatch, frame):
+    calls = []
+
+    def http(*args, **kwargs):
+        calls.append((args, kwargs))
+        return io.BytesIO(frame + b"\ndata: [DONE]\n\n")
+
+    monkeypatch.setattr(dep, "http", http)
+    assert dep.stream_probe(5) == "stream: upstream error event"
+    assert len(calls) == 1
+
+
+def test_stream_once_accepts_successful_sse(dep, monkeypatch):
+    monkeypatch.setattr(
+        dep,
+        "http",
+        lambda *args, **kwargs: io.BytesIO(
+            b'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n'
+        ),
+    )
+    assert dep.stream_once(5) == (None, False)
 
 
 def scripted_probe(dep, monkeypatch, outcomes):
@@ -210,3 +263,161 @@ def test_rollback_targets_what_live_version_replaced(dep, monkeypatch):
     monkeypatch.setattr(dep, "verify", lambda v, **k: None)
     assert dep.cmd_rollback(type("A", (), {"version": None})) == 0
     assert dep.live() == dep.release_dir("v8").resolve()
+
+
+@pytest.mark.parametrize("operation", ["deploy", "rollback"])
+def test_enrolled_dispatch_never_enters_legacy_mutation(
+    dep, tmp_path, monkeypatch, operation
+):
+    calls = []
+    fake = type(
+        "Controller",
+        (),
+        {
+            "deploy_tarball": staticmethod(
+                lambda tgz: calls.append(("deploy", tgz)) or 17
+            ),
+            "rollback_release": staticmethod(
+                lambda version: calls.append(("rollback", version)) or 19
+            ),
+        },
+    )
+    (dep.HOME / "hotswap").mkdir()
+    (dep.HOME / "hotswap/state.json").write_text("{corrupted-but-enrolled")
+    monkeypatch.setattr(dep, "load_hotswap", lambda: fake)
+
+    def prohibited(*args, **kwargs):
+        pytest.fail("Enrolled dispatch entered legacy pointer/restart/install path")
+
+    for name in ("restart", "switch", "snapshot_db", "unqualified"):
+        monkeypatch.setattr(dep, name, prohibited)
+    monkeypatch.setattr(dep.subprocess, "run", prohibited)
+    if operation == "deploy":
+        tgz = tmp_path / "candidate.tgz"
+        assert dep.cmd_deploy(deploy_args(tgz)) == 17
+        assert calls == [("deploy", tgz.resolve())]
+    else:
+        assert dep.cmd_rollback(type("A", (), {"version": "v1"})) == 19
+        assert calls == [("rollback", "v1")]
+
+
+@pytest.mark.parametrize(
+    "version", ["../escape", "/absolute", "v2/nested", ".", "..", ""]
+)
+def test_release_path_rejects_invalid_version_before_join(dep, version):
+    with pytest.raises(ValueError):
+        dep.release_dir(version)
+
+
+def test_partial_enrollment_never_falls_back_to_legacy_deploy(dep, monkeypatch):
+    (dep.HOME / "hotswap").mkdir()
+    calls = []
+    fake = type(
+        "Controller",
+        (),
+        {
+            "deploy_tarball": staticmethod(lambda tgz: calls.append(tgz) or 1),
+        },
+    )
+    monkeypatch.setattr(dep, "load_hotswap", lambda: fake)
+
+    def prohibited(*args, **kwargs):
+        pytest.fail("Partial enrollment entered legacy deployment")
+
+    monkeypatch.setattr(dep, "live", prohibited)
+    assert dep.cmd_deploy(deploy_args(dep.HOME / "candidate.tgz")) == 1
+    assert calls == [(dep.HOME / "candidate.tgz").resolve()]
+
+
+def test_http_explicit_base_does_not_change_global(dep, monkeypatch):
+    seen = []
+    original_base = dep.BASE
+    monkeypatch.setattr(
+        dep.urllib.request, "urlopen", lambda req, timeout: seen.append(req.full_url)
+    )
+    dep.http("/api/version", base="http://127.0.0.1:21130")
+    assert seen == ["http://127.0.0.1:21130/api/version"]
+    assert dep.BASE == original_base
+
+
+@pytest.mark.parametrize(
+    "path, body, authenticated",
+    [
+        ("/api/version", None, False),
+        ("/v1/models", None, True),
+        ("/v1/chat/completions", {"stream": True}, True),
+    ],
+)
+def test_http_authenticates_models_without_changing_get_method(
+    dep, monkeypatch, path, body, authenticated
+):
+    seen = []
+    monkeypatch.setattr(dep, "api_key", lambda: "fixture-client-key")
+    monkeypatch.setattr(
+        dep.urllib.request, "urlopen", lambda req, timeout: seen.append(req)
+    )
+    dep.http(path, body, base="http://127.0.0.1:20128")
+    assert seen[0].get_header("Authorization") == (
+        "Bearer fixture-client-key" if authenticated else None
+    )
+    assert seen[0].get_method() == ("GET" if body is None else "POST")
+
+
+def test_verify_reports_missing_models_probe_key(dep, monkeypatch):
+    def urlopen(req, timeout):
+        assert req.full_url.endswith("/api/version")
+        return io.BytesIO(b'{"currentVersion":"v2"}')
+
+    def missing_key():
+        raise RuntimeError("no active API key for the stream probe")
+
+    monkeypatch.setattr(dep.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(dep, "api_key", missing_key)
+    assert dep.verify("v2") == "models: no active API key for the stream probe"
+
+
+def test_stream_probe_propagates_private_base_without_mutating_global(dep, monkeypatch):
+    seen = []
+    original_base = dep.BASE
+
+    def stream_once(timeout, *, base=dep.BASE):
+        seen.append(base)
+        return None, False
+
+    monkeypatch.setattr(dep, "stream_once", stream_once)
+    assert dep.stream_probe(base="http://127.0.0.1:21130") is None
+    assert seen == ["http://127.0.0.1:21130"] and dep.BASE == original_base
+
+
+def test_verify_propagates_private_base_to_all_probes(dep, monkeypatch):
+    seen = []
+
+    def http(path, body=None, timeout=10, *, base=dep.BASE):
+        seen.append((path, base))
+        value = {"currentVersion": "v2"} if path == "/api/version" else {"data": [{}]}
+        return io.BytesIO(json.dumps(value).encode())
+
+    def stream_probe(timeout=90, *, base=dep.BASE):
+        seen.append(("stream", base))
+        return None
+
+    monkeypatch.setattr(dep, "http", http)
+    monkeypatch.setattr(dep, "stream_probe", stream_probe)
+    assert dep.verify("v2", base="http://127.0.0.1:21130") is None
+    assert seen == [
+        ("/api/version", "http://127.0.0.1:21130"),
+        ("/v1/models", "http://127.0.0.1:21130"),
+        ("stream", "http://127.0.0.1:21130"),
+    ]
+
+
+def test_stream_once_uses_explicit_private_base(dep, monkeypatch):
+    seen = []
+
+    def http(path, body=None, timeout=10, *, base=dep.BASE):
+        seen.append(base)
+        return io.BytesIO(b"data: [DONE]\n")
+
+    monkeypatch.setattr(dep, "http", http)
+    assert dep.stream_once(1, base="http://127.0.0.1:21130") == (None, False)
+    assert seen == ["http://127.0.0.1:21130"]

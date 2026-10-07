@@ -15,20 +15,27 @@ per-target cooldown. Logs JSON lines to <home>/.9router/logs/path-watchdog.log.
 
 Intended to run as root LaunchDaemon so it can:
   - kickstart system/com.lfenergy.tailscaled
-  - kickstart gui/<uid>/com.lfenergy.9router
+  - kickstart gui/<uid>/com.lfenergy.9router (unenrolled only)
+  - kickstart enrolled proxy or confirmed failed ACTIVE worker, never a drain
   - kickstart gui/<uid>/com.lfenergy.9router-combo-helper
+
+Enrolled checks require 9router_hotswap.py and its runtime bundle beside this
+script. Unknown control state alarms and suppresses managed restart targets.
 """
 
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
+import stat
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable, Mapping, MutableMapping, Optional, Sequence
@@ -40,13 +47,17 @@ DEFAULT_COOLDOWN_S = 180
 DEFAULT_TS_SOCKET = "/var/run/tailscaled.socket"
 DEFAULT_TS_BIN = "/opt/homebrew/bin/tailscale"
 LAUNCHCTL = "/bin/launchctl"
-# Plain HTTP is intentional: probes hit local/Tailscale TCP serve, not the public TLS edge.
+# Plain HTTP is intentional: probes hit local/Tailscale TCP serve,
+# not the public TLS edge.
 LOCAL_9ROUTER = "http://127.0.0.1:20128/v1/models"  # NOSONAR python:S5332
 LOCAL_HELPER = "http://127.0.0.1:20129/combo/subs-coding"  # NOSONAR python:S5332
 
 TARGET_TAILSCALE = "tailscale"
 TARGET_9ROUTER = "9router"
 TARGET_HELPER = "helper"
+TARGET_PROXY = "proxy"
+WORKER_TARGETS = {"a": "worker-a", "b": "worker-b"}
+CONTROLLER = Path(__file__).with_name("9router_hotswap.py")
 
 PROBE_TARGETS: Mapping[str, tuple[str, ...]] = {
     "local_9router": (TARGET_9ROUTER,),
@@ -68,6 +79,7 @@ class ProbeResult:
 class WatchState:
     fail_streaks: MutableMapping[str, int] = field(default_factory=dict)
     last_kick_mono: MutableMapping[str, float] = field(default_factory=dict)
+    active_slot: str | None = None
 
 
 def http_probe(url: str, *, timeout_s: float) -> tuple[bool, str]:
@@ -199,6 +211,131 @@ def run_probes(
     return results
 
 
+def managed_status(*, home: Path, uid: int) -> dict | None:
+    """Read managed status as the worker owner, including from the root daemon."""
+    directory = home / ".9router" / "hotswap"
+    try:
+        directory.lstat()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return {"errors": ["managed enrollment state unreadable"]}
+    command = [sys.executable, str(CONTROLLER), "status"]
+    try:
+        owner = {}
+        if os.getuid() == 0 and uid != 0:
+            owner = {"user": uid, "group": home.stat().st_gid, "extra_groups": []}
+        elif os.getuid() != uid:
+            return {"errors": ["managed owner identity differs"]}
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+            env={**os.environ, "HOME": str(home)},
+            **owner,
+        )
+        status = json.loads(result.stdout)
+        if result.returncode or not isinstance(status, dict):
+            raise ValueError("managed controller status refused")
+        return status
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return {"errors": ["managed control state unknown"]}
+
+
+@contextmanager
+def managed_lock(home: Path, uid: int):
+    """Hold the existing controller lock across classification and kickstart."""
+    directory = home / ".9router" / "hotswap"
+    try:
+        directory.lstat()
+    except FileNotFoundError:
+        yield True
+        return
+    except OSError:
+        yield False
+        return
+    fd = None
+    acquired = False
+    try:
+        info = directory.lstat()
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or info.st_uid != uid
+            or stat.S_IMODE(info.st_mode) != 0o700
+        ):
+            raise ValueError("unsafe managed directory")
+        fd = os.open(directory / "deploy.lock", os.O_RDONLY | os.O_NOFOLLOW)
+        info = os.fstat(fd)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != uid
+            or stat.S_IMODE(info.st_mode) != 0o600
+            or info.st_nlink != 1
+        ):
+            raise ValueError("unsafe managed lock")
+        fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+        acquired = True
+    except (OSError, ValueError):
+        # Refuse recovery when lock validation or acquisition fails.
+        pass
+    try:
+        yield acquired
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
+def managed_probes(
+    results: Sequence[ProbeResult], status: dict, *, timeout_s: float
+) -> list[ProbeResult]:
+    """Classify path failures without granting retirement or targeting drains."""
+    probes = {result.name: result for result in results}
+    state = status.get("state")
+    route = status.get("route")
+    workers = status.get("workers")
+    known = (
+        status.get("errors") == []
+        and isinstance(state, dict)
+        and isinstance(route, str)
+        and route in WORKER_TARGETS
+        and state.get("active") == route
+        and state.get("enrollment") == "complete"
+        and state.get("pending") is None
+        and isinstance(workers, dict)
+        and isinstance(workers.get(route), dict)
+        and workers[route].get("mode") == "active"
+    )
+    targets = {"local_9router": (), "hairpin_ts": ()}
+    if known:
+        port = {"a": 21128, "b": 21130}[route]
+        # Private readiness is unauthenticated; model discovery requires an API key.
+        healthy, detail = http_probe(
+            f"http://127.0.0.1:{port}/api/version",
+            timeout_s=timeout_s,  # NOSONAR python:S5332
+        )
+        active = ProbeResult("active_worker", healthy, detail, (WORKER_TARGETS[route],))
+        if healthy:
+            targets["local_9router"] = (TARGET_PROXY,)
+            if probes["local_9router"].ok:
+                targets["hairpin_ts"] = (TARGET_TAILSCALE,)
+    else:
+        active = ProbeResult("active_worker", False, "not_evaluated", ())
+    return [
+        ProbeResult(
+            result.name,
+            result.ok,
+            result.detail,
+            targets.get(result.name, result.targets),
+        )
+        for result in results
+    ] + [
+        ProbeResult("managed_control", known, "known" if known else "unknown", ()),
+        active,
+    ]
+
+
 def decide_kicks(
     results: Sequence[ProbeResult],
     state: WatchState,
@@ -241,6 +378,13 @@ def kickstart_commands(*, uid: int, targets: Iterable[str]) -> list[list[str]]:
             cmds.append(
                 [LAUNCHCTL, "kickstart", "-k", f"gui/{uid}/com.lfenergy.9router"]
             )
+        elif target == TARGET_PROXY or target in WORKER_TARGETS.values():
+            label = (
+                "com.lfenergy.9router-proxy"
+                if target == TARGET_PROXY
+                else f"com.lfenergy.9router-{target}"
+            )
+            cmds.append([LAUNCHCTL, "kickstart", "-k", f"gui/{uid}/{label}"])
         elif target == TARGET_HELPER:
             cmds.append(
                 [
@@ -304,21 +448,36 @@ def cycle(
 ) -> int:
     """Run one probe/kick cycle. Exit 0 healthy, 2 kicked, 1 degraded."""
     started = time.time()
-    results = run_probes(timeout_s=timeout_s, ts_socket=ts_socket, ts_bin=ts_bin)
-    kicks, notes = decide_kicks(
-        results,
-        state,
-        now_mono=time.monotonic(),
-        fail_threshold=fail_threshold,
-        cooldown_s=cooldown_s,
-    )
-    actions = apply_kicks(
-        kicks,
-        uid=uid,
-        state=state,
-        now_mono=time.monotonic(),
-        dry_run=dry_run,
-    )
+    with managed_lock(home, uid) as locked:
+        results = run_probes(timeout_s=timeout_s, ts_socket=ts_socket, ts_bin=ts_bin)
+        status = (
+            managed_status(home=home, uid=uid)
+            if locked
+            else {"errors": ["deployment busy or lock unknown"]}
+        )
+        if status is not None:
+            results = managed_probes(results, status, timeout_s=timeout_s)
+        if status is not None:
+            active_slot = status.get("route")
+            if not isinstance(active_slot, str) or active_slot != state.active_slot:
+                state.fail_streaks.pop("active_worker", None)
+                state.active_slot = (
+                    active_slot if isinstance(active_slot, str) else None
+                )
+        kicks, notes = decide_kicks(
+            results,
+            state,
+            now_mono=time.monotonic(),
+            fail_threshold=fail_threshold,
+            cooldown_s=cooldown_s,
+        )
+        actions = apply_kicks(
+            kicks,
+            uid=uid,
+            state=state,
+            now_mono=time.monotonic(),
+            dry_run=dry_run,
+        )
     event = {
         "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started)),
         "ok": all(r.ok for r in results),

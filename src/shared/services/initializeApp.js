@@ -1,4 +1,6 @@
 import os from "os";
+import managed from "../../lib/db/managed.cjs";
+import { getManagedIngressSettings } from "../../lib/db/repos/settingsRepo.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { existsSync } from "fs";
@@ -50,6 +52,28 @@ const g = global.__appSingleton ??= {
 };
 
 export async function initializeApp() {
+  if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
+    await managed.awaitResponsesWsReady();
+    if (managed.workState().initialized) return;
+    let settings;
+    try { settings = await getManagedIngressSettings(); } catch (error) {
+      managed.workState().unknown = true;
+      throw error;
+    }
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings) ||
+        ['tunnelEnabled', 'tailscaleEnabled', 'mitmEnabled'].some(key =>
+          settings[key] !== undefined && settings[key] !== false)) {
+      managed.workState().unknown = true;
+      throw new Error('Managed workers refuse app-owned ingress');
+    }
+    // Each worker owns a gated scheduler so activation/rollback needs no re-bootstrap.
+    const { startBackgroundTokenRefresh } = await import("@/sse/services/backgroundTokenRefresh.js");
+    startBackgroundTokenRefresh();
+    const { startQuotaAutoPing } = await import("@/shared/services/quotaAutoPing");
+    startQuotaAutoPing();
+    managed.workState().initialized = true;
+    return;
+  }
   try {
     // Register cleanup + exit-respawn callback immediately so signals and
     // unexpected cloudflared exits are handled even during the deferred window.
