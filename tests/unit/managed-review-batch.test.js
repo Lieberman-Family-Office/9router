@@ -180,6 +180,32 @@ it('provider actual PUT preserves noncredential edits and refuses stale credenti
   expect(row.providerSpecificData.usage).toBe(8);
 });
 
+it('Xiaomi browser status mints a bound proof only after provider verification', async () => {
+  let verified = false;
+  vi.doMock('@/lib/mimoLoginSession', () => ({
+    sessionFromRequest: () => ({ state: 'fixture-state', status: 'done', region: 'sgp' }),
+    readSessionIdentity: () => ({ userId: 'fixture', passToken: 'fake-after' }),
+    ensureServiceSession: async () => verified,
+    attachSessionCookie: response => response,
+  }));
+  vi.doMock('next/server', () => ({ NextResponse: { json: (body, init) => {
+    const response = Response.json(body, init); response.cookies = { set() {} }; return response;
+  } } }));
+  try {
+    const { GET } = await import('@/app/api/oauth/xiaomi-mimo/login/status/route.js');
+    const request = new Request('http://localhost/api/oauth/xiaomi-mimo/login/status?state=fixture-state');
+    expect((await GET(request)).status).toBe(400);
+    verified = true;
+    const response = await GET(request);
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    const { getDashboardAuthSession } = await import('@/lib/auth/dashboardSession');
+    const proof = await getDashboardAuthSession(payload.reauthorizationProof);
+    expect(proof).toMatchObject({ purpose: 'xiaomi-reauthorization', userId: 'fixture', region: 'sgp' });
+    expect(proof.reauthorizationExpiresAt).toBeGreaterThan(Date.now());
+  } finally { vi.doUnmock('@/lib/mimoLoginSession'); }
+});
+
 it('signed Xiaomi reauthorization uses real issuance generation and rejects a tampered proof', async () => {
   db.prepare('UPDATE providerConnections SET provider=?,email=?,data=? WHERE id=?')
     .run('xiaomi-mimo', 'fixture@xiaomi', JSON.stringify({ providerSpecificData: { mimoPassToken: 'fake-before', usage: 7 } }), 'fake-id');

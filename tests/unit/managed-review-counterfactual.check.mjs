@@ -20,7 +20,7 @@ try {
   const aliases = [
     { find: 'open-sse', replacement: path.join(temporary, 'open-sse') },
     { find: '@', replacement: path.join(temporary, 'src') },
-    ...['uuid', 'sql.js', 'undici'].map(name => ({ find: name, replacement: require.resolve(name) })),
+    ...['uuid', 'sql.js', 'undici', 'jose', 'bcryptjs'].map(name => ({ find: name, replacement: require.resolve(name) })),
     { find: 'vitest', replacement: path.join(installed, 'tests/node_modules/vitest/dist/index.js') },
   ];
   const config = path.join(temporary, 'vitest.config.mjs');
