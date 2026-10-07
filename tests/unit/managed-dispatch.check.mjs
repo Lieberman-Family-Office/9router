@@ -27,7 +27,7 @@ function resolve(source, file) {
 }
 function load(file, text = fs.readFileSync(file, 'utf8')) {
   const ast = parse(text, { sourceType: 'unambiguous', plugins: ['jsx'] });
-  const mod = { file, ast, imports: new Map(), functions: new Map(), exports: new Map() };
+  const mod = { file, ast, imports: new Map(), functions: new Map(), exports: new Map(), values: new Map() };
   walk(ast, node => {
     if (node.type === 'ImportDeclaration') for (const spec of node.specifiers) {
       mod.imports.set(spec.local.name, { file: resolve(node.source.value, file), name: spec.imported?.name || 'default' });
@@ -35,6 +35,7 @@ function load(file, text = fs.readFileSync(file, 'utf8')) {
     if (node.type === 'ExportNamedDeclaration' && node.source) for (const spec of node.specifiers) {
       mod.exports.set(spec.exported.name, { file: resolve(node.source.value, file), name: spec.local.name });
     }
+    if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier' && node.init) mod.values.set(node.id.name, node.init);
     if (node.type === 'FunctionDeclaration') mod.functions.set(node.id.name, node);
     if (node.type === 'VariableDeclarator' && ['ArrowFunctionExpression', 'FunctionExpression'].includes(node.init?.type)) mod.functions.set(node.id.name, node.init);
     if (node.type === 'ClassMethod') mod.functions.set(node.key.name, node);
@@ -66,6 +67,20 @@ function managedCondition(node) {
   if (member?.type !== 'MemberExpression' || member.property?.name !== 'NINEROUTER_MANAGED_WORKER' ||
       member.object?.property?.name !== 'env' || member.object?.object?.name !== 'process' || node.right?.value !== '1') return null;
   return node.operator === '===';
+}
+const grantCache = new WeakMap();
+function grantKinds(mod, node, seen = new Set()) {
+  if (!node) return new Set();
+  if (seen.size === 0 && grantCache.has(node)) return grantCache.get(node);
+  const kinds = new Set();
+  walk(node, child => {
+    if (child.type === 'StringLiteral' && ['refresh_token', 'refreshToken', 'urn:ietf:params:oauth:grant-type:jwt-bearer'].includes(child.value)) kinds.add(child.value);
+    if (child.type === 'Identifier' && mod.values.has(child.name) && !seen.has(child.name)) {
+      for (const kind of grantKinds(mod, mod.values.get(child.name), new Set(seen).add(child.name))) kinds.add(kind);
+    }
+  });
+  if (seen.size === 0) grantCache.set(node, kinds);
+  return kinds;
 }
 let checkedCalls = 0;
 let coordinatedIssuers = 0;
@@ -114,16 +129,12 @@ function verify(mod, node, coordinated = false, trail = new Set()) {
         verify(target.mod, target.node.body, coordinated, next);
       }
     }
-    // A raw legacy issuance anywhere on a reachable managed refresh path is forbidden.
-    let refreshGrant = false;
-    walk(mod.ast, child => { if (child.type === 'StringLiteral' && ['refresh_token', 'refreshToken'].includes(child.value)) refreshGrant = true; });
-    // ponytail: grant-bearing modules are conservative subjects; use dataflow before admitting mixed grant/health modules.
-    if (!coordinated && ['fetch', 'proxyAwareFetch'].includes(name) && refreshGrant) {
-      // Service-account JWT minting does not rotate a shared refresh token.
-      let serviceAccountGrant = false;
-      walk(node, child => { if (child.type === 'StringLiteral' && child.value === 'urn:ietf:params:oauth:grant-type:jwt-bearer') serviceAccountGrant = true; });
-      if (serviceAccountGrant) return false;
-      assert.fail(`Managed dispatch reaches raw refresh grant: ${path.relative(root, mod.file)}:${node.loc.start.line}`);
+    // Bind the verdict to the request options, including variable and builder bindings.
+    if (!coordinated && ['fetch', 'proxyAwareFetch'].includes(name)) {
+      const kinds = grantKinds(mod, node.arguments[1]);
+      if (!kinds.has('urn:ietf:params:oauth:grant-type:jwt-bearer') && (kinds.has('refresh_token') || kinds.has('refreshToken'))) {
+        assert.fail(`Managed dispatch reaches raw refresh grant: ${path.relative(root, mod.file)}:${node.loc.start.line}`);
+      }
     }
   }
   for (const [key, value] of Object.entries(node)) {
@@ -160,6 +171,10 @@ assert.ok(checkedCalls > 30 && coordinatedIssuers > 10, 'Dispatch census did not
 const fixture = load(path.join(root, 'open-sse/services/tokenRefresh/providers.js'),
   'export async function refreshBad(){ return fetch("fake", {body: {grant_type: "refresh_token"}}); }');
 assert.throws(() => verify(fixture, fixture.functions.get('refreshBad').body), /Uncoordinated/);
+const harmless = load(path.join(root, 'open-sse/health.js'), 'export function refreshStatus(){return fetch("health",{method:"GET"});}');
+verify(harmless, harmless.functions.get('refreshStatus').body);
+const indirect = load(path.join(root, 'open-sse/indirect.js'), 'export function refreshBad(){const body={grant_type:"refresh_token"}; return fetch("token",{body});}');
+assert.throws(() => verify(indirect, indirect.functions.get('refreshBad').body), /raw refresh grant/);
 const alias = load(path.join(root, 'open-sse/fixture.js'),
   'import {refreshAccessToken as renamed} from "./services/tokenRefresh/providers.js"; export function dispatch(){return renamed();}');
 assert.equal(binding(alias, 'renamed').name, 'refreshAccessToken');
