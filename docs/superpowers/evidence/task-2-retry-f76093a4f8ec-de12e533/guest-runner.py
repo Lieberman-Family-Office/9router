@@ -1014,8 +1014,7 @@ finally:
             "/launchd/production qualification"
         ),
         "unrun": [
-            "lint/format",
-            "Sonar scans",
+            "Sonar code analysis",
             "build/package",
             "native Caddy-to-real-worker",
             "launchd",
