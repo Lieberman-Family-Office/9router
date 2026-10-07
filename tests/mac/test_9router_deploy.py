@@ -69,7 +69,10 @@ def fake_npm(dep, monkeypatch):
 
 
 def test_release_build_metadata_stays_confined(dep):
-    assert dep.release_dir("1.2.3+arm64").relative_to(dep.RELEASES).parts[0] == "1.2.3+arm64"
+    assert (
+        dep.release_dir("1.2.3+arm64").relative_to(dep.RELEASES).parts[0]
+        == "1.2.3+arm64"
+    )
 
 
 def test_stream_terminal_detection(dep):

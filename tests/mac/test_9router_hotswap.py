@@ -1426,8 +1426,12 @@ def test_launch_config_preserves_shared_secrets_across_swap_and_rollback(
     assert candidate["ThrottleInterval"] == 5
     assert candidate["Label"] == c.mod.job_label("b")
     assert candidate["StandardOutPath"] != candidate["StandardErrorPath"]
-    assert candidate["EnvironmentVariables"]["NINEROUTER_HOTSWAP_ENROLLED_MANIFEST"] == str(c.mod.STATE_DIR / "manifest.json")
-    assert candidate["EnvironmentVariables"]["NINEROUTER_HOTSWAP_REFRESH_DB"] == str(c.mod.STATE_DIR / "refresh.sqlite")
+    assert candidate["EnvironmentVariables"][
+        "NINEROUTER_HOTSWAP_ENROLLED_MANIFEST"
+    ] == str(c.mod.STATE_DIR / "manifest.json")
+    assert candidate["EnvironmentVariables"]["NINEROUTER_HOTSWAP_REFRESH_DB"] == str(
+        c.mod.STATE_DIR / "refresh.sqlite"
+    )
     assert all(
         candidate["EnvironmentVariables"][key] == value for key, value in shared.items()
     )

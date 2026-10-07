@@ -1,4 +1,4 @@
-"""Parse evidence-only plist fixtures; production enrollment is covered by hotswap tests."""
+"""Parse evidence fixtures. Hotswap tests cover production enrollment."""
 
 import pathlib
 import plistlib
