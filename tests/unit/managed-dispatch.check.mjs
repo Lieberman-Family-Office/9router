@@ -71,12 +71,22 @@ function managedCondition(node) {
 const grantCache = new WeakMap();
 function grantKinds(mod, node, seen = new Set()) {
   if (!node) return new Set();
+  if (seen.has(node)) return new Set();
+  const visited = new Set(seen).add(node);
   if (seen.size === 0 && grantCache.has(node)) return grantCache.get(node);
   const kinds = new Set();
   walk(node, child => {
     if (child.type === 'StringLiteral' && ['refresh_token', 'refreshToken', 'urn:ietf:params:oauth:grant-type:jwt-bearer'].includes(child.value)) kinds.add(child.value);
-    if (child.type === 'Identifier' && mod.values.has(child.name) && !seen.has(child.name)) {
-      for (const kind of grantKinds(mod, mod.values.get(child.name), new Set(seen).add(child.name))) kinds.add(kind);
+    if (child.type === 'Identifier' && mod.values.has(child.name)) {
+      for (const kind of grantKinds(mod, mod.values.get(child.name), visited)) kinds.add(kind);
+    }
+    if (child.type === 'CallExpression' && child.callee.type === 'Identifier') {
+      const target = binding(mod, child.callee.name);
+      if (target) {
+        walk(target.node.body, returned => {
+          if (returned.type === 'ReturnStatement') for (const kind of grantKinds(target.mod, returned.argument, visited)) kinds.add(kind);
+        });
+      }
     }
   });
   if (seen.size === 0) grantCache.set(node, kinds);
@@ -175,6 +185,8 @@ const harmless = load(path.join(root, 'open-sse/health.js'), 'export function re
 verify(harmless, harmless.functions.get('refreshStatus').body);
 const indirect = load(path.join(root, 'open-sse/indirect.js'), 'export function refreshBad(){const body={grant_type:"refresh_token"}; return fetch("token",{body});}');
 assert.throws(() => verify(indirect, indirect.functions.get('refreshBad').body), /raw refresh grant/);
+const builder = load(path.join(root, 'open-sse/builder.js'), 'function body(){return {grant_type:"refresh_token"};} export function refreshBad(){return fetch("token",{body:body()});}');
+assert.throws(() => verify(builder, builder.functions.get('refreshBad').body), /raw refresh grant/);
 const alias = load(path.join(root, 'open-sse/fixture.js'),
   'import {refreshAccessToken as renamed} from "./services/tokenRefresh/providers.js"; export function dispatch(){return renamed();}');
 assert.equal(binding(alias, 'renamed').name, 'refreshAccessToken');
