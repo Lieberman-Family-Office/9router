@@ -2,7 +2,23 @@
   "schema": 1,
   "population": "All 120 unique Cubic root findings from the two b2c59fd0 review submissions; indices refer to the unchanged complete initial API ordering, not a count limit.",
   "sourceHead": "b2c59fd00ab9c218950d2c8ac01e0e35ebe5d7f4",
-  "status": "Local evidence ledger; remote resolution follows the complete batched push. Historical artifacts are not final-head acceptance.",
+  "status": "Original 120 outcomes were published at e7658388 and verified resolved in actual threads. The completed exact-head review raised seven new Cubic findings and two new GitHub code-quality comments; their batched fix/proof outcomes are separate below. Historical artifacts are not final-head acceptance.",
+  "reviewRoundTwo": {
+    "reviewedHead": "e76583886fc87542a1f7802fb76189549b30c058",
+    "cubic": [
+      {"issueId":"d7d5f66f-a20b-41e2-bedc-e46c75242fb5","status":"resolved","evidence":"Finalizer retries ownership metadata twice without escaping finally; unknown/replacement refuses all guest effects and retains failure/claim. Runnable extracted-block test covers transient recovery, permanent unknown, replacement and replacement-after-stop."},
+      {"issueId":"2be443ab-6542-4fc6-b7f5-dacbd1d7b794","status":"resolved","evidence":"Browser status verifies provider session, then signs a short-lived HTTP-only proof cookie bound to UID/region/token hash. Existing-account POST verifies signature, purpose, expiry and tuple before entering real issuance/CAS generation. Direct edits, tampered/expired proof refuse; real signing/persistence and status-dispatch tests pass."},
+      {"issueId":"b339afbe-4c5b-4858-8124-01a141892e5d","status":"resolved","evidence":"Both receipt and manifest hash sinks resolve and confine paths beneath their actual evidence root. Outside-root temp regression covers absolute, parent traversal and symlink without checkout plants."},
+      {"issueId":"ce245f6e-2744-4028-b299-a83a029947ca","status":"resolved","evidence":"Deleted byte-identical duplicate session.js fixture write; complete directory-copy and artifact import regression stays green."},
+      {"issueId":"b30c203e-5972-480e-9931-b652ccd7d150","status":"resolved","evidence":"Child binds port 0 natively; prepend listening callback publishes actual PORT before ingress accounting. No reserve-release/rebind gap; native h2c/IPC proof passes."},
+      {"issueId":"7c7b91d7-c61c-4f05-8d37-a18f72ec6d8a","status":"resolved","evidence":"beforeEach calls vi.resetAllMocks and explicitly restores defaults/reauth state, clearing implementation, once queues and call history. Context7 Vitest docs verified semantics; seeded shuffled order passes."},
+      {"issueId":"3e4804b8-8899-4006-ad86-6e26aeebb197","status":"resolved","evidence":"Real merge without oauth generation strips accessToken, refreshToken, apiKey, expiresAt and lastRefreshAt while preserving provider-specific data; independent negative-case regression passes."}
+    ],
+    "github": [
+      {"rootComment":4209296048,"status":"resolved","evidence":"Removed dead delay import binding; historical delays use native setTimeout inline. Early historical-authorization refusal remains untouched; syntax/lint and integrity pass."},
+      {"rootComment":4209296069,"status":"resolved","evidence":"Removed dead named SDK import; archived body uses dynamic module expression only after the unchanged early refusal. No Namespace call or authority weakening."}
+    ]
+  },
   "issueIds": [
     "73560c20-1523-412c-976a-b06ce8642e32", "757643c5-a1ce-4faf-9e06-882516ae2921", "773cacd4-7b31-423d-a118-37f4e74e6d98", "ee9d4804-faf1-44a6-a415-af7451a49b51", "ab14f2dd-6aa2-4fe9-b506-0a9fc8682a8d", "68cdd609-f056-4996-ad29-7efb6cdcf91e", "64635a3e-5652-4962-a725-5f333873b970", "48a0f1cb-e9b6-4f3e-8c98-e3f747dc6544", "9c45b807-f2b3-4fc5-80cd-26a1d147322e", "68e22edf-bfb5-463a-8544-726001642d8c",
     "993958ab-e5d0-4e19-999a-3f7259666ff2", "d8bc1640-807f-414f-9949-6c7115ad10be", "f4a15e6a-1bed-4e93-ac16-4bdedce40f88", "11dfe645-8919-4cd8-9738-9e4bd543f3db", "a30c4610-4266-4f5a-b51b-d42480b9624e", "1196607f-3e0e-4c55-afde-1e99540eb987", "3b92095d-ddf6-4f4a-a027-c82f9fece2f7", "5ead8aa5-79ed-4f91-bbfe-588e3da46aa7", "38959331-b078-42e9-bff9-b49c15148422", "69baa53e-bfda-4d55-9e90-00e94fe4494b",
