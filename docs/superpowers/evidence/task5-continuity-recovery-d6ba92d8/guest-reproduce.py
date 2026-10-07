@@ -50,6 +50,28 @@ try:
         for key in ['dependencies', 'devDependencies', 'optionalDependencies']:
             q.require(manifest.get(key, {}) == data['packages'][''].get(key, {}), 'locked dependency mismatch')
         check('dependencies-' + name, ['npm', 'ci', '--ignore-scripts', '--include=dev', '--include=optional', '--no-audit', '--no-fund'], folder, env, 1200)
+    # Regressions run on unchanged baseline and fixed source in separate mirrors.
+    config = run / 'regression-vitest.config.mjs'
+    config.write_text('import path from "node:path"; const root=' + json.dumps(str(source)) + '; export default {root,test:{environment:"node",globals:true},resolve:{alias:[{find:"@",replacement:path.join(root,"src")}]}};')
+    mirror = run / 'baseline-mirror'
+    subprocess.run(['git', 'clone', '--shared', '--no-checkout', str(source), str(mirror)], check=True, capture_output=True)
+    subprocess.run(['git', 'checkout', '--detach', 'c0ceebc70d892398870f93dba9af522f870ccc08'], cwd=mirror, check=True, capture_output=True)
+    for name in ['custom-server-ws-ownership.test.cjs', 'passthrough-done.test.js']:
+        (mirror / 'tests/unit' / name).write_bytes((source / 'tests/unit' / name).read_bytes())
+    (mirror / 'node_modules').symlink_to(source / 'node_modules')
+    mirror_config = run / 'baseline-vitest.config.mjs'
+    mirror_config.write_text(config.read_text().replace(str(source), str(mirror)))
+    for label, argv, directory in [
+        ('ws-red', ['node', '--test', 'tests/unit/custom-server-ws-ownership.test.cjs'], mirror),
+        ('sse-red', ['node', str(source / 'tests/node_modules/vitest/vitest.mjs'), 'run', '--config', str(mirror_config), 'tests/unit/passthrough-done.test.js', '--reporter=verbose'], mirror),
+        ('ws-green', ['node', '--test', 'tests/unit/custom-server-ws-ownership.test.cjs'], source),
+        ('sse-green', ['node', 'tests/node_modules/vitest/vitest.mjs', 'run', '--config', str(config), 'tests/unit/passthrough-done.test.js', '--reporter=verbose'], source),
+    ]:
+        output = check(label, argv, directory, env, 120, expected=1 if label.endswith('-red') else 0)
+        if label == 'ws-red':
+            q.require('Responses socket was ended by competing app-route handler' in output or 'Responses terminal missing' in output, 'wrong WebSocket RED assertion')
+        if label == 'sse-red':
+            q.require('to have a length of 1 but got 2' in output, 'wrong SSE RED assertion')
     record['versions'] = {'node': q.output(['node', '--version']), 'npm': q.output(['npm', '--version']), 'python': q.output(['python3', '--version']), 'caddy': q.output(['caddy', 'version']), 'macos': q.output(['sw_vers', '-productVersion']), 'architecture': q.output(['uname', '-m'])}
     record['locked_dependencies'] = {str(p.relative_to(source)): q.sha256(p) for p in [source / 'package-lock.json', source / 'tests/package-lock.json', source / 'cli/package-lock.json']}
     check('build', ['node', 'cli/scripts/build-cli.js'], source, env, 1800)
