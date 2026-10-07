@@ -3,7 +3,7 @@
   "source-manifest.json": "34412e651b7b724fc1a5a1816e166f3cb6ecb64137a50efd1ba6755d15724302",
   "summary.json": "62cbcf7d69dee7e92ce2a0bb3b6caf5f4ef240d59835509aac0373eac2c398af",
   "guest-battery.log": "1984e875cfd741f7ab2ba32310522de9940e0fdeb75d16806b0e9a193c344f77",
-  "host-orchestrator.py": "baabce4d5a418702d12a620dc16ff3aed2bc4e3a385f53540f8e1d944e2051e4",
+  "host-orchestrator.py": "6f72be4da61104ee2b662785a6a0f698cd19f1e1d2b549280b3e2e8f868d3033",
   "metadata-before.log": "b3a0a1a6a4e51a1b390b466118bc8a3a0d38b829b9e897ec311cc2011f66efdd",
   "metadata-after-api.log": "b48b41d8168deb04eda0365d9b8236782184756f5c072b8c6641ace50b67b09a",
   "guest-runner.py": "27749cff6c796d2b3e223bea7d9001896ac7668390d29de9e18f82376404d8d0",
