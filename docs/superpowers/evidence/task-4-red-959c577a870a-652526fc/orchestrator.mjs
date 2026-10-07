@@ -124,7 +124,14 @@ try:
             assert failed and all(r['phase']=='setup' and 'Task 4 controller is missing' in r['message'] for r in failed), 'Hotswap RED is not uniformly the missing controller assertion'
             checks[-1]['cause']='Task 4 controller is missing; fixture assertion before import'
         else:
-            checks[-1]['cause']='Task 4 deploy contracts; inspect individually bound report and log'
+            expected={
+                'test_enrolled_dispatch_never_enters_legacy_mutation[deploy]',
+                'test_enrolled_dispatch_never_enters_legacy_mutation[rollback]',
+                *['test_release_path_rejects_invalid_version_before_join['+v+']' for v in ['../escape','/absolute','v2/nested','.','..','']],
+                'test_http_explicit_base_does_not_change_global','test_stream_probe_propagates_private_base_without_mutating_global',
+                'test_verify_propagates_private_base_to_all_probes','test_stream_once_uses_explicit_private_base'}
+            assert {r['nodeid'].split('::')[-1] for r in failed}==expected and all(r['phase']=='call' for r in failed) and not skipped, 'Deploy RED identities or phases differ'
+            checks[-1]['cause']='Exact missing managed dispatch, confinement, and private-base contracts'
         save(out/'checks.json',checks)
     for p,h in m['overlay'].items(): assert digest(checkout/p)==h, 'Test overlay mutated'
     complete=True

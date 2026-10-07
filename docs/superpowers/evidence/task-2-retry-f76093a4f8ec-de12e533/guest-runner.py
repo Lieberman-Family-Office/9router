@@ -245,6 +245,7 @@ def unit_summary(p, minimum, files):
 
 
 success = False
+head = root / "head"
 try:
     assert command(["uname", "-s"]) == "Darwin" and command(["uname", "-m"]) == "arm64"
     archive = root / "caddy.tar.gz"
