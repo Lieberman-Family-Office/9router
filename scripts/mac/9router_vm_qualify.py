@@ -22,6 +22,7 @@ import re
 import secrets
 import shutil
 import signal
+import socket
 import sqlite3
 import stat
 import subprocess
@@ -1883,6 +1884,102 @@ def record_packaged_measurements(result, evidence, identity, checks, log):
         record_check(evidence, identity, checks, name, subjects, measurement, log)
 
 
+def validate_signin_confirmation(confirmation, binding):
+    require(
+        isinstance(confirmation, dict)
+        and confirmation.get("run_id") == binding["run_id"]
+        and confirmation.get("namespace") == binding["namespace"]
+        and confirmation.get("confirmed", True) is True
+        and all(
+            isinstance(confirmation.get(key), str) and confirmation[key].strip()
+            for key in ("operator_quote", "operator_turn")
+        ),
+        "current-run independent sign-in confirmation required",
+    )
+
+
+def interactive_baseline(tgz, binding, run_root, timeout):
+    """Prepare only this run's private worker after deterministic jobs close."""
+    scope_path, scope, manifest = prepare_scope(
+        tgz, binding, run_id=safe_run_id(binding["run_id"] + "-live")
+    )
+    home = Path(scope["home"])
+    require(not (home / ".9router/db/data.sqlite").exists(), "fresh sign-in state required")
+    initialize_baseline(scope, manifest)
+    previous_home = os.environ.get("HOME")
+    os.environ["HOME"] = str(home)
+    try:
+        controller = controller_module()
+        controller.configure_qualification(scope_path)
+        package = scope["packages"][binding["sha256"]]
+        with controller.deployment_lock():
+            require(not controller.STATE_FILE.exists(), "sign-in transaction occupied")
+            controller.verify_enrollment_slots()
+            controller.shared_environment(enrollment=True)
+            entry = {
+                "release": package["release"],
+                "version": json.loads(regular(Path(package["release"]) / "package.json").read_text())["version"],
+                "digest": binding["sha256"],
+                "mode": "starting",
+            }
+            state = {
+                "schema": 1, "active": "a", "slots": {"a": entry, "b": None},
+                "pending": None, "enrollment": "preparing",
+                "environment_sha256": controller.sha256(controller.STATE_DIR / "environment.json"),
+            }
+            controller.write_state(state)
+            controller.prepare_enrollment(state, Path(entry["release"]), entry)
+            controller.stop_enrollment_legacy_service(state)
+            controller.start_worker("a", entry)
+            status = controller.worker_status("a", controller.read_state()["slots"]["a"])
+            require(status["mode"] == "ready", "pinned sign-in worker not ready")
+    finally:
+        if previous_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = previous_home
+    new_json(run_root / "signin-ready.json", {
+        "run_id": binding["run_id"], "namespace": binding["namespace"],
+        "sha256": binding["sha256"], "source_commit": binding["source_commit"],
+        "scope": str(scope_path), "home": str(home), "remote_port": 21128,
+        "worker_pid": status["appPid"], "worker_label": controller.job_label("a"),
+        "provider_probes_run": False, "deadline_epoch": time.time() + timeout,
+    })
+    confirmation_path = run_root / "signin-confirmation.json"
+    deadline = time.monotonic() + timeout
+    while not confirmation_path.exists() and time.monotonic() < deadline:
+        time.sleep(0.5)
+    require(confirmation_path.exists(), "independent sign-in deadline expired")
+    confirmation = private_json(confirmation_path)
+    validate_signin_confirmation(confirmation, binding)
+    with sqlite3.connect((home / ".9router/db/data.sqlite").as_uri() + "?mode=ro", uri=True) as db:
+        providers = dict(db.execute("SELECT provider,COUNT(*) FROM providerConnections WHERE isActive=1 AND authType='oauth' AND provider IN ('codex','claude') GROUP BY provider"))
+        keys = db.execute("SELECT COUNT(*) FROM apiKeys WHERE isActive=1").fetchone()[0]
+    require(all(providers.get(name, 0) > 0 for name in ("codex", "claude")) and keys > 0, "independent guest provider/key population missing")
+    controller_call(scope_path, "reconcile")
+    state = private_json(home / ".9router/hotswap/state.json")
+    require(state.get("enrollment") == "complete" and state.get("pending") is None, "authenticated enrollment incomplete")
+    new_json(run_root / "evidence/signin-provenance.json", {
+        **confirmation, "credential_origin": "guest-owned-current-run",
+        "active_provider_counts": providers, "active_api_key_count": keys,
+        "scope": str(scope_path), "sha256": binding["sha256"],
+        "snapshot_persistence_qualified": False,
+    })
+    return scope_path, scope
+
+
+def live_scope_for_run(args, binding, run_root):
+    if getattr(args, "interactive_signin", False):
+        return interactive_baseline(Path(args.tgz), binding, run_root, args.signin_timeout)
+    require(BASELINE.is_file() and not BASELINE.is_symlink(), "BLOCKED: existing guest-owned persistent baseline is absent; manual provider login needs separate authorization")
+    baseline = private_json(BASELINE)
+    require(baseline.get("credential_origin") == "guest-owned" and baseline.get("devbox_id") == binding["namespace"]["devbox_id"], "guest live baseline provenance missing")
+    path, scope, _ = prepare_scope(Path(args.tgz), binding, run_id=safe_run_id(baseline["run_id"]))
+    require(str(path) == baseline["scope"], "guest live baseline confinement differs")
+    controller_call(path, "restore")
+    return path, scope
+
+
 def guest_failure_record(error):
     return {
         "type": type(error).__name__,
@@ -2026,25 +2123,7 @@ def cmd_guest(args):
             "packaged fixture failed or identity/cleanup differs",
         )
         record_packaged_measurements(result, evidence, identity, checks, log)
-        require(
-            BASELINE.is_file() and not BASELINE.is_symlink(),
-            "BLOCKED: existing guest-owned persistent baseline is absent; "
-            "manual provider login needs separate authorization",
-        )
-        baseline = private_json(BASELINE)
-        require(
-            baseline.get("credential_origin") == "guest-owned"
-            and baseline.get("devbox_id") == binding["namespace"]["devbox_id"],
-            "guest live baseline provenance missing",
-        )
-        live_scope_path, live_scope, _ = prepare_scope(
-            Path(args.tgz), binding, run_id=safe_run_id(baseline["run_id"])
-        )
-        require(
-            str(live_scope_path) == baseline["scope"],
-            "guest live baseline confinement differs",
-        )
-        controller_call(live_scope_path, "restore")
+        live_scope_path, live_scope = live_scope_for_run(args, binding, run_root)
         current_state = private_json(
             Path(live_scope["home"]) / ".9router/hotswap/state.json"
         )
@@ -2374,15 +2453,16 @@ def complete_host_qualification(
     exported_expected,
     require_claim,
     claim_path,
+    close=lambda: None,
 ):
-    # Synchronous CLI operations retain no SSH/exec/forwarding session handles.
+    # Close any owned sign-in forwarding before the exact final stop.
     with interruption_boundary():
         record = qualification_lifecycle(
             args.devbox_name,
             args.devbox_id,
             work,
             metadata,
-            lambda: None,
+            close,
             stop=lambda name: devbox("stop", name, "--force"),
         )
     record["authorization"] = binding["authorization"]
@@ -2422,6 +2502,9 @@ def validate_host_qualification(args):
         "positive guest deadline required",
     )
     safe_run_id(args.devbox_name)
+    if getattr(args, "interactive_signin", False):
+        require(type(args.signin_timeout) is int and args.signin_timeout > 0, "positive sign-in deadline required")
+        require(args.confirmation_file and not Path(args.confirmation_file).exists(), "new private sign-in confirmation path required")
 
 
 def cmd_run(args):
@@ -2462,6 +2545,18 @@ def cmd_run(args):
         return output([cli, *argv], ROOT, cli_env, timeout)
 
     exported_expected = {}
+    forwards = []
+
+    def close():
+        for child, log in forwards:
+            if child.poll() is None:
+                child.terminate()
+                try:
+                    child.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait(timeout=5)
+            log.close()
 
     def require_claim():
         held, live = os.fstat(claim), claim_path.lstat()
@@ -2570,6 +2665,7 @@ def cmd_run(args):
             str(remote / "candidate.tgz"),
             "--input",
             str(remote / "input.json"),
+            *(["--interactive-signin", "--signin-timeout", str(args.signin_timeout)] if getattr(args, "interactive_signin", False) else []),
             *[
                 argument
                 for model in args.models or QUALIFY_MODELS
@@ -2585,6 +2681,56 @@ def cmd_run(args):
             str(stage / "execution.json"),
             str(remote / "execution.json"),
         )
+        if getattr(args, "interactive_signin", False):
+            deadline = time.monotonic() + args.timeout
+            while time.monotonic() < deadline:
+                require_claim()
+                observed = metadata(args.devbox_id)
+                require(observed.get("instance_id") == active["instance_id"] and observed.get("state") == "running", "sign-in guest instance changed")
+                ready = subprocess.run([cli, "exec", args.devbox_name, "--", "/bin/test", "-s", str(remote / "signin-ready.json")], env=cli_env, capture_output=True, timeout=30)
+                require(ready.returncode in {0, 1}, "sign-in readiness observation failed")
+                if ready.returncode == 0:
+                    break
+                finished = subprocess.run([cli, "exec", args.devbox_name, "--", "/bin/test", "-s", str(remote / "evidence/manifest.json")], env=cli_env, capture_output=True, timeout=30)
+                require(finished.returncode in {0, 1}, "guest outcome observation failed")
+                if finished.returncode == 0:
+                    break
+                time.sleep(5)
+            if ready.returncode == 0:
+                devbox("download", args.devbox_name, str(remote / "signin-ready.json"), str(evidence / "signin-ready.json"))
+                handoff = private_json(evidence / "signin-ready.json")
+                require(handoff["namespace"] == binding["namespace"] and handoff["run_id"] == run_id, "sign-in handoff differs")
+                for port in (32128, 1455):
+                    reservation = socket.socket()
+                    try:
+                        reservation.bind(("127.0.0.1", port))
+                    finally:
+                        reservation.close()
+                log = (evidence / "signin-forward.log").open("x")
+                child = subprocess.Popen([cli, "port-forward", args.devbox_name, "--ports", "32128:21128,1455:1455"], env=cli_env, stdout=log, stderr=subprocess.STDOUT)
+                forwards.append((child, log))
+                until = time.monotonic() + 60
+                while time.monotonic() < until:
+                    require(child.poll() is None, "owned sign-in forward exited")
+                    listener = subprocess.run(["/usr/sbin/lsof", "-nP", "-a", "-p", str(child.pid), "-iTCP:32128", "-sTCP:LISTEN", "-Fpn"], capture_output=True, text=True)
+                    names = [line[1:] for line in listener.stdout.splitlines() if line.startswith("n")]
+                    if names:
+                        require(all(value == "127.0.0.1:32128" for value in names), "sign-in access is not loopback-only")
+                        break
+                    time.sleep(1)
+                require(names, "owned sign-in forward unavailable")
+                print(json.dumps({"phase": "independent-signin-required", "url": "http://localhost:32128/login", "home": handoff["home"], "run_id": run_id, "namespace": binding["namespace"], "confirmation_file": args.confirmation_file, "forward_pid": child.pid, "deadline_epoch": handoff["deadline_epoch"]}), flush=True)
+                confirmation_path = Path(args.confirmation_file)
+                until = time.monotonic() + args.signin_timeout
+                while not confirmation_path.exists() and time.monotonic() < until:
+                    require_claim()
+                    require(child.poll() is None and metadata(args.devbox_id).get("instance_id") == active["instance_id"], "sign-in owner or instance changed")
+                    time.sleep(1)
+                require(confirmation_path.exists(), "manual sign-in deadline expired")
+                confirmation = private_json(confirmation_path)
+                validate_signin_confirmation(confirmation, binding)
+                devbox("upload", args.devbox_name, str(confirmation_path), str(remote / "signin-confirmation.json"))
+                close()
         wait_guest_manifest(args, active, remote, metadata, require_claim, cli, cli_env)
         manifest_hash = devbox(
             "exec",
@@ -2632,6 +2778,7 @@ def cmd_run(args):
             exported_expected,
             require_claim,
             claim_path,
+            close,
         )
     finally:
         os.close(claim)
@@ -2660,6 +2807,10 @@ def main(argv=None):
             command.add_argument("--scope", required=True)
         if name in {"run", "guest"}:
             command.add_argument("--model", dest="models", action="append")
+            command.add_argument("--interactive-signin", action="store_true")
+            command.add_argument("--signin-timeout", type=int, default=1200)
+        if name == "run":
+            command.add_argument("--confirmation-file")
         if name == "run":
             command.add_argument("--acknowledge-namespace", action="store_true")
             command.add_argument("--authorization-quote")
