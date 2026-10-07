@@ -50,9 +50,13 @@ export async function GET(request) {
       reauthorizationExpiresAt: Date.now() + 60000,
     });
   }
-  const payload = { status: "done", region: sess.region, ...id, ...(reauthorizationProof ? { reauthorizationProof } : {}) };
+  const payload = { status: "done", region: sess.region, ...id };
   // One-shot: don't let the identity linger past the client reading it.
   const res = NextResponse.json(payload);
+  if (reauthorizationProof) res.cookies.set("9r_mimo_reauth", reauthorizationProof, {
+    path: "/api/oauth/xiaomi-mimo/api-key", httpOnly: true, sameSite: "strict", maxAge: 60,
+    secure: new URL(request.url).protocol === "https:",
+  });
   res.cookies.set("9r_mimo_login", "", { path: "/", httpOnly: true, maxAge: 0 });
   return res;
 }

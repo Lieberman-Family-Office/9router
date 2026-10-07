@@ -46,7 +46,8 @@ it('managed Xiaomi verified reauthorization enters issuance while edited or expi
     reauthorizationExpiresAt: Date.now() + 60000, credentialSha256: createHash('sha256').update('fixture-pass').digest('hex') };
   const { POST } = await import('@/app/api/oauth/xiaomi-mimo/api-key/route.js');
   const call = mimoPassToken => POST(new Request('http://localhost/api/oauth/xiaomi-mimo/api-key', { method: 'POST',
-    body: JSON.stringify({ uid: 'fixture', mimoUserId: 'fixture', mimoPassToken, region: 'sgp', reauthorizationProof: 'fixture-signed' }) }));
+    headers: { cookie: '9r_mimo_reauth=fixture-signed' },
+    body: JSON.stringify({ uid: 'fixture', mimoUserId: 'fixture', mimoPassToken, region: 'sgp' }) }));
   expect((await call('fixture-pass')).status).toBe(200);
   expect(xiaomiWrite).toHaveBeenCalledOnce();
   expect(xiaomiWrite.mock.calls[0][0]).toMatchObject({ authType: 'oauth', email: 'fixture@xiaomi', providerSpecificData: { mimoPassToken: 'fixture-pass' } });

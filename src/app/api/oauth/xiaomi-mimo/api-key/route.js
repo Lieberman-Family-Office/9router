@@ -9,7 +9,7 @@ import { createProviderConnection } from "@/models";
  */
 export async function POST(request) {
   try {
-    const { apiKey, uid, baseUrl, mimoPassToken, mimoUserId, mimoCUserId, region, reauthorizationProof } = await request.json();
+    const { apiKey, uid, baseUrl, mimoPassToken, mimoUserId, mimoCUserId, region } = await request.json();
 
     const key = typeof apiKey === "string" ? apiKey.trim() : "";
     const sessionOnly = !key && !!mimoPassToken;
@@ -74,6 +74,8 @@ export async function POST(request) {
       if (process.env.NINEROUTER_MANAGED_WORKER === "1") {
         const { getDashboardAuthSession } = await import("@/lib/auth/dashboardSession");
         const { createHash } = await import("node:crypto");
+        const reauthorizationProof = request.cookies?.get?.("9r_mimo_reauth")?.value
+          || request.headers.get("cookie")?.split(";").map(part => part.trim()).find(part => part.startsWith("9r_mimo_reauth="))?.slice("9r_mimo_reauth=".length);
         const proof = await getDashboardAuthSession(reauthorizationProof);
         if (!sessionOnly || typeof mimoPassToken !== "string" || !proof || proof.purpose !== "xiaomi-reauthorization"
             || !Number.isFinite(proof.reauthorizationExpiresAt) || proof.reauthorizationExpiresAt <= Date.now()
@@ -89,8 +91,10 @@ export async function POST(request) {
             region: normRegion, authMethod: "session" },
           testStatus: "active",
         });
-        return NextResponse.json({ success: true, validated: true, updated: true,
+        const response = NextResponse.json({ success: true, validated: true, updated: true,
           connection: { id: connection.id, provider: connection.provider, email: connection.email, displayName: connection.displayName } });
+        response.headers.append("Set-Cookie", "9r_mimo_reauth=; Path=/api/oauth/xiaomi-mimo/api-key; HttpOnly; SameSite=Strict; Max-Age=0");
+        return response;
       }
       const updated = await updateProviderConnection(existing.id, {
         accessToken: key || existing.accessToken,

@@ -189,7 +189,7 @@ it('Xiaomi browser status mints a bound proof only after provider verification',
     attachSessionCookie: response => response,
   }));
   vi.doMock('next/server', () => ({ NextResponse: { json: (body, init) => {
-    const response = Response.json(body, init); response.cookies = { set() {} }; return response;
+    const response = Response.json(body, init); response.cookies = { set(name, value) { response.headers.append('Set-Cookie', `${name}=${value}`); } }; return response;
   } } }));
   try {
     const { GET } = await import('@/app/api/oauth/xiaomi-mimo/login/status/route.js');
@@ -199,8 +199,10 @@ it('Xiaomi browser status mints a bound proof only after provider verification',
     const response = await GET(request);
     expect(response.status).toBe(200);
     const payload = await response.json();
+    expect(payload.reauthorizationProof).toBeUndefined();
+    const token = response.headers.getSetCookie().find(cookie => cookie.startsWith('9r_mimo_reauth=')).slice('9r_mimo_reauth='.length);
     const { getDashboardAuthSession } = await import('@/lib/auth/dashboardSession');
-    const proof = await getDashboardAuthSession(payload.reauthorizationProof);
+    const proof = await getDashboardAuthSession(token);
     expect(proof).toMatchObject({ purpose: 'xiaomi-reauthorization', userId: 'fixture', region: 'sgp' });
     expect(proof.reauthorizationExpiresAt).toBeGreaterThan(Date.now());
   } finally { vi.doUnmock('@/lib/mimoLoginSession'); }
@@ -221,7 +223,8 @@ it('signed Xiaomi reauthorization uses real issuance generation and rejects a ta
       reauthorizationExpiresAt: Date.now() + 60000, credentialSha256: createHash('sha256').update('fake-after').digest('hex') });
     const { POST } = await import('@/app/api/oauth/xiaomi-mimo/api-key/route.js');
     const call = reauthorizationProof => POST(new Request('http://localhost/api/oauth/xiaomi-mimo/api-key', { method: 'POST',
-      body: JSON.stringify({ uid: 'fixture', mimoUserId: 'fixture', mimoPassToken: 'fake-after', region: 'sgp', reauthorizationProof }) }));
+      headers: { cookie: `9r_mimo_reauth=${reauthorizationProof}` },
+      body: JSON.stringify({ uid: 'fixture', mimoUserId: 'fixture', mimoPassToken: 'fake-after', region: 'sgp' }) }));
     expect((await call(proof + 'tampered')).status).toBe(409);
     expect((await call(proof)).status).toBe(200);
     const { getProviderConnectionById } = await import('@/lib/db/repos/connectionsRepo.js');

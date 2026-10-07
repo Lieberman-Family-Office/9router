@@ -170,7 +170,6 @@ export default function XiaomiMimoAuthModal({ isOpen, onSuccess, onClose }) {
               mimoUserId: sd.userId || null,
               mimoCUserId: sd.cUserId || null,
               region: sd.region || sessRegion,
-              reauthorizationProof: sd.reauthorizationProof,
             }),
           });
           const saved = await save.json();
