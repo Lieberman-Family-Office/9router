@@ -17,11 +17,12 @@
   "authorization": {
     "quote": "Yes\u2014apply the targeted fix and validate in Namespace with verified shutdown (Recommended)",
     "turnTime": "2026-10-05T21:50:00-04:00",
-    "provenance": "Actual operator response namespace_h2c=yes in this conversation. Validate h2c and related Task 2 checks only. Production is outside scope."
+    "provenance": "Historical authorization claim is unverified in this repository. The h2c record is discussed in docs/superpowers/plans/2026-10-05-9router-hot-swap.md. This archive cannot authorize a new run or production action."
   },
   "devboxId": "2tc0b2eg4mveo",
   "instanceId": "nqt4o237r2q3m",
   "success": false,
+  "failureEvidence": "checks.json:h2c-head validationFailure rejected TAP skipped/todo zero counters. Raw command exit was zero, but the original validator refused; this historical verdict is not rewritten as a new execution pass.",
   "interrupted": false,
   "scope": "Task 2 deterministic source checks and routing prerequisites only; NOT packaging/launchd/production qualification",
   "unrun": [

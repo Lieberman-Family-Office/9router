@@ -1,4 +1,4 @@
-"""Task 4 transaction contracts. Execute only in the isolated Namespace guest."""
+"""Historical input deployed as tests/mac/test_9router_hotswap.py in the guest. Not runnable in the archive; fixture defects are preserved and grant no final-head proof."""
 
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def controller(hs, monkeypatch):
     }
     config = {
         "slot": "a", "version": "v1", "release": str(releases["v1"]),
-        "port": 21128, "runtime": str(hs.RUNTIME), "dataDir": str(hs.DB.parent),
+        "port": 21128, "runtime": str(hs.RUNTIME), "dataDir": str(hs.DB.parent.parent),
     }
     private_json(hs.STATE_DIR / "a.json", config)
     failures = set()
@@ -127,6 +127,7 @@ def controller(hs, monkeypatch):
     monkeypatch.setattr(hs, "control", control)
     monkeypatch.setattr(hs, "start_worker", start_worker)
     monkeypatch.setattr(hs, "bootout_worker", bootout_worker)
+    monkeypatch.setattr(hs, "verify_job", lambda slot, entry: None)
     monkeypatch.setattr(hs, "verify_at", verify_at)
     monkeypatch.setattr(hs, "replace_route", replace_route)
     # Transaction checks replace qualification, not its independent refusal checks below.

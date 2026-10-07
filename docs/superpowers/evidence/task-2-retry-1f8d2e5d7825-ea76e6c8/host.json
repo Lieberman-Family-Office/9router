@@ -7,7 +7,7 @@
   "authorization": {
     "quote": "Yes—apply the targeted fix and validate in Namespace with verified shutdown (Recommended)",
     "turnTime": "2026-10-05T21:50:00-04:00",
-    "provenance": "Actual operator response namespace_h2c=yes in this conversation. Validate h2c and related Task 2 checks only. Production is outside scope."
+    "provenance": "Historical authorization claim is unverified in this repository. The h2c record is discussed in docs/superpowers/plans/2026-10-05-9router-hot-swap.md. This archive cannot authorize a new run or production action."
   },
   "testScope": "task2",
   "runtime": {

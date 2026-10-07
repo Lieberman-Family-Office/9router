@@ -1,4 +1,4 @@
-"""9router_deploy: pointer switch, no-overwrite, auto-rollback, rollback target."""
+"""Historical uploaded input; deployed as tests/mac/test_9router_deploy.py in the guest, not runnable at the archive location."""
 
 from __future__ import annotations
 
