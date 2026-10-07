@@ -199,6 +199,8 @@
     ],
     "exit": 2,
     "log": "docs/superpowers/evidence/task-2-2026-10-05-ef67fdaa/metadata-immediate.log",
-    "at": "2026-10-05T22:16:42.710815+00:00"
+    "at": "2026-10-05T22:16:42.710815+00:00",
+    "verdict": "Initial shutdown verification failed. Overall run is BLOCKED. Subsequent cleanup observations are recorded in summary.json and final-metadata logs.",
+    "summary": "summary.json"
   }
 ]

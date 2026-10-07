@@ -4,7 +4,7 @@
   "baselineRevision": "5fd82262218f5f00b4f987587318908e548ad65a",
   "devboxId": "2tc0b2eg4mveo",
   "devboxName": "9router-qualify-recovery",
-  "observedInstances": ["qu91iigvh5rsm", "559o4gj7l781a", "s5kkkar1epjnc"],
+  "observedInstances": ["a982pej3g2ilg", "559o4gj7l781a", "s5kkkar1epjnc"],
   "guestRoot": "/Volumes/devbox/task2-ef67fdaa-20261005-2215",
   "guestPlatformBoundary": "Darwin arm64 guard passed; detailed runtime output not recovered",
   "testResultsExported": 0,

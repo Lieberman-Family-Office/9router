@@ -13,6 +13,7 @@ assert(requestedTree && requestedPhase === 'green' && process.argv.length <= 4, 
 const tree = fs.realpathSync(requestedTree);
 const expectedHead = '959c577a870a6a598afe05745a8b649f6624f368';
 const authorization = { quote: 'Yes—run Task 4 tests and scans in Namespace; verify shutdown twice (Recommended)', turn: 'operator chat_selection at 2026-10-06 00:46 EDT; continued by finish task 4 /goal at 2026-10-06 02:16 EDT' };
+throw new Error('Archived runner is evidence only. A new run requires current operator authorization and a newly bound runner.');
 const sourcePaths = ['scripts/mac/9router_hotswap.py', 'scripts/mac/9router_deploy.py', 'tests/mac/test_9router_hotswap.py', 'tests/mac/test_9router_deploy.py'];
 const requiredChecks = ['venv', 'tools', 'tool-versions', 'dependencies-app', 'dependencies-tests', 'controller-tests', 'ruff-check', 'ruff-format', ...sourcePaths.map((_, i) => 'syntax-' + i), 's3776', 'caddy-download', 'caddy-extract', 'worker', 'proxy', 'counterfactual', 'scanner-download', 'scanner-version', 'secrets'];
 const scope = 'Task 4 green source checks only; no package/launchd/production acceptance; Sonar secrets is not code analysis';
@@ -85,7 +86,9 @@ root=pathlib.Path(sys.argv[1]);m=json.loads((root/'input.json').read_text());out
 head=root/'head';results=[];active=None;success=False;aborted=False;before=None;after=None;tracked={};credential_clean=False
 secret=(root/'scanner-credential').read_text()
 def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
-def clean(s):return re.sub(r'(?:nsct_|ghp_|github_pat_|sk-)[A-Za-z0-9_.-]+','[REDACTED]',s.replace(secret,'[REDACTED]'))
+def clean(s):
+    s=re.sub(r'(?i)(authorization\s*[:=]\s*(?:bearer\s+)?|(?:access_token|refresh_token|api[_-]?key|password|client_secret|session_secret)\s*["\x27]?\s*[:=]\s*["\x27]?)[^\s,"\x27}]+',r'\1[REDACTED]',s.replace(secret,'[REDACTED]'))
+    return re.sub(r'(?:nsct_|ghp_|github_pat_|sk-)[A-Za-z0-9_.-]+','[REDACTED]',s)
 def environment(name):
     d=root/'isolated'/name
     for p in [d/'home',d/'tmp',d/'data',d/'cache']:p.mkdir(parents=True,exist_ok=True,mode=0o700)

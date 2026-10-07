@@ -6,6 +6,7 @@ import platform
 import shutil
 import signal
 import subprocess
+import sys
 import tarfile
 import time
 from pathlib import Path
@@ -16,6 +17,7 @@ OUT.mkdir(parents=True, exist_ok=False)
 HEAD = "05b606931b824cf77dc3cc1164b75df88590ed24"
 BASE = "5fd82262218f5f00b4f987587318908e548ad65a"
 results = []
+failed = False
 
 
 def digest(p):
@@ -151,8 +153,8 @@ try:
                 "/bin/sh",
                 "-c",
                 (
-                    "git rev-parse HEAD; git diff --exit-code"
-                    "; git status --porcelain; shasum -a 256 "
+                    "git rev-parse HEAD && git diff --exit-code"
+                    " && test -z \"$(git status --porcelain)\" && shasum -a 256 "
                     "package.json package-lock.json cli/packa"
                     "ge-lock.json"
                 ),
@@ -360,6 +362,7 @@ try:
     for name, checkout in [("h2c-baseline", base), ("h2c-head", head)]:
         run(name, ["node", "tests/unit/custom-server-h2c.test.cjs"], checkout, 60)
 except Exception as e:
+    failed = True
     (OUT / "guest-error.txt").write_text(repr(e))
     print("GUEST ERROR", repr(e), flush=True)
 finally:
@@ -382,3 +385,4 @@ finally:
         digest(ROOT / "evidence.tar"),
         flush=True,
     )
+sys.exit(2 if failed or any(r["exit"] != 0 and r["name"] != "h2c-baseline" for r in results) else 0)

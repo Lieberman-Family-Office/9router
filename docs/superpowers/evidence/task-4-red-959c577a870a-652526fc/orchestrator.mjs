@@ -7,7 +7,8 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 import {createDevboxClient} from '@namespacelabs/sdk';
-const tree='/Users/jasonlieberman/dev/worktrees/9router-hot-swap-plan-ef67fdaa';
+const tree=process.argv[2];
+assert(tree && path.isAbsolute(tree), 'Supply the owned absolute worktree');
 const head='959c577a870a6a598afe05745a8b649f6624f368', id='2tc0b2eg4mveo', name='9router-qualify-recovery';
 const tests=['tests/mac/test_9router_hotswap.py','tests/mac/test_9router_deploy.py'];
 const cli=path.join(os.homedir(),'.local/bin/devbox');
@@ -25,7 +26,9 @@ const priorHashes=Object.fromEntries([...priorPaths].map(p=>[p,sha(fs.readFileSy
 const indexHash=sha(fs.readFileSync(indexPath));
 const overlay=Object.fromEntries(tests.map(p=>[p,sha(fs.readFileSync(path.join(tree,p)))]));
 const immutable=()=>{assert.equal(git('rev-parse','HEAD').toString().trim(),head);assert.equal(sha(fs.readFileSync(indexPath)),indexHash,'Index bytes changed');for(const [p,h] of Object.entries(priorHashes))assert.equal(sha(fs.readFileSync(path.join(tree,p))),h,'Existing file changed: '+p);assert(git('status','--porcelain=v1','-z','--untracked-files=all','--','.',':(exclude)'+relative).equals(priorStatus),'Existing index/worktree status changed');};
-const transcript='/Users/jasonlieberman/.cursor/projects/Users-jasonlieberman-dev-og-workflow/agent-transcripts/ef67fdaa-3d82-4a60-8a11-ccd6c0628733/ef67fdaa-3d82-4a60-8a11-ccd6c0628733.jsonl';
+const transcript=process.argv[3];
+assert(transcript && path.isAbsolute(transcript), 'Supply the authorization source');
+throw new Error('Historical transcript is evidence, not current execution authorization. Prepare a newly bound runner.');
 const transcriptLines=fs.readFileSync(transcript,'utf8').split('\n');
 const authorization=[{line:3353,quote:'Yes—authorize Namespace startup and testing, with verified shutdown afterward (Recommended)'},{line:3541,quote:'APPROVED'},{line:3688,quote:'continue to next task on Implementation plan'}].map(x=>{const turn=JSON.parse(transcriptLines[x.line-1]);assert.equal(turn.role,'user');assert(turn.message.content.some(c=>c.text?.includes(x.quote)));return {...x,role:turn.role,turnSha256:sha(Buffer.from(transcriptLines[x.line-1]))};});
 const plugin=String.raw`import json, os

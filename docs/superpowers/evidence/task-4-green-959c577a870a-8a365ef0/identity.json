@@ -83,7 +83,8 @@
   "runnerSha256": "6b6eb27689dd1c9cc97868e7f65394dad4cb43f232f9296f90fa0194ed236ca7",
   "instanceId": "p4434ml40hdle",
   "priorCredentialCleanup": true,
-  "success": true,
+  "success": false,
+  "provenanceCorrection": "The preserved host result is incomplete. Historical source checks do not grant qualification or final-head acceptance.",
   "interrupted": false,
   "credentialCleanup": true,
   "sourceAfter": {
