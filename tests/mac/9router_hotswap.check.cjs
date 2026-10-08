@@ -354,10 +354,10 @@ async function main() {
       const stamped = '100.64.0.7';
       const forwarded = await request(port, '/echo', { socketPath: path.join(root, 'http-ingress.sock'),
         headers: { 'X-Forwarded-For': stamped, 'X-Real-IP': '203.0.113.66', 'X-9r-Real-Ip': '203.0.113.66', 'X-9r-Peer-Token': 'forged' } });
-      assert.equal(JSON.parse(forwarded.body).headers['x-9r-real-ip'], stamped,
+      assert.equal(JSON.parse(forwarded.body).headers['x-forwarded-for'], stamped,
         'protected HTTP ingress must retain authenticated upstream client identity');
       const rawForged = await request(port, '/echo', { headers: { 'X-Forwarded-For': stamped, 'X-Real-IP': stamped } });
-      assert.notEqual(JSON.parse(rawForged.body).headers['x-9r-real-ip'], stamped,
+      assert.notEqual(JSON.parse(rawForged.body).headers['x-forwarded-for'], stamped,
         'raw TCP ingress must never trust client-supplied XFF');
       const streamA = await openStream(port, '/stream');
       const wsA = await openWebSocket(port);
