@@ -155,18 +155,18 @@ def validate_account_generations(rows, refresh, sequence):
 
 
 def validate_checkpoint_layout(app, schema):
-    if not schema.get('layout'):
+    if not schema.get("layout"):
         return
     layout = [
-        dict(zip(('type', 'name', 'tbl_name', 'sql'), row))
+        dict(zip(("type", "name", "tbl_name", "sql"), row))
         for row in app.execute(
             "SELECT type,name,tbl_name,sql FROM sqlite_schema "
             "WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name"
         )
     ]
     for row in layout:
-        row['sql'] = re.sub(r'\s+', ' ', row['sql']).strip() if row['sql'] else None
-    require(layout == schema['layout'], 'Checkpoint SQLite layout differs')
+        row["sql"] = re.sub(r"\s+", " ", row["sql"]).strip() if row["sql"] else None
+    require(layout == schema["layout"], "Checkpoint SQLite layout differs")
 
 
 def validate(folder, fingerprint=None):

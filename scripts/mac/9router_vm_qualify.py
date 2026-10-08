@@ -2942,7 +2942,7 @@ def host_signin_handoff(
     forwards,
     close,
 ):
-    if not getattr(args, 'interactive_signin', False):
+    if not getattr(args, "interactive_signin", False):
         return
     if not wait_signin_ready(
         args, active, remote, metadata, require_claim, cli, cli_env
@@ -3095,19 +3095,27 @@ def close_owned_forwards(forwards):
 
 def validate_active_devbox(args, active):
     require(
-        active.get('id') == args.devbox_id and active.get('name') == args.devbox_name
-        and active.get('state') == 'running' and active.get('instance_id'),
-        'activated devbox identity differs',
+        active.get("id") == args.devbox_id
+        and active.get("name") == args.devbox_name
+        and active.get("state") == "running"
+        and active.get("instance_id"),
+        "activated devbox identity differs",
     )
 
 
 def verify_lifecycle_claim(claim, claim_path):
     held, live = os.fstat(claim), claim_path.lstat()
     require(
-        stat.S_ISREG(live.st_mode) and live.st_uid == os.getuid()
+        stat.S_ISREG(live.st_mode)
+        and live.st_uid == os.getuid()
         and (held.st_dev, held.st_ino) == (live.st_dev, live.st_ino),
-        'exclusive Namespace lifecycle claim changed',
+        "exclusive Namespace lifecycle claim changed",
     )
+
+
+def close_lifecycle_claim(claim):
+    if claim is not None:
+        os.close(claim)
 
 
 def cmd_run(args):
@@ -3163,8 +3171,18 @@ def cmd_run(args):
     def final_checkpoint():
         close()
         save_final_checkpoint(
-            args, remote, devbox, credentials, credential_root, credential_previous,
-            cli, cli_env, evidence, binding, run_id, credential_armed,
+            args,
+            remote,
+            devbox,
+            credentials,
+            credential_root,
+            credential_previous,
+            cli,
+            cli_env,
+            evidence,
+            binding,
+            run_id,
+            credential_armed,
         )
 
     def require_claim():
@@ -3278,8 +3296,18 @@ def cmd_run(args):
             args, remote, stage, binding, devbox, credentials
         )
         host_signin_handoff(
-            args, active, remote, metadata, require_claim, cli, cli_env,
-            devbox, evidence, binding, forwards, close,
+            args,
+            active,
+            remote,
+            metadata,
+            require_claim,
+            cli,
+            cli_env,
+            devbox,
+            evidence,
+            binding,
+            forwards,
+            close,
         )
         wait_guest_manifest(args, active, remote, metadata, require_claim, cli, cli_env)
         return collect_host_qualification(
@@ -3296,7 +3324,11 @@ def cmd_run(args):
     claim_path = Path(tempfile.gettempdir()) / (
         "namespace-owner-" + args.devbox_id + ".lock"
     )
-    probe = credentials.owner(Path(args.credential_checkpoint)) if credentials else nullcontext()
+    probe = (
+        credentials.owner(Path(args.credential_checkpoint))
+        if credentials
+        else nullcontext()
+    )
     claim = None
 
     def complete():
@@ -3317,13 +3349,14 @@ def cmd_run(args):
         try:
             if credentials:
                 credential_seed = credentials.current(credential_root)
-                credential_previous = credentials.digest(credential_root / 'latest.json')
+                credential_previous = credentials.digest(
+                    credential_root / ("latest.json")
+                )
             claim = os.open(claim_path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
             fcntl.flock(claim, fcntl.LOCK_EX | fcntl.LOCK_NB)
             return complete()
         finally:
-            if claim is not None:
-                os.close(claim)
+            close_lifecycle_claim(claim)
 
 
 def add_run_arguments(command):

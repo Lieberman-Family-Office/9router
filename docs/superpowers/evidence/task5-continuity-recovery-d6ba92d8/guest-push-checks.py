@@ -256,21 +256,41 @@ try:
             SONARQUBE_CLI_TOKEN=secret.read_text(),
             SONARQUBE_CLI_ORG="lieberman-family-office",
         )
-        history = run / 'historical-blobs'
+        history = run / "historical-blobs"
         history.mkdir(mode=0o700)
-        commits = q.output(['git', 'rev-list', 'HEAD', '^c0ceebc70d892398870f93dba9af522f870ccc08'], source).splitlines()
+        commits = q.output(
+            [
+                ("git"),
+                ("rev-list"),
+                ("HEAD"),
+                ("^c0ceebc70d892398870f93dba9af522f870ccc08"),
+            ],
+            source,
+        ).splitlines()
         objects = {}
         for commit in commits:
-            for entry in q.output(['git', 'ls-tree', '-r', '-z', commit], source).split('\0'):
+            for entry in q.output(
+                [("git"), ("ls-tree"), ("-r"), ("-z"), commit], source
+            ).split(("\x00")):
                 if not entry:
                     continue
-                metadata, filename = entry.split('\t', 1)
+                metadata, filename = entry.split("\t", 1)
                 mode, kind, oid = metadata.split()
-                if kind == 'blob':
+                if kind == "blob":
                     objects.setdefault(oid, set()).add(filename)
         base_objects = {
-            entry.split('\t', 1)[0].split()[2]
-            for entry in q.output(['git', 'ls-tree', '-r', '-z', 'c0ceebc70d892398870f93dba9af522f870ccc08'], source).split('\0') if entry
+            entry.split("\t", 1)[0].split()[2]
+            for entry in q.output(
+                [
+                    ("git"),
+                    ("ls-tree"),
+                    ("-r"),
+                    ("-z"),
+                    ("c0ceebc70d892398870f93dba9af522f870ccc08"),
+                ],
+                source,
+            ).split(("\x00"))
+            if entry
         }
         historical_paths = []
         census = {}
@@ -278,15 +298,39 @@ try:
             if oid in base_objects:
                 continue
             target = history / oid
-            result = subprocess.run(['git', 'cat-file', 'blob', oid], cwd=source, capture_output=True, check=True)
+            result = subprocess.run(
+                [("git"), ("cat-file"), ("blob"), oid],
+                cwd=source,
+                capture_output=True,
+                check=True,
+            )
             target.write_bytes(result.stdout)
-            census[oid] = {'paths': sorted(filenames), 'sha256': q.sha256(target), 'bytes': len(result.stdout)}
+            census[oid] = {
+                ("paths"): sorted(filenames),
+                ("sha256"): q.sha256(target),
+                ("bytes"): len(result.stdout),
+            }
             historical_paths.append(str(target))
-        q.require(commits and historical_paths, 'Zero historical publication population')
-        q.new_json(out / 'historical-blob-census.json', {'commits': len(commits), 'unique_blobs': len(census), 'objects': census})
+        q.require(
+            commits and historical_paths, ("Zero historical publication population")
+        )
+        q.new_json(
+            out / ("historical-blob-census.json"),
+            {
+                ("commits"): len(commits),
+                ("unique_blobs"): len(census),
+                ("objects"): census,
+            },
+        )
         for offset in range(0, len(historical_paths), 10):
-            population = historical_paths[offset:offset + 10]
-            check('historical-secrets-' + str(offset), [str(scanner), 'analyze', 'secrets', *population], env, len(population), 600)
+            population = historical_paths[offset : offset + 10]
+            check(
+                ("historical-secrets-") + str(offset),
+                [str(scanner), ("analyze"), ("secrets"), *population],
+                env,
+                len(population),
+                600,
+            )
         for offset in range(0, len(changed), 10):
             population = changed[offset : offset + 10]
             check(
@@ -324,6 +368,7 @@ finally:
             "namespace": binding["namespace"],
             "checks": checks,
             "success": bool(checks)
+            and not (out / 'runner-failure.json').exists()
             and all(
                 item.get("exit_code") == 0 and item["subjects"] > 0 for item in checks
             ),
