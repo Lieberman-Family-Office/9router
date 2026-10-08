@@ -44,7 +44,6 @@ for filename in FILES:
     loop = next(node for node in ast.walk(outer) if isinstance(node, ast.For)
                 and any(isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)
                         and child.func.attr == "open" for child in ast.walk(node)))
-    descriptor_name = next(node.targets[0].id for node in loop.body if isinstance(node, ast.Assign))
     target_name = loop.target.id
     module = ast.fix_missing_locations(ast.Module(body=loop.body, type_ignores=[]))
     for fault in ("append", "flock", "write", "none"):
@@ -62,8 +61,10 @@ for filename in FILES:
         except Fault:
             pass
         finally:
-            for descriptor, _target in claims:
-                close(descriptor)
+            namespace['secret'] = SimpleNamespace(unlink=lambda **_kwargs: None)
+            namespace['record'] = None
+            cleanup = ast.fix_missing_locations(ast.Module(body=outer.finalbody, type_ignores=[]))
+            exec(compile(cleanup, str(EVIDENCE / filename), 'exec'), namespace)
         assert collections.Counter(closed) == collections.Counter(opened), (filename, fault, opened, closed)
         assert all(count == 1 for count in collections.Counter(closed).values())
         assert len(opened) == 2
@@ -76,4 +77,47 @@ acquisition = owner.body[0]
 assert isinstance(acquisition, ast.Try)
 assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
            and node.func.attr == "close" for node in ast.walk(acquisition.finalbody[0]))
-print(f"PASS: {population} actual acquisition failure/interrupt cases; cmd_run closes in owning finally")
+for fault in ('flock', 'work', 'interrupt', 'close', 'none'):
+    opened, closed, events = [], [], []
+    descriptor = 301
+    def open_claim(*_args):
+        events.append('open')
+        opened.append(descriptor)
+        return descriptor
+    def close_claim(fd):
+        events.append('close')
+        closed.append(fd)
+        if fault == 'close':
+            raise Fault()
+    def flock_claim(fd, flags):
+        if fault == 'flock':
+            raise Fault()
+    def complete():
+        if fault in {'work', 'interrupt'}:
+            raise Fault()
+        return 0
+    class Probe:
+        def __enter__(self):
+            events.append('owner-enter')
+            return 'fictional-root'
+        def __exit__(self, *_args):
+            events.append('owner-exit')
+    dispatch = ast.fix_missing_locations(ast.Module(body=[ast.FunctionDef(
+        name='dispatch', args=ast.arguments(posonlyargs=[], args=[], kwonlyargs=[], kw_defaults=[], defaults=[]),
+        body=[owner], decorator_list=[],
+    )], type_ignores=[]))
+    namespace = {
+        'probe': Probe(), 'claim': None, 'claim_path': 'fictional', 'credentials': None,
+        'checkpoint_seed_binding': lambda *_args: (None, None), 'complete': complete,
+        'os': SimpleNamespace(open=open_claim, close=close_claim, O_RDWR=1, O_CREAT=2, O_EXCL=4),
+        'fcntl': SimpleNamespace(flock=flock_claim, LOCK_EX=1, LOCK_NB=2),
+    }
+    exec(compile(dispatch, 'actual-cmd-run-owner-scope', 'exec'), namespace)
+    try:
+        namespace['dispatch']()
+    except Fault:
+        pass
+    assert opened == closed == [descriptor], (fault, events)
+    assert events[-1] == 'owner-exit' and events.index('close') < events.index('owner-exit')
+    population += 1
+print(f'PASS: {population} actual acquisition/owner failure cases; exact-once close and owner release')

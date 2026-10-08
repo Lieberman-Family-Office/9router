@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-08T04:30:43.750Z",
+  "instanceId": "scnps4mqrp42",
+  "scope": "non-activating failure metadata and safe lifecycle logs",
+  "failure": {
+    "code": 5,
+    "message": "[not_found] rpc error: code = NotFound desc = scnps4mqrp42: does not exist"
+  },
+  "logSubjects": 0,
+  "logComplete": true,
+  "lines": []
+}
