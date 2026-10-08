@@ -621,8 +621,6 @@ def stage_asset_directory(source, *, target=None):
     if source == target or source in target.parents or target in source.parents:
         raise ValueError("asset source and target must not overlap")
     for path in entries:
-        if path.is_symlink():
-            raise ValueError("symlink dashboard asset refused")
         relative = path.relative_to(source)
         out = target / relative
         if path.is_dir():

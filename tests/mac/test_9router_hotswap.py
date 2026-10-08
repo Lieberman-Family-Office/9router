@@ -757,6 +757,18 @@ def test_legacy_qualification_receipt_cannot_enroll_managed_release(hs):
         hs.qualification(digest)
 
 
+def test_explicit_runtime_binding_does_not_fall_back(hs, monkeypatch, tmp_path):
+    executable = tmp_path / "pinned-node"
+    executable.write_bytes(b"fixture executable bytes")
+    executable.chmod(0o700)
+    monkeypatch.setenv("NINEROUTER_NODE_BIN", str(executable))
+    monkeypatch.setattr(hs.shutil, "which", lambda name: "/wrong/global/node")
+    assert hs.executable("node") == str(executable)
+    executable.unlink()
+    with pytest.raises(ValueError, match="missing runtime executable"):
+        hs.executable("node")
+
+
 def test_runtime_binding_mismatch_refuses_before_native_checks(hs, monkeypatch):
     digest = "b" * 64
     private_json(
@@ -1080,6 +1092,12 @@ def test_asset_seed_is_confined_nonempty_and_conflict_checked(hs, tmp_path):
         hs.stage_asset_directory(link)
     with pytest.raises(ValueError, match="concrete"):
         hs.stage_asset_directory(source / ".." / "legacy-assets")
+    (source / "outside.js").unlink()
+    (source / "old.js").write_bytes(b"old dashboard chunk")
+    with pytest.raises(ValueError, match="overlap"):
+        hs.stage_asset_directory(source, target=source)
+    with pytest.raises(ValueError, match="concrete"):
+        hs.stage_asset_directory(source, target=link)
 
 
 def test_enrollment_requires_explicit_maintenance_acknowledgement(hs):
