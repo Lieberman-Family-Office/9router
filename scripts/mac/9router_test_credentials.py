@@ -329,6 +329,17 @@ def begin(root, binding):
     sync(root)
 
 
+def archive_preuse_marker(root, marker, archived):
+    require(not os.path.lexists(archived), "Pre-use disposition already exists")
+    os.rename(marker, archived)
+    try:
+        sync(root)
+    except OSError:
+        os.rename(archived, marker)
+        sync(root)
+        raise
+
+
 def abort_precredential_run(root, evidence_path, inspection_path, expected):
     """Archive proven pre-restore uncertainty after a durable, hash-bound receipt."""
     root = private(Path(root), True)
@@ -514,14 +525,7 @@ def abort_precredential_run(root, evidence_path, inspection_path, expected):
             "Pre-use mutation boundary changed",
         )
         archived = root / ("preuse-aborted-" + run_id + ".json")
-        require(not os.path.lexists(archived), "Pre-use disposition already exists")
-        os.rename(marker, archived)
-        try:
-            sync(root)
-        except OSError:
-            os.rename(archived, marker)
-            sync(root)
-            raise
+        archive_preuse_marker(root, marker, archived)
         return {
             "run_id": run_id,
             "receipt": str(receipt),
