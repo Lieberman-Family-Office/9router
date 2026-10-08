@@ -1,41 +1,54 @@
 #!/usr/bin/env python3
 """Observe guest storage only, under exclusive approved lifecycle ownership."""
+
 import fcntl
 import importlib.util
 import json
 import os
-from pathlib import Path
 import tempfile
 import uuid
+from pathlib import Path
 
 root = Path(__file__).resolve().parents[4]
-spec = importlib.util.spec_from_file_location('qualifier', root / 'scripts/mac/9router_vm_qualify.py')
+spec = importlib.util.spec_from_file_location(
+    "qualifier", root / "scripts/mac/9router_vm_qualify.py"
+)
 q = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(q)
-identity, name = '2tc0b2eg4mveo', '9router-qualify-recovery'
-sdk = Path('/tmp').resolve() / 'namespace-runtime-check-ef67fdaa'
-cli = str(Path.home() / '.local/bin/devbox')
-evidence = Path(__file__).parent / ('storage-inspection-' + uuid.uuid4().hex[:8])
+identity, name = "2tc0b2eg4mveo", "9router-qualify-recovery"
+sdk = Path("/tmp").resolve() / "namespace-runtime-check-ef67fdaa"
+cli = str(Path.home() / ".local/bin/devbox")
+evidence = Path(__file__).parent / ("storage-inspection-" + uuid.uuid4().hex[:8])
 evidence.mkdir(mode=0o700)
 claims = []
+
 
 def metadata(_identity):
     return q.host_metadata(identity, sdk)
 
+
 def owned():
     for fd, path in claims:
         held, live = os.fstat(fd), path.lstat()
-        q.require((held.st_dev, held.st_ino) == (live.st_dev, live.st_ino), 'Lifecycle claim changed')
+        q.require(
+            (held.st_dev, held.st_ino) == (live.st_dev, live.st_ino),
+            "Lifecycle claim changed",
+        )
+
 
 def command(*args):
     owned()
     return q.output([cli, *args], root, timeout=360)
 
+
 def work():
-    command('exec', name, '--', '/usr/bin/uname', '-m')
+    command("exec", name, "--", "/usr/bin/uname", "-m")
     active = metadata(identity)
-    q.require(active['state'] == 'running' and active['instance_id'], 'Active instance identity missing')
-    program = '''import json,pathlib,sqlite3,subprocess,os,plistlib,hashlib
+    q.require(
+        active["state"] == "running" and active["instance_id"],
+        "Active instance identity missing",
+    )
+    program = """import json,pathlib,sqlite3,subprocess,os,plistlib,hashlib
 r=pathlib.Path('/Volumes/devbox/9router');h=r/'qualification/task5-signin-5a004deda56e459b/home';b=r/'baseline.json';db=h/'.9router/db/data.sqlite'
 o={'baseline_exists':b.exists(),'baseline_is_symlink':b.is_symlink(),'signin_home_exists':h.exists(),'database_exists':db.exists(),'qualification_directories':sorted(p.name for p in (r/'qualification').iterdir()) if (r/'qualification').exists() else [],'mounts':subprocess.run(['/sbin/mount'],capture_output=True,text=True,check=True).stdout,'root_listing':[p.name for p in r.iterdir()]}
 v=plistlib.loads(subprocess.run(['/usr/sbin/diskutil','info','-plist','/Volumes/devbox'],capture_output=True,check=True).stdout);o['volume']={k:v.get(k) for k in ['DeviceIdentifier','VolumeUUID','APFSVolumeUUID','APFSContainerReference','TotalSize','VolumeFreeSpace','MountPoint','VolumeName']}
@@ -56,22 +69,54 @@ for base in [pathlib.Path('/Volumes/devbox'),pathlib.Path('/Users/runner/workspa
    finally:c.close()
 o['scoped_discovery']={'files_observed':walked,'errors':errors,'subjects':subjects,'excluded':['node_modules','.git','Library','Caches','.next-cli-build','app','releases','python-tools','npm-cache']}
 m=r/'diagnostics/storage-diagnostic-checkpoint.json';o['retained_marker_sha256']=hashlib.sha256(m.read_bytes()).hexdigest() if m.exists() else None
-print(json.dumps(o))'''
-    observed = json.loads(command('exec', name, '--', 'python3', '-c', program))
-    q.new_json(evidence / 'storage.json', {'namespace': {'devbox_id': identity, 'instance_id': active['instance_id']}, **observed})
-    return {'guest_result': 'unrun', 'scope': 'storage metadata and count-only credential presence', 'evidence': str(evidence)}
+print(json.dumps(o))"""
+    observed = json.loads(command("exec", name, "--", "python3", "-c", program))
+    q.new_json(
+        evidence / "storage.json",
+        {
+            "namespace": {"devbox_id": identity, "instance_id": active["instance_id"]},
+            **observed,
+        },
+    )
+    return {
+        "guest_result": "unrun",
+        "scope": "storage metadata and count-only credential presence",
+        "evidence": str(evidence),
+    }
+
 
 try:
-    for path in sorted({Path(tempfile.gettempdir()) / ('namespace-owner-' + identity + '.lock'), Path('/private/tmp') / ('namespace-owner-' + identity + '.lock')}):
+    for path in sorted(
+        {
+            Path(tempfile.gettempdir()) / ("namespace-owner-" + identity + ".lock"),
+            Path("/private/tmp") / ("namespace-owner-" + identity + ".lock"),
+        }
+    ):
         fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
         claims.append((fd, path))
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        os.write(fd, json.dumps({'owner': '1c7bce1a-1309-45c3-a156-cf5623c06fda', 'pid': os.getpid(), 'scope': 'Task5 storage inspection'}).encode())
+        os.write(
+            fd,
+            json.dumps(
+                {
+                    "owner": "1c7bce1a-1309-45c3-a156-cf5623c06fda",
+                    "pid": os.getpid(),
+                    "scope": "Task5 storage inspection",
+                }
+            ).encode(),
+        )
     with q.interruption_boundary():
-        result = q.qualification_lifecycle(name, identity, work, metadata, lambda: None, stop=lambda exact: command('stop', exact, '--force'))
-    q.new_json(evidence / 'host.json', result)
-    print(json.dumps({'evidence': str(evidence), 'result': result}))
-    if result.get('cleanup', {}).get('verified'):
+        result = q.qualification_lifecycle(
+            name,
+            identity,
+            work,
+            metadata,
+            lambda: None,
+            stop=lambda exact: command("stop", exact, "--force"),
+        )
+    q.new_json(evidence / "host.json", result)
+    print(json.dumps({"evidence": str(evidence), "result": result}))
+    if result.get("cleanup", {}).get("verified"):
         owned()
         for fd, path in claims:
             path.unlink()

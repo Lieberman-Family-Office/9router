@@ -1,0 +1,39 @@
+self-check: 5 function(s) above S3776 cognitive limit 15 — WILL FAIL Sonar:
+
+  docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-signin.py:56  work  cognitive=18 (limit 15)
+  scripts/mac/9router_test_credentials.py:77  validate  cognitive=22 (limit 15)
+  scripts/mac/9router_test_credentials.py:219  export  cognitive=16 (limit 15)
+  scripts/mac/9router_vm_qualify.py:2606  cmd_run  cognitive=87 (limit 15)
+  scripts/mac/9router_vm_qualify.py:2921  main  cognitive=18 (limit 15)
+
+self-check: 4 function(s) above C901 cyclomatic limit 5 (secondary heuristic):
+  NOT diff-scoped and NOT the Sonar metric. ruff has no baseline mode here, so this list is whole-file and may be entirely pre-existing debt; S3776 above is the scoped, gate-relevant one (PI-335).
+
+  scripts/mac/9router_vm_qualify.py:2606:5: C901 `cmd_run` is too complex (32 > 5)
+  scripts/mac/9router_vm_qualify.py:2689:9: C901 `work` is too complex (14 > 5)
+  scripts/mac/9router_vm_qualify.py:2921:5: C901 `main` is too complex (10 > 5)
+  tests/mac/test_9router_vm_qualify.py:1360:9: C901 `test_download_replacement_links_wrong_digest_and_preexisting_paths_refuse` is too complex (6 > 5)
+
+self-check: 10 PRE-EXISTING function(s) above the C901 cyclomatic limit 5 — unchanged from the merge base.
+  C901 is a secondary heuristic, not Sonar's metric; these are context only and do not block this new-code-scoped push.
+
+  scripts/mac/9router_vm_qualify.py:1377:5: C901 `guest_command` is too complex (7 > 5)
+  scripts/mac/9router_vm_qualify.py:441:5: C901 `observe_shutdown` is too complex (6 > 5)
+  scripts/mac/9router_vm_qualify.py:1096:5: C901 `prepare_scope` is too complex (6 > 5)
+  scripts/mac/9router_vm_qualify.py:1195:5: C901 `initialize_baseline` is too complex (6 > 5)
+  scripts/mac/9router_vm_qualify.py:1583:5: C901 `prerequisite_checks` is too complex (6 > 5)
+  tests/mac/test_9router_vm_qualify.py:574:9: C901 `test_host_stage_binds_static_source_without_host_native_observations` is too complex (8 > 5)
+  tests/mac/test_9router_vm_qualify.py:588:17: C901 `git_output` is too complex (7 > 5)
+  tests/mac/test_9router_vm_qualify.py:313:9: C901 `fixture_work` is too complex (6 > 5)
+  tests/mac/test_9router_vm_qualify.py:327:9: C901 `exercise` is too complex (6 > 5)
+  tests/mac/test_9router_vm_qualify.py:1225:9: C901 `exercise` is too complex (6 > 5)
+
+self-check: 4 C901 finding(s) have no readable baseline at `c0ceebc70d892398870f93dba9af522f870ccc08` — UNKNOWN (advisory):
+
+  docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-landing-checks.py:45:5: C901 `work` is too complex (6 > 5)
+  docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-signin.py:56:5: C901 `work` is too complex (11 > 5)
+  scripts/mac/9router_test_credentials.py:77:5: C901 `validate` is too complex (9 > 5)
+  scripts/mac/9router_test_credentials.py:219:5: C901 `export` is too complex (11 > 5)
+
+Extract-function before pushing; a CI round-trip costs a push and a wait per round.
+NOTE: self-check does NOT cover non-complexity rules (S2083, S5864, etc.) — run `sonar_pr_issues.py <PR>` once the CI scan completes.

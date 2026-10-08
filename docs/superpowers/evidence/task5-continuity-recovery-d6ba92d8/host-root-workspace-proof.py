@@ -1,27 +1,30 @@
 #!/usr/bin/env python3
 """Compare scoped root/workspace checkpoint bytes before and after exact guest stop."""
+
 import fcntl
 import importlib.util
 import json
 import os
-from pathlib import Path
 import subprocess
 import tempfile
 import uuid
+from pathlib import Path
 
 source = Path(__file__).resolve().parents[4]
-spec = importlib.util.spec_from_file_location('qualifier', source / 'scripts/mac/9router_vm_qualify.py')
+spec = importlib.util.spec_from_file_location(
+    "qualifier", source / "scripts/mac/9router_vm_qualify.py"
+)
 q = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(q)
-identity, name = '2tc0b2eg4mveo', '9router-qualify-recovery'
-sdk = Path('/tmp').resolve() / 'namespace-runtime-check-ef67fdaa'
-cli = str(Path.home() / '.local/bin/devbox')
-run_id = 'boundary-' + uuid.uuid4().hex[:12]
+identity, name = "2tc0b2eg4mveo", "9router-qualify-recovery"
+sdk = Path("/tmp").resolve() / "namespace-runtime-check-ef67fdaa"
+cli = str(Path.home() / ".local/bin/devbox")
+run_id = "boundary-" + uuid.uuid4().hex[:12]
 local = Path(__file__).parent / run_id
 local.mkdir(mode=0o700)
 claims = []
 
-program = '''import hashlib,json,os,pathlib,plistlib,subprocess,sys,time
+program = """import hashlib,json,os,pathlib,plistlib,subprocess,sys,time
 root=pathlib.Path('/Volumes/devbox');workspace=pathlib.Path('/Users/runner/workspaces').resolve()
 paths=[root/(sys.argv[1]+'.json'),workspace/(sys.argv[1]+'.json'),root/'9router/diagnostics'/sys.argv[1]/'home/db/checkpoint.json']
 phase=sys.argv[2]
@@ -57,49 +60,120 @@ if phase=='create':
   text=p.read_text(errors='replace');safe=[{'line':i+1,'text':line[:240]} for i,line in enumerate(text.splitlines()) if any(word in line.lower() for word in ['rm ','delete','unlink','rmtree','rsync','restore','snapshot','mount','apfs','sync','9router','workspace','devbox']) and not any(word in line.lower() for word in ['token','password','secret','credential','authorization','cookie','bearer'])]
   surface.append({'path':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'line_count':len(text.splitlines()),'scoped_relevant_lines':safe})
  result['startup_source_observation']=surface
-print(json.dumps(result))'''
+print(json.dumps(result))"""
+
 
 def metadata(_identity):
     return q.host_metadata(identity, sdk)
 
+
 def owned():
     for fd, path in claims:
         a, b = os.fstat(fd), path.lstat()
-        q.require((a.st_dev, a.st_ino) == (b.st_dev, b.st_ino), 'Lifecycle claim changed')
+        q.require(
+            (a.st_dev, a.st_ino) == (b.st_dev, b.st_ino), "Lifecycle claim changed"
+        )
+
 
 def command(*args):
     owned()
     return q.output([cli, *args], source, timeout=360)
 
+
 def api_snapshot(label):
-    target = local / (label + '-api.json')
-    result = subprocess.run(['node', str(Path(__file__).parent / 'snapshot-metadata.mjs'), str(sdk), str(target)], cwd=source, capture_output=True, text=True, timeout=120)
-    q.require(result.returncode == 0 and target.is_file(), 'Read-only lineage collection failed')
+    target = local / (label + "-api.json")
+    result = subprocess.run(
+        [
+            "node",
+            str(Path(__file__).parent / "snapshot-metadata.mjs"),
+            str(sdk),
+            str(target),
+        ],
+        cwd=source,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    q.require(
+        result.returncode == 0 and target.is_file(),
+        "Read-only lineage collection failed",
+    )
+
 
 def work(phase):
-    command('exec', name, '--', '/usr/bin/uname', '-m')
+    command("exec", name, "--", "/usr/bin/uname", "-m")
     active = metadata(identity)
-    api_snapshot(phase + '-before')
-    observed = json.loads(command('exec', name, '--', 'python3', '-c', program, run_id, phase))
-    q.new_json(local / (phase + '.json'), {'namespace': active, **observed})
-    if phase == 'create':
-        again = json.loads(command('exec', name, '--', 'python3', '-c', program, run_id, 'same-instance-read'))
-        q.require(metadata(identity)['instance_id'] == active['instance_id'], 'Instance changed during running byte comparison')
-        q.new_json(local / 'same-instance-read.json', {'namespace': active, **again})
-    api_snapshot(phase + '-after-work')
-    return {'guest_result': 'unrun', 'scope': 'root/workspace checkpoint persistence and scoped startup metadata only', 'namespace': active}
+    api_snapshot(phase + "-before")
+    observed = json.loads(
+        command("exec", name, "--", "python3", "-c", program, run_id, phase)
+    )
+    q.new_json(local / (phase + ".json"), {"namespace": active, **observed})
+    if phase == "create":
+        again = json.loads(
+            command(
+                "exec",
+                name,
+                "--",
+                "python3",
+                "-c",
+                program,
+                run_id,
+                "same-instance-read",
+            )
+        )
+        q.require(
+            metadata(identity)["instance_id"] == active["instance_id"],
+            "Instance changed during running byte comparison",
+        )
+        q.new_json(local / "same-instance-read.json", {"namespace": active, **again})
+    api_snapshot(phase + "-after-work")
+    return {
+        "guest_result": "unrun",
+        "scope": "root/workspace checkpoint persistence and scoped startup metadata only",
+        "namespace": active,
+    }
+
 
 try:
-    for path in sorted({Path(tempfile.gettempdir()) / ('namespace-owner-' + identity + '.lock'), Path('/private/tmp') / ('namespace-owner-' + identity + '.lock')}):
-        fd=os.open(path,os.O_RDWR|os.O_CREAT|os.O_EXCL,0o600);claims.append((fd,path));fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB);os.write(fd,json.dumps({'owner':'1c7bce1a-1309-45c3-a156-cf5623c06fda','pid':os.getpid(),'scope':'Task5 root/workspace boundary comparison'}).encode())
-    for phase in ['create','read']:
+    for path in sorted(
+        {
+            Path(tempfile.gettempdir()) / ("namespace-owner-" + identity + ".lock"),
+            Path("/private/tmp") / ("namespace-owner-" + identity + ".lock"),
+        }
+    ):
+        fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
+        claims.append((fd, path))
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        os.write(
+            fd,
+            json.dumps(
+                {
+                    "owner": "1c7bce1a-1309-45c3-a156-cf5623c06fda",
+                    "pid": os.getpid(),
+                    "scope": "Task5 root/workspace boundary comparison",
+                }
+            ).encode(),
+        )
+    for phase in ["create", "read"]:
         with q.interruption_boundary():
-            result=q.qualification_lifecycle(name,identity,lambda:work(phase),metadata,lambda:None,stop=lambda exact:command('stop',exact,'--force'))
-        q.new_json(local/(phase+'-host.json'),result)
-        q.require(result.get('cleanup',{}).get('verified') and not result.get('failure'),'Guest observation or cleanup incomplete')
-        api_snapshot(phase+'-after-stop')
-    print(json.dumps({'evidence':str(local),'run_id':run_id}))
+            result = q.qualification_lifecycle(
+                name,
+                identity,
+                lambda: work(phase),
+                metadata,
+                lambda: None,
+                stop=lambda exact: command("stop", exact, "--force"),
+            )
+        q.new_json(local / (phase + "-host.json"), result)
+        q.require(
+            result.get("cleanup", {}).get("verified") and not result.get("failure"),
+            "Guest observation or cleanup incomplete",
+        )
+        api_snapshot(phase + "-after-stop")
+    print(json.dumps({"evidence": str(local), "run_id": run_id}))
     owned()
-    for fd,path in claims:path.unlink()
+    for fd, path in claims:
+        path.unlink()
 finally:
-    for fd,path in claims:os.close(fd)
+    for fd, path in claims:
+        os.close(fd)

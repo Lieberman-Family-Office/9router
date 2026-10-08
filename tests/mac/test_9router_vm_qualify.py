@@ -1287,55 +1287,105 @@ class ConcurrentApiTest(unittest.TestCase):
 class ContinuousSigninTest(unittest.TestCase):
     def test_run_dispatch_accepts_signin_without_a_second_lifecycle_owner(self):
         with patch.object(qualify, "cmd_run", return_value=0) as callback:
-            result = qualify.main([
-                "run", "candidate.tgz", "--interactive-signin",
-                "--signin-timeout", "1200", "--confirmation-file", "confirmation.json",
-                "--evidence", "new-evidence",
-            ])
+            result = qualify.main(
+                [
+                    "run",
+                    "candidate.tgz",
+                    "--interactive-signin",
+                    "--signin-timeout",
+                    "1200",
+                    "--confirmation-file",
+                    "confirmation.json",
+                    "--evidence",
+                    "new-evidence",
+                ]
+            )
         self.assertEqual(result, 0)
         self.assertTrue(callback.call_args.args[0].interactive_signin)
         self.assertEqual(callback.call_args.args[0].signin_timeout, 1200)
 
     def test_guest_dispatch_selects_same_instance_live_scope_without_restore(self):
-        args = unittest.mock.Mock(interactive_signin=True, credential_checkpoint=False, tgz="candidate.tgz", signin_timeout=1200)
-        binding = {"namespace": {"devbox_id": "fixture", "instance_id": "same-instance"}}
+        args = unittest.mock.Mock(
+            interactive_signin=True,
+            credential_checkpoint=False,
+            tgz="candidate.tgz",
+            signin_timeout=1200,
+        )
+        binding = {
+            "namespace": {"devbox_id": "fixture", "instance_id": "same-instance"}
+        }
         scope = {"home": "fixture-home", "packages": {"digest": {"release": "release"}}}
         with (
-            patch.object(qualify, "interactive_baseline", return_value=(Path("scope.json"), scope)) as signin,
+            patch.object(
+                qualify,
+                "interactive_baseline",
+                return_value=(Path("scope.json"), scope),
+            ) as signin,
             patch.object(qualify, "controller_call") as controller,
         ):
             result = qualify.live_scope_for_run(args, binding, Path("guest-run"))
         self.assertEqual(result, (Path("scope.json"), scope))
-        signin.assert_called_once_with(Path("candidate.tgz"), binding, Path("guest-run"), 1200)
+        signin.assert_called_once_with(
+            Path("candidate.tgz"), binding, Path("guest-run"), 1200
+        )
         controller.assert_not_called()
 
     def test_recently_closed_private_port_waits_but_loaded_listener_refuses(self):
         import errno
+
         with (
             patch.object(qualify.socket, "socket") as socket,
-            patch.object(qualify.subprocess, "run", return_value=unittest.mock.Mock(returncode=1, stdout="", stderr="")),
+            patch.object(
+                qualify.subprocess,
+                "run",
+                return_value=unittest.mock.Mock(returncode=1, stdout="", stderr=""),
+            ),
             patch.object(qualify.time, "sleep"),
         ):
-            socket.return_value.__enter__.return_value.bind.side_effect = [OSError(errno.EADDRINUSE, "recent connection"), None]
+            socket.return_value.__enter__.return_value.bind.side_effect = [
+                OSError(errno.EADDRINUSE, "recent connection"),
+                None,
+            ]
             qualify.wait_signin_port(21128, 120)
-            self.assertEqual(socket.return_value.__enter__.return_value.bind.call_count, 2)
+            self.assertEqual(
+                socket.return_value.__enter__.return_value.bind.call_count, 2
+            )
         with (
             patch.object(qualify.socket, "socket") as socket,
-            patch.object(qualify.subprocess, "run", return_value=unittest.mock.Mock(returncode=0, stdout="listener", stderr="")),
+            patch.object(
+                qualify.subprocess,
+                "run",
+                return_value=unittest.mock.Mock(
+                    returncode=0, stdout="listener", stderr=""
+                ),
+            ),
             patch.object(qualify.time, "sleep") as sleep,
         ):
-            socket.return_value.__enter__.return_value.bind.side_effect = OSError(errno.EADDRINUSE, "occupied")
+            socket.return_value.__enter__.return_value.bind.side_effect = OSError(
+                errno.EADDRINUSE, "occupied"
+            )
             with self.assertRaisesRegex(ValueError, "occupied listener"):
                 qualify.wait_signin_port(21128, 120)
             sleep.assert_not_called()
 
     def test_confirmation_binds_run_and_instance_and_refuses_nonconfirmation(self):
-        binding = {"run_id": "current", "namespace": {"devbox_id": "box", "instance_id": "instance"}}
-        good = {"run_id": "current", "namespace": binding["namespace"], "operator_quote": "Signed in independently", "operator_turn": "current actual turn"}
+        binding = {
+            "run_id": "current",
+            "namespace": {"devbox_id": "box", "instance_id": "instance"},
+        }
+        good = {
+            "run_id": "current",
+            "namespace": binding["namespace"],
+            "operator_quote": "Signed in independently",
+            "operator_turn": "current actual turn",
+        }
         qualify.validate_signin_confirmation(good, binding)
         for patch_value in (
-            {"run_id": "other"}, {"namespace": {"devbox_id": "box", "instance_id": "old"}},
-            {"operator_quote": ""}, {"operator_turn": ""}, {"confirmed": False},
+            {"run_id": "other"},
+            {"namespace": {"devbox_id": "box", "instance_id": "old"}},
+            {"operator_quote": ""},
+            {"operator_turn": ""},
+            {"confirmed": False},
         ):
             with self.subTest(patch_value=patch_value), self.assertRaises(ValueError):
                 qualify.validate_signin_confirmation({**good, **patch_value}, binding)
@@ -1345,47 +1395,85 @@ class PrivateDownloadTest(unittest.TestCase):
     def test_actual_download_dispatch_privatizes_0644_before_validation(self):
         import hashlib
         import os
+
         data = b'{"run_id":"current","namespace":{"instance_id":"current"}}'
         with TemporaryDirectory() as directory:
             target = Path(directory) / "handoff.json"
+
             def download(_argv, *, stdout, **_kwargs):
                 target.chmod(0o644)
                 stdout.write(data)
                 return unittest.mock.Mock(returncode=0)
+
             with patch.object(qualify.subprocess, "run", side_effect=download):
-                qualify.download_private("devbox", {}, "box", Path("/guest/ready.json"), target, hashlib.sha256(data).hexdigest())
+                qualify.download_private(
+                    "devbox",
+                    {},
+                    "box",
+                    Path("/guest/ready.json"),
+                    target,
+                    hashlib.sha256(data).hexdigest(),
+                )
             self.assertEqual(target.stat().st_mode & 0o777, 0o600)
             self.assertEqual(qualify.private_json(target)["run_id"], "current")
 
     def test_download_replacement_links_wrong_digest_and_preexisting_paths_refuse(self):
         import hashlib
         import os
-        data = b'private'
+
+        data = b"private"
         for mutation in ("symlink", "hardlink", "replace", "wrong-digest"):
             with self.subTest(mutation=mutation), TemporaryDirectory() as directory:
-                root = Path(directory); target = root / "handoff.json"; foreign = root / "foreign"
-                foreign.write_bytes(b'unchanged')
+                root = Path(directory)
+                target = root / "handoff.json"
+                foreign = root / "foreign"
+                foreign.write_bytes(b"unchanged")
+
                 def download(_argv, *, stdout, **_kwargs):
-                    stdout.write(data); stdout.flush()
+                    stdout.write(data)
+                    stdout.flush()
                     if mutation != "wrong-digest":
                         target.unlink()
-                        if mutation == "symlink": target.symlink_to(foreign)
-                        elif mutation == "hardlink": os.link(foreign, target)
-                        else: target.write_bytes(data)
+                        if mutation == "symlink":
+                            target.symlink_to(foreign)
+                        elif mutation == "hardlink":
+                            os.link(foreign, target)
+                        else:
+                            target.write_bytes(data)
                     return unittest.mock.Mock(returncode=0)
-                with patch.object(qualify.subprocess, "run", side_effect=download), self.assertRaises(ValueError):
-                    qualify.download_private("devbox", {}, "box", Path("/guest/ready.json"), target, "a" * 64 if mutation == "wrong-digest" else hashlib.sha256(data).hexdigest())
-                self.assertEqual(foreign.read_bytes(), b'unchanged')
+
+                with (
+                    patch.object(qualify.subprocess, "run", side_effect=download),
+                    self.assertRaises(ValueError),
+                ):
+                    qualify.download_private(
+                        "devbox",
+                        {},
+                        "box",
+                        Path("/guest/ready.json"),
+                        target,
+                        "a" * 64
+                        if mutation == "wrong-digest"
+                        else hashlib.sha256(data).hexdigest(),
+                    )
+                self.assertEqual(foreign.read_bytes(), b"unchanged")
         with TemporaryDirectory() as directory:
-            path = Path(directory) / "occupied.json"; path.write_text("preserve")
+            path = Path(directory) / "occupied.json"
+            path.write_text("preserve")
             with self.assertRaises(FileExistsError):
-                qualify.download_private("devbox", {}, "box", Path("/guest/ready.json"), path, "a" * 64)
+                qualify.download_private(
+                    "devbox", {}, "box", Path("/guest/ready.json"), path, "a" * 64
+                )
             self.assertEqual(path.read_text(), "preserve")
 
 
 class NativeReviewIdentityTest(unittest.TestCase):
-    def test_existing_review_counterfactual_terminal_is_accepted_but_wrong_terminal_refuses(self):
-        entry = next(item for item in qualify.NATIVE if item[0] == "review-counterfactual")
+    def test_existing_review_counterfactual_terminal_is_accepted_but_wrong_terminal_refuses(
+        self,
+    ):
+        entry = next(
+            item for item in qualify.NATIVE if item[0] == "review-counterfactual"
+        )
         terminal = "GREEN: unchanged mirror passes; RED: baseline mirror fails all eight named review mechanisms while pending/uncertain safety passes"
         for emitted, accepted in ((terminal, True), ("PASS: unrelated check", False)):
             with (
@@ -1396,11 +1484,15 @@ class NativeReviewIdentityTest(unittest.TestCase):
                 patch.object(qualify, "record_check") as record,
             ):
                 if accepted:
-                    qualify.prerequisite_native_checks({}, {}, Path("guest-evidence"), {}, {})
+                    qualify.prerequisite_native_checks(
+                        {}, {}, Path("guest-evidence"), {}, {}
+                    )
                     self.assertEqual(record.call_count, 1)
                 else:
                     with self.assertRaisesRegex(ValueError, "identity absent"):
-                        qualify.prerequisite_native_checks({}, {}, Path("guest-evidence"), {}, {})
+                        qualify.prerequisite_native_checks(
+                            {}, {}, Path("guest-evidence"), {}, {}
+                        )
                     record.assert_not_called()
 
 

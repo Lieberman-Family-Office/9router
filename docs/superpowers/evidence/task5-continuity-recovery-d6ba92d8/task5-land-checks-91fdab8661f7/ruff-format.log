@@ -1,0 +1,16 @@
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/create-fresh-guest.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-push-checks.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-reproduce.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin-complete.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-landing-checks.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-persistence-proof.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-reproduce.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-root-workspace-proof.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-signin.py
+Would reformat: docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py
+Would reformat: scripts/mac/9router_test_credentials.py
+Would reformat: scripts/mac/9router_vm_qualify.py
+Would reformat: tests/mac/9router_test_credentials.check.py
+Would reformat: tests/mac/test_9router_vm_qualify.py
+15 files would be reformatted

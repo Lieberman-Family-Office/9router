@@ -1,0 +1,6 @@
+
+/Volumes/devbox/9router/qualification/task5-land-checks-91fdab8661f7/source/open-sse/handlers/responsesWs/index.js
+  67:1  warning  Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+✖ 1 problem (0 errors, 1 warning)
+
