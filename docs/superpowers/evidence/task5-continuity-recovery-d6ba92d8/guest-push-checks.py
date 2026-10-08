@@ -368,7 +368,7 @@ finally:
             "namespace": binding["namespace"],
             "checks": checks,
             "success": bool(checks)
-            and not (out / 'runner-failure.json').exists()
+            and not (out / "runner-failure.json").exists()
             and all(
                 item.get("exit_code") == 0 and item["subjects"] > 0 for item in checks
             ),

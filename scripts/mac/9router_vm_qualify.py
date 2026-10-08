@@ -3160,7 +3160,6 @@ def cmd_run(args):
     credentials = (
         credential_module() if getattr(args, "credential_checkpoint", None) else None
     )
-    credential_root = None
     credential_seed = None
     credential_previous = None
     credential_armed = False
