@@ -64,6 +64,9 @@ CADDY_URL = (
 CADDY_ARCHIVE_SHA256 = (
     "9efb0af2d6cf09cfb5053c0e51721b9b3d4956d346234f39368d943d25a3c9a7"
 )
+NODE_ARCHIVE_SHA256 = "751fdf7439f115d87ee2a8f3f18c065b6151852068e3e666ac60ac2996f75ac9"
+NODE_BINARY_SHA256 = "56d28b39a8048f0cd1af7ad7e09f6cbe1c04439b6dfeb6c8d9090c082af60861"
+NODE_URL = "https://nodejs.org/dist/v26.10.0/node-v26.10.0-darwin-arm64.tar.gz"
 STALL_S = 5.0
 CHECKS = {"continuity", "authentication", "recovery"}
 BINDINGS = (
@@ -951,6 +954,32 @@ def provision_guest_caddy(tools):
         )
 
 
+def provision_guest_node(tools):
+    archive_path = tools / "node.tgz"
+    with tempfile.TemporaryDirectory(prefix=".node-", dir=tools) as temporary:
+        staged = Path(temporary)
+        if not os.path.lexists(archive_path):
+            with urllib.request.urlopen(NODE_URL, timeout=120) as incoming, (staged / "archive").open("xb") as outgoing:
+                shutil.copyfileobj(incoming, outgoing)
+            (staged / "archive").chmod(0o600)
+            require(sha256(staged / "archive") == NODE_ARCHIVE_SHA256, "guest Node archive digest differs")
+            os.replace(staged / "archive", archive_path)
+        require(sha256(regular(archive_path)) == NODE_ARCHIVE_SHA256, "guest Node archive digest differs")
+        with tarfile.open(archive_path, "r:gz") as archive:
+            member = archive.getmember("node-v26.10.0-darwin-arm64/bin/node")
+            require(member.isfile(), "guest Node archive entry differs")
+            with archive.extractfile(member) as incoming, (staged / "node").open("xb") as outgoing:
+                shutil.copyfileobj(incoming, outgoing)
+        expected = sha256(staged / "node")
+        binary = tools / "node"
+        if not os.path.lexists(binary):
+            (staged / "node").chmod(0o700)
+            os.replace(staged / "node", binary)
+        require(sha256(regular(binary)) == expected and binary.stat().st_uid == os.getuid()
+                and stat.S_IMODE(binary.stat().st_mode) == 0o700 and binary.stat().st_nlink == 1,
+                "persistent guest Node binary differs")
+
+
 def cmd_runtime(args):
     guest_guard()
     tools = Path(args.tools)
@@ -962,7 +991,13 @@ def cmd_runtime(args):
     if os.path.lexists(tools / "caddy") or not shutil.which("caddy"):
         provision_guest_caddy(tools)
         os.environ["PATH"] = str(tools) + os.pathsep + os.environ.get("PATH", "")
-    print(json.dumps(guest_binary_bindings(), sort_keys=True))
+    if getattr(args, "portable_node", False):
+        provision_guest_node(tools)
+        os.environ["PATH"] = str(tools) + os.pathsep + os.environ.get("PATH", "")
+    binaries = guest_binary_bindings()
+    if getattr(args, "portable_node", False):
+        require(binaries["node"]["sha256"] == NODE_BINARY_SHA256, "portable Node binary pin differs")
+    print(json.dumps(binaries, sort_keys=True))
     return 0
 
 
@@ -3268,6 +3303,7 @@ def cmd_run(args):
                 "runtime",
                 "--tools",
                 str(GUEST_ROOT / "tools" / CADDY_ARCHIVE_SHA256),
+                *(["--portable-node"] if getattr(args, "portable_node", False) else []),
                 timeout=180,
             )
         )
@@ -3419,6 +3455,7 @@ def add_run_arguments(command):
     command.add_argument(
         ("--sdk-root"), default=os.environ.get(("NINEROUTER_NAMESPACE_SDK_ROOT"))
     )
+    command.add_argument("--portable-node", action="store_true")
     command.add_argument("--source-file", action="append")
     command.add_argument("--evidence", required=True)
     command.add_argument("--timeout", type=int, default=7200)
@@ -3450,6 +3487,7 @@ def main(argv=None):
         "runtime", help="observe/provision guest runtime before tests"
     )
     runtime.add_argument("--tools", required=True)
+    runtime.add_argument("--portable-node", action="store_true")
     runtime.set_defaults(function=cmd_runtime)
     for name, function in (
         ("run", cmd_run),
