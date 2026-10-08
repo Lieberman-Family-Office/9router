@@ -76,7 +76,7 @@ def update_gate_latch(
     persist_s: float,
     latch: GateLatchState,
 ) -> tuple[GateLatchState, Optional[str]]:
-    """Advance latch state. Returns (new_state, event) with event in {None, latch, clear}."""
+    """Advance latch state; return (new_state, None/latch/clear event)."""
     new = GateLatchState(
         purge_anchor_wall=latch.purge_anchor_wall,
         latched=latch.latched,
@@ -669,7 +669,7 @@ def apply_actions(
                 state.last_remediation_mono[CLASS_PURGE] = now_mono
         elif action.startswith("kick:"):
             target = action.split(":", 1)[1]
-            # ponytail: managed recovery belongs to the path watchdog; memory pressure never retires accepted work.
+            # ponytail: path watchdog owns recovery; memory never retires managed work.
             if target == "9router" and os.path.lexists(home / ".9router/hotswap"):
                 results.append("kick_suppressed:managed_9router")
                 continue

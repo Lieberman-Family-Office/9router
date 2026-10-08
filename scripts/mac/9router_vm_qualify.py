@@ -1007,11 +1007,11 @@ def cmd_runtime(args):
     if os.path.lexists(tools / "caddy") or not shutil.which("caddy"):
         provision_guest_caddy(tools)
         os.environ["PATH"] = str(tools) + os.pathsep + os.environ.get("PATH", "")
-    if getattr(args, "portable_node", False):
+    if getattr(args, "portable_node", False) is True:
         provision_guest_node(tools)
         os.environ["PATH"] = str(tools) + os.pathsep + os.environ.get("PATH", "")
     binaries = guest_binary_bindings()
-    if getattr(args, "portable_node", False):
+    if getattr(args, "portable_node", False) is True:
         require(
             binaries["node"]["sha256"] == NODE_BINARY_SHA256,
             "portable Node binary pin differs",
