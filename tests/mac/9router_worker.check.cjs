@@ -109,7 +109,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.url === '/eof') {
     res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
-    res.write(JSON.stringify({ padding: 'x'.repeat(1024 * 1024) }));
+    res.write(JSON.stringify({ padding: 'x'.repeat(15059) }));
     return res.end();
   }
   if (req.url === '/status-release') { fs.unlinkSync(statusHold); fs.unlinkSync(statusHold + '.waiting'); for (const finish of waiting.splice(0)) finish(); return res.end('ok'); }
@@ -178,8 +178,8 @@ async function main() {
   select('a');
   assert.equal((await command('a', 'status')).mode, 'active');
   // Exercise real bridge backpressure: upstream EOF must not discard queued client writes.
-  const expectedEof = JSON.stringify({ padding: 'x'.repeat(1024 * 1024) });
-  await new Promise((resolve, reject) => {
+  const expectedEof = JSON.stringify({ padding: 'x'.repeat(15059) });
+  for (let attempt = 0; attempt < 40; attempt++) await new Promise((resolve, reject) => {
     const req = http.get({ socketPath: path.join(root, 'a.sock'), path: '/eof', agent: false }, res => {
       const chunks = [];
       res.pause();
