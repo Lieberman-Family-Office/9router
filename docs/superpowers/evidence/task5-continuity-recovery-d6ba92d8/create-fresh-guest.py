@@ -98,7 +98,8 @@ try:
     )
     record.update(created=True, verified=box)
 finally:
-    # Creation was explicitly stopped. If the response is uncertain, inspect only the unique name.
+    # Creation was explicitly stopped.
+    # If the response is uncertain, inspect only the unique name.
     if box is None:
         observed = subprocess.run(
             ["node", str(api), str(sdk), "metadata", name],

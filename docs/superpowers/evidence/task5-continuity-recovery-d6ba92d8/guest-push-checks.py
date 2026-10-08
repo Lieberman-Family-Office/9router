@@ -50,7 +50,7 @@ def wrap_long_literals(filename):
             value = ast.literal_eval(token.string)
         except (ValueError, SyntaxError):
             continue
-        if not isinstance(value, str):
+        if not isinstance(value, str) or not value:
             continue
         indent = ' ' * (len(token.line) - len(token.line.lstrip()))
         chunks = [repr(value[index:index + 40]) for index in range(0, len(value), 40)]
@@ -137,6 +137,7 @@ try:
     q.require(python_files and js_files and changed, "Zero changed check population")
     for filename in python_files:
         wrap_long_literals(filename)
+    q.new_json(out / 'pre-check-formatting.json', {'files': {filename: q.sha256(source / filename) for filename in python_files}})
     q.guest_command(
         [python, '-m', 'ruff', 'check', '--select=F401,I', '--fix', *python_files],
         source, env, 180,
