@@ -143,9 +143,9 @@ def work():
         "cess.run(['git','apply',str(r/'source.pa"
         "tch')],cwd=r/'source',check=True) if (r/"
         "'source.patch').stat().st_size else None"
-        "; assert all(hashlib.sha256((r/'source'/"
-        "p).read_bytes()).hexdigest()==h for p,h "
-        "in b['source_files'].items()); (r/'scann"
+        "; bad=[p for p,h in b['source_files'].items() "
+        "if hashlib.sha256((r/'source'/p).read_bytes()).hexdigest()!=h]; "
+        "assert not bad, 'Source hashes differ: '+repr(bad); (r/'scann"
         "er-credential').chmod(0o600)"
     )
     command("exec", name, "--", "python3", "-c", setup, str(remote), timeout=300)
