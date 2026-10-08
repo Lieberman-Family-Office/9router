@@ -54,7 +54,7 @@ def sanitize(text):
 
 try:
     q.provision_dependencies(binding, run)
-    scope_path, scope = q.checkpoint_baseline(run / "candidate.tgz", binding, run)
+    q.checkpoint_baseline(run / "candidate.tgz", binding, run)
     q.new_json(
         evidence / ("enrollment-diagnostic.json"),
         {

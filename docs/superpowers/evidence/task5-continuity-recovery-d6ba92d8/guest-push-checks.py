@@ -222,6 +222,7 @@ try:
         1,
         180,
     )
+    check('claim-cleanup-regressions', ['python3', 'tests/mac/task5_claim_cleanup.check.py'], env, 24, 180)
     # Produce only a guest formatting/import diff for the host authoring surface.
     q.guest_command(
         [python, "-m", "ruff", "check", "--select=F401,I", "--fix", *python_files],

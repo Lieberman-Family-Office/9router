@@ -3153,9 +3153,10 @@ def verify_lifecycle_claim(claim, claim_path):
     )
 
 
-def close_lifecycle_claim(claim):
-    if claim is not None:
-        os.close(claim)
+def checkpoint_seed_binding(credentials, credential_root):
+    if not credentials:
+        return None, None
+    return credentials.current(credential_root), credentials.digest(credential_root / 'latest.json')
 
 
 def cmd_run(args):
@@ -3386,16 +3387,13 @@ def cmd_run(args):
 
     with probe as credential_root:
         try:
-            if credentials:
-                credential_seed = credentials.current(credential_root)
-                credential_previous = credentials.digest(
-                    credential_root / ("latest.json")
-                )
+            credential_seed, credential_previous = checkpoint_seed_binding(credentials, credential_root)
             claim = os.open(claim_path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
             fcntl.flock(claim, fcntl.LOCK_EX | fcntl.LOCK_NB)
             return complete()
         finally:
-            close_lifecycle_claim(claim)
+            if claim is not None:
+                os.close(claim)
 
 
 def add_run_arguments(command):

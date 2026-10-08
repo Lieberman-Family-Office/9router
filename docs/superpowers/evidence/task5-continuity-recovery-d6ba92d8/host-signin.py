@@ -326,19 +326,17 @@ try:
         }
     ):
         fd = os.open(target, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
-        claims.append((fd, target))
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        os.write(
-            fd,
-            json.dumps(
-                {
-                    "owner": "1c7bce1a-1309-45c3-a156-cf5623c06fda",
-                    "pid": os.getpid(),
-                    "run_id": run_id,
-                    "authorization_quote": quote,
-                }
-            ).encode(),
-        )
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            os.write(fd, json.dumps({
+                "owner": "1c7bce1a-1309-45c3-a156-cf5623c06fda",
+                "pid": os.getpid(), "run_id": run_id,
+                "authorization_quote": quote,
+            }).encode())
+            claims.append((fd, target))
+        except BaseException:
+            os.close(fd)
+            raise
     with q.interruption_boundary():
         result = q.qualification_lifecycle(
             name,

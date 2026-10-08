@@ -230,20 +230,16 @@ try:
     }
     for target in sorted(targets):
         descriptor = os.open(target, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
-        claims.append((descriptor, target))
-        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        os.write(
-            descriptor,
-            json.dumps(
-                {
-                    "owner": owner,
-                    "run_id": run_id,
-                    "scope": "Task5 reproduction",
-                    "pid": os.getpid(),
-                    "authorization_quote": quote,
-                }
-            ).encode(),
-        )
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            os.write(descriptor, json.dumps({
+                "owner": owner, "run_id": run_id, "scope": "Task5 reproduction",
+                "pid": os.getpid(), "authorization_quote": quote,
+            }).encode())
+            claims.append((descriptor, target))
+        except BaseException:
+            os.close(descriptor)
+            raise
     with q.interruption_boundary():
         record = q.qualification_lifecycle(
             name,

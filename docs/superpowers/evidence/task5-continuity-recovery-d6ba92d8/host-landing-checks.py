@@ -237,20 +237,18 @@ try:
     }
     for path in sorted(targets):
         fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
-        claims.append((fd, path))
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        os.write(
-            fd,
-            json.dumps(
-                {
-                    "owner": "Task5 scoped landing lane d6ba92d8",
-                    "run_id": run_id,
-                    "pid": os.getpid(),
-                    "scope": "guest scans only; no issuer restoration",
-                    "authorization_quote": quote,
-                }
-            ).encode(),
-        )
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            os.write(fd, json.dumps({
+                "owner": "Task5 scoped landing lane d6ba92d8",
+                "run_id": run_id, "pid": os.getpid(),
+                "scope": "guest scans only; no issuer restoration",
+                "authorization_quote": quote,
+            }).encode())
+            claims.append((fd, path))
+        except BaseException:
+            os.close(fd)
+            raise
     with q.interruption_boundary():
         record = q.qualification_lifecycle(
             name,
