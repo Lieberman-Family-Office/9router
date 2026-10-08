@@ -44,7 +44,7 @@ try:
     q.output(['python3', '-m', 'venv', str(venv)], env=env)
     python = str(venv / 'bin/python')
     q.guest_command([python, '-m', 'pip', 'install', '--disable-pip-version-check', 'ruff==0.15.18'], source, env, 180)
-    changed = q.output(['git', 'diff', '--name-only', 'c0ceebc70d892398870f93dba9af522f870ccc08', 'HEAD'], source).splitlines()
+    changed = q.output(['git', 'diff', '--name-only', 'c0ceebc70d892398870f93dba9af522f870ccc08'], source).splitlines()
     python_files = [name for name in changed if name.endswith('.py')]
     js_files = [name for name in changed if Path(name).suffix in {'.js', '.cjs', '.mjs'}]
     q.require(python_files and js_files and changed, 'Zero changed check population')
@@ -53,6 +53,9 @@ try:
     check('eslint', ['node', 'node_modules/eslint/bin/eslint.js', '--no-warn-ignored', *js_files], env, len(js_files))
     for name in js_files:
         check('syntax-' + hashlib.sha256(name.encode()).hexdigest()[:8], ['node', '--check', name], env, 1)
+    selfcheck = "import sys; sys.path.insert(0, sys.argv[1]); import sonar_pr_issues as s; raise SystemExit(s.self_check(sys.argv[3:], base=sys.argv[2]))"
+    self_env = {**env, 'PATH': str(venv / 'bin') + os.pathsep + env['PATH']}
+    check('s3776-self-check', [python, '-c', selfcheck, str(run), 'c0ceebc70d892398870f93dba9af522f870ccc08', *python_files], self_env, len(python_files))
     # Produce only a guest formatting/import diff for the host authoring surface.
     q.guest_command([python, '-m', 'ruff', 'check', '--select=I', '--fix', *python_files], source, env, 180)
     q.guest_command([python, '-m', 'ruff', 'format', *python_files], source, env, 180)
