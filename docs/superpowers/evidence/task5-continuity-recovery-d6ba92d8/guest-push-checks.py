@@ -3,7 +3,6 @@
 
 import hashlib
 import importlib.util
-import json
 import os
 import subprocess
 import sys
@@ -164,10 +163,10 @@ try:
             SONARQUBE_CLI_ORG="lieberman-family-office",
         )
         for offset in range(0, len(changed), 10):
-            population = changed[offset:offset + 10]
+            population = changed[offset : offset + 10]
             check(
-                'sonar-secrets-' + str(offset),
-                [str(scanner), 'analyze', 'secrets', *population],
+                "sonar-secrets-" + str(offset),
+                [str(scanner), "analyze", "secrets", *population],
                 env,
                 len(population),
                 600,

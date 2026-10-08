@@ -243,7 +243,9 @@ try:
     )
     q.new_json(local / "host.json", record)
     print(json.dumps({"evidence": str(local), "record": record}), flush=True)
-    if record.get('guest_result') != 'pass' or not record.get('cleanup', {}).get('verified'):
+    if record.get("guest_result") != "pass" or not record.get("cleanup", {}).get(
+        "verified"
+    ):
         raise SystemExit(1)
 finally:
     secret.unlink(missing_ok=True)

@@ -1,0 +1,63 @@
+{
+  "scope": "Task5 isolated repair landing only; production and Task6 remain untouched",
+  "authorization": {
+    "quote": "guest lint/secrets scans, repair PR review and merge - APPROVED. PUSH AND OPEN PR",
+    "turn": "2026-10-07 21:18 EDT"
+  },
+  "source": "44915c273948a7decdba7447f6fa5a02bbceb3e8",
+  "fork_master_observed": "c0ceebc70d892398870f93dba9af522f870ccc08",
+  "landing_branch": "fix/task5-land-d6ba92d8",
+  "original_tree_modified": false,
+  "pushed": false,
+  "pull_request": null,
+  "merged": false,
+  "guest_checks": {
+    "latest_source": "8e23f84a18e5bac1edbf9f62c888559c032838f5",
+    "namespace_devbox": "2tc0b2eg4mveo",
+    "namespace_instance": "roae2slqptgau",
+    "execution": "exec_fhpf9fm1aom3ie5i58c3i2eoo8",
+    "evidence": "task5-land-checks-d356f1405e5a",
+    "secrets_changed_tracked_files": 291,
+    "secrets_batches": 30,
+    "secrets_all_exit_codes": 0,
+    "secrets_scope_is_current_tree_not_history": true,
+    "eslint_files": 10,
+    "eslint_exit_code": 0,
+    "javascript_syntax_files": 10,
+    "javascript_syntax_all_exit_codes": 0,
+    "ruff_files": 15,
+    "ruff_check_exit_code": 1,
+    "ruff_format_exit_code": 1,
+    "s3776_self_check_exit_code": 2,
+    "s3776_functions": {
+      "docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-signin.py:work": 18,
+      "scripts/mac/9router_test_credentials.py:validate": 22,
+      "scripts/mac/9router_test_credentials.py:export": 16,
+      "scripts/mac/9router_vm_qualify.py:cmd_run": 87,
+      "scripts/mac/9router_vm_qualify.py:main": 18
+    },
+    "s3776_limit": 15,
+    "export_manifest_sha256": "1395189aff13d3d8fffec34bbb268c6102d01ec8f0840670ff5f07791267cec2",
+    "export_manifest_sha256_scope": "push-checks.json digest from hash-verified export.json",
+    "cleanup_verified": true,
+    "stopped_no_instance_observed_epoch": [1791423977.201376, 1791424037.824337],
+    "lifecycle_claims_released": true,
+    "issuer_credentials_restored": false
+  },
+  "qualified_runtime_preserved": {
+    "comparison": "git diff --quiet from exact 44915c27 to landing HEAD for custom-server.js, responsesWs/index.js, stream.js, worker, controller, deployer, managed registry, and templates",
+    "comparison_exit_code": 0,
+    "package_digest_reported_by_parent": "70c5ba7ad7116567129ae06dbc01fee02c1a15a7145e58fa90591192485c3699",
+    "qualification_receipt_modified": false,
+    "private_checkpoint_modified": false,
+    "new_qualification_claim": false
+  },
+  "publication_blockers": [
+    "Residual Ruff E501 findings and updated formatter changes need another exact-source guest run.",
+    "Five S3776 findings remain. cmd_run exceeds the limit by 72. Clearing requires substantive orchestration refactoring outside lint-only scope.",
+    "Historical commit blobs have not received a complete Namespace secrets scan. Current-tree zero does not certify history.",
+    "Private qualification evidence is not tracked in exact source 44915c27; publishable hash-bound proof must be deliberately selected without copying private checkpoint bodies.",
+    "Diagnostic history includes personal host paths. Publication privacy review remains incomplete."
+  ],
+  "required_followup": "Approve scoped orchestration decomposition and review publication payload, then re-run guest lint, format, self-check, historical blob secrets scans and exact binding before any push. Do not weaken checks or rewrite existing history."
+}

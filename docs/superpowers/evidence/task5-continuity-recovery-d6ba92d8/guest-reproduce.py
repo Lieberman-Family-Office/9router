@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Run the current packaged fixture inside the approved Namespace guest only."""
 
-import hashlib
 import importlib.util
 import json
 import os

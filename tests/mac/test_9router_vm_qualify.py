@@ -1394,7 +1394,6 @@ class ContinuousSigninTest(unittest.TestCase):
 class PrivateDownloadTest(unittest.TestCase):
     def test_actual_download_dispatch_privatizes_0644_before_validation(self):
         import hashlib
-        import os
 
         data = b'{"run_id":"current","namespace":{"instance_id":"current"}}'
         with TemporaryDirectory() as directory:
