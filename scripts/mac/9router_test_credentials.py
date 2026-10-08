@@ -154,6 +154,21 @@ def validate_account_generations(rows, refresh, sequence):
     return accounts
 
 
+def validate_checkpoint_layout(app, schema):
+    if not schema.get('layout'):
+        return
+    layout = [
+        dict(zip(('type', 'name', 'tbl_name', 'sql'), row))
+        for row in app.execute(
+            "SELECT type,name,tbl_name,sql FROM sqlite_schema "
+            "WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name"
+        )
+    ]
+    for row in layout:
+        row['sql'] = re.sub(r'\s+', ' ', row['sql']).strip() if row['sql'] else None
+    require(layout == schema['layout'], 'Checkpoint SQLite layout differs')
+
+
 def validate(folder, fingerprint=None):
     """No secret value is returned or included in validation errors."""
     private(folder, True)
@@ -193,22 +208,12 @@ def validate(folder, fingerprint=None):
             ),
             "Checkpoint SQLite integrity refused",
         )
-        if schema.get("layout"):
-            layout = [
-                dict(zip(("type", "name", "tbl_name", "sql"), row))
-                for row in app.execute(
-                    ("SELECT type,name,tbl_name,sql FROM sqlite_schema "
-                     "WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name")
-                )
-            ]
-            for row in layout:
-                row["sql"] = (
-                    re.sub(r"\s+", " ", row["sql"]).strip() if row["sql"] else None
-                )
-            require(layout == schema["layout"], "Checkpoint SQLite layout differs")
+        validate_checkpoint_layout(app, schema)
         rows = app.execute(
-            ("SELECT id,provider,authType,isActive,data "
-             "FROM providerConnections ORDER BY provider")
+            (
+                "SELECT id,provider,authType,isActive,data "
+                "FROM providerConnections ORDER BY provider"
+            )
         ).fetchall()
         require(
             len(rows) == 2

@@ -117,7 +117,30 @@ def work():
         command("upload", name, str(helper), str(remote / filename))
     command("upload", name, str(secret), str(remote / "scanner-credential"))
     secret.unlink()
-    setup = "import hashlib,json,pathlib,subprocess,sys; r=pathlib.Path(sys.argv[1]); b=json.loads((r/'input.json').read_text()); assert hashlib.sha256((r/'source.bundle').read_bytes()).hexdigest()==b['bundle_sha256']; assert hashlib.sha256((r/'source.patch').read_bytes()).hexdigest()==b['source_patch_sha256']; assert hashlib.sha256((r/'guest-push-checks.py').read_bytes()).hexdigest()==b['guest_program_sha256']; subprocess.run(['git','clone','--no-checkout',str(r/'source.bundle'),str(r/'source')],check=True); subprocess.run(['git','checkout','--detach',b['source_commit']],cwd=r/'source',check=True); subprocess.run(['git','apply',str(r/'source.patch')],cwd=r/'source',check=True) if (r/'source.patch').stat().st_size else None; assert all(hashlib.sha256((r/'source'/p).read_bytes()).hexdigest()==h for p,h in b['source_files'].items()); (r/'scanner-credential').chmod(0o600)"
+    setup = (
+        "import hashlib,json,pathlib,subprocess,s"
+        "ys; r=pathlib.Path(sys.argv[1]); b=json."
+        "loads((r/'input.json').read_text()); ass"
+        "ert hashlib.sha256((r/'source.bundle').r"
+        "ead_bytes()).hexdigest()==b['bundle_sha2"
+        "56']; assert hashlib.sha256((r/'source.p"
+        "atch').read_bytes()).hexdigest()==b['sou"
+        "rce_patch_sha256']; assert hashlib.sha25"
+        "6((r/'guest-push-checks.py').read_bytes("
+        ")).hexdigest()==b['guest_program_sha256'"
+        "]; subprocess.run(['git','clone','--no-c"
+        "heckout',str(r/'source.bundle'),str(r/'s"
+        "ource')],check=True); subprocess.run(['g"
+        "it','checkout','--detach',b['source_comm"
+        "it']],cwd=r/'source',check=True); subpro"
+        "cess.run(['git','apply',str(r/'source.pa"
+        "tch')],cwd=r/'source',check=True) if (r/"
+        "'source.patch').stat().st_size else None"
+        "; assert all(hashlib.sha256((r/'source'/"
+        "p).read_bytes()).hexdigest()==h for p,h "
+        "in b['source_files'].items()); (r/'scann"
+        "er-credential').chmod(0o600)"
+    )
     command("exec", name, "--", "python3", "-c", setup, str(remote), timeout=300)
     detached = command(
         "exec",

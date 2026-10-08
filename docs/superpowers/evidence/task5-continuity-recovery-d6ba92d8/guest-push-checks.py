@@ -3,13 +3,12 @@
 
 import ast
 import hashlib
-import io
-import textwrap
-import tokenize
 import importlib.util
+import io
 import os
 import subprocess
 import sys
+import tokenize
 import urllib.request
 from pathlib import Path
 
@@ -39,11 +38,13 @@ def wrap_long_literals(filename):
         offsets.append(offsets[-1] + len(line))
     replacements = []
     tokens = list(tokenize.generate_tokens(io.StringIO(original).readline))
-    significant = [item for item in tokens if item.type not in {tokenize.NL, tokenize.COMMENT}]
+    significant = [
+        item for item in tokens if item.type not in {tokenize.NL, tokenize.COMMENT}
+    ]
     for token_index, token in enumerate(significant):
         if token.type != tokenize.STRING or not any(
-            len(line.rstrip('\n')) > 88
-            for line in lines[token.start[0] - 1:token.end[0]]
+            len(line.rstrip("\n")) > 88
+            for line in lines[token.start[0] - 1 : token.end[0]]
         ):
             continue
         try:
@@ -52,20 +53,30 @@ def wrap_long_literals(filename):
             continue
         if not isinstance(value, str) or not value:
             continue
-        indent = ' ' * (len(token.line) - len(token.line.lstrip()))
-        chunks = [repr(value[index:index + 40]) for index in range(0, len(value), 40)]
+        indent = " " * (len(token.line) - len(token.line.lstrip()))
+        chunks = [repr(value[index : index + 40]) for index in range(0, len(value), 40)]
         adjacent = any(
             0 <= index < len(significant) and significant[index].type == tokenize.STRING
             for index in (token_index - 1, token_index + 1)
         )
-        replacement = ('\n' + indent + '    ').join(chunks) if adjacent else '(\n' + ''.join(indent + '    ' + chunk + '\n' for chunk in chunks) + indent + ')'
+        replacement = (
+            (("\n") + indent + ("    ")).join(chunks)
+            if adjacent
+            else ("(\n")
+            + "".join(indent + ("    ") + chunk + ("\n") for chunk in chunks)
+            + indent
+            + (")")
+        )
         start = offsets[token.start[0] - 1] + token.start[1]
         end = offsets[token.end[0] - 1] + token.end[1]
         replacements.append((start, end, replacement))
     updated = original
     for start, end, replacement in reversed(replacements):
         updated = updated[:start] + replacement + updated[end:]
-    q.require(ast.dump(ast.parse(original)) == ast.dump(ast.parse(updated)), 'Literal wrapping changed Python semantics: ' + filename)
+    q.require(
+        ast.dump(ast.parse(original)) == ast.dump(ast.parse(updated)),
+        ("Literal wrapping changed Python semantics: ") + filename,
+    )
     path.write_text(updated)
 
 
@@ -137,12 +148,21 @@ try:
     q.require(python_files and js_files and changed, "Zero changed check population")
     for filename in python_files:
         wrap_long_literals(filename)
-    q.new_json(out / 'pre-check-formatting.json', {'files': {filename: q.sha256(source / filename) for filename in python_files}})
-    q.guest_command(
-        [python, '-m', 'ruff', 'check', '--select=F401,I', '--fix', *python_files],
-        source, env, 180,
+    q.new_json(
+        out / ("pre-check-formatting.json"),
+        {
+            ("files"): {
+                filename: q.sha256(source / filename) for filename in python_files
+            }
+        },
     )
-    q.guest_command([python, '-m', 'ruff', 'format', *python_files], source, env, 180)
+    q.guest_command(
+        [python, "-m", "ruff", "check", "--select=F401,I", "--fix", *python_files],
+        source,
+        env,
+        180,
+    )
+    q.guest_command([python, "-m", "ruff", "format", *python_files], source, env, 180)
     check(
         "ruff-check",
         [python, "-m", "ruff", "check", "--select=E,F,I", *python_files],
@@ -168,7 +188,12 @@ try:
             env,
             1,
         )
-    selfcheck = "import sys; sys.path.insert(0, sys.argv[1]); import sonar_pr_issues as s; raise SystemExit(s.self_check(sys.argv[3:], base=sys.argv[2]))"
+    selfcheck = (
+        "import sys; sys.path.insert(0, sys.argv["
+        "1]); import sonar_pr_issues as s; raise "
+        "SystemExit(s.self_check(sys.argv[3:], ba"
+        "se=sys.argv[2]))"
+    )
     self_env = {**env, "PATH": str(venv / "bin") + os.pathsep + env["PATH"]}
     check(
         "s3776-self-check",
@@ -183,8 +208,20 @@ try:
         self_env,
         len(python_files),
     )
-    check('qualifier-regressions', ['python3', 'tests/mac/test_9router_vm_qualify.py'], env, 1, 300)
-    check('checkpoint-regressions', ['python3', 'tests/mac/9router_test_credentials.check.py'], env, 1, 180)
+    check(
+        ("qualifier-regressions"),
+        [("python3"), ("tests/mac/test_9router_vm_qualify.py")],
+        env,
+        1,
+        300,
+    )
+    check(
+        ("checkpoint-regressions"),
+        [("python3"), ("tests/mac/9router_test_credentials.check.py")],
+        env,
+        1,
+        180,
+    )
     # Produce only a guest formatting/import diff for the host authoring surface.
     q.guest_command(
         [python, "-m", "ruff", "check", "--select=F401,I", "--fix", *python_files],
@@ -199,7 +236,11 @@ try:
     (out / "format.patch").write_bytes(patch)
     if secret.exists():
         scanner = run / "sonar"
-        url = "https://binaries.sonarsource.com/Distribution/sonarqube-cli/1.9.0.15656/macos/sonarqube-cli-1.9.0.15656-macos-arm64.bin"
+        url = (
+            "https://binaries.sonarsource.com/Distrib"
+            "ution/sonarqube-cli/1.9.0.15656/macos/so"
+            "narqube-cli-1.9.0.15656-macos-arm64.bin"
+        )
         with (
             urllib.request.urlopen(url, timeout=120) as incoming,
             scanner.open("xb") as stream,
@@ -215,6 +256,37 @@ try:
             SONARQUBE_CLI_TOKEN=secret.read_text(),
             SONARQUBE_CLI_ORG="lieberman-family-office",
         )
+        history = run / 'historical-blobs'
+        history.mkdir(mode=0o700)
+        commits = q.output(['git', 'rev-list', 'HEAD', '^c0ceebc70d892398870f93dba9af522f870ccc08'], source).splitlines()
+        objects = {}
+        for commit in commits:
+            for entry in q.output(['git', 'ls-tree', '-r', '-z', commit], source).split('\0'):
+                if not entry:
+                    continue
+                metadata, filename = entry.split('\t', 1)
+                mode, kind, oid = metadata.split()
+                if kind == 'blob':
+                    objects.setdefault(oid, set()).add(filename)
+        base_objects = {
+            entry.split('\t', 1)[0].split()[2]
+            for entry in q.output(['git', 'ls-tree', '-r', '-z', 'c0ceebc70d892398870f93dba9af522f870ccc08'], source).split('\0') if entry
+        }
+        historical_paths = []
+        census = {}
+        for oid, filenames in sorted(objects.items()):
+            if oid in base_objects:
+                continue
+            target = history / oid
+            result = subprocess.run(['git', 'cat-file', 'blob', oid], cwd=source, capture_output=True, check=True)
+            target.write_bytes(result.stdout)
+            census[oid] = {'paths': sorted(filenames), 'sha256': q.sha256(target), 'bytes': len(result.stdout)}
+            historical_paths.append(str(target))
+        q.require(commits and historical_paths, 'Zero historical publication population')
+        q.new_json(out / 'historical-blob-census.json', {'commits': len(commits), 'unique_blobs': len(census), 'objects': census})
+        for offset in range(0, len(historical_paths), 10):
+            population = historical_paths[offset:offset + 10]
+            check('historical-secrets-' + str(offset), [str(scanner), 'analyze', 'secrets', *population], env, len(population), 600)
         for offset in range(0, len(changed), 10):
             population = changed[offset : offset + 10]
             check(
@@ -234,7 +306,15 @@ try:
             }
         )
 except BaseException as error:
-    q.new_json(out / 'runner-failure.json', {'failure': type(error).__name__, 'reason': str(error) if isinstance(error, ValueError) else 'Guest setup failed'})
+    q.new_json(
+        out / ("runner-failure.json"),
+        {
+            ("failure"): type(error).__name__,
+            ("reason"): str(error)
+            if isinstance(error, ValueError)
+            else ("Guest setup failed"),
+        },
+    )
 finally:
     secret.unlink(missing_ok=True)
     q.new_json(

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guest-only baseline preparation. Do not perform provider probes before confirmation."""
+"Guest-only baseline preparation. Do not perform provider probes before confirmation."
 
 import importlib.util
 import json

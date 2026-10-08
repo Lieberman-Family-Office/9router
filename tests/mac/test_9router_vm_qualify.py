@@ -1473,7 +1473,12 @@ class NativeReviewIdentityTest(unittest.TestCase):
         entry = next(
             item for item in qualify.NATIVE if item[0] == "review-counterfactual"
         )
-        terminal = "GREEN: unchanged mirror passes; RED: baseline mirror fails all eight named review mechanisms while pending/uncertain safety passes"
+        terminal = (
+            "GREEN: unchanged mirror passes; RED: bas"
+            "eline mirror fails all eight named revie"
+            "w mechanisms while pending/uncertain saf"
+            "ety passes"
+        )
         for emitted, accepted in ((terminal, True), ("PASS: unrelated check", False)):
             with (
                 self.subTest(accepted=accepted),

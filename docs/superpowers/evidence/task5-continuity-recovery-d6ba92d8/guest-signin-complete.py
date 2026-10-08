@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Complete the retained guest enrollment after actual independent sign-in confirmation."""
+"Complete the retained guest enrollment after actual independent sign-in confirmation."
 
 import importlib.util
 import json
@@ -34,7 +34,12 @@ with sqlite3.connect(
     counts = {
         row[0]: row[1]
         for row in db.execute(
-            "SELECT provider,count(*) FROM providerConnections WHERE isActive=1 AND authType='oauth' AND provider IN ('codex','claude') GROUP BY provider"
+            (
+                "SELECT provider,count(*) FROM providerCo"
+                "nnections WHERE isActive=1 AND authType="
+                "'oauth' AND provider IN ('codex','claude"
+                "') GROUP BY provider"
+            )
         )
     }
     keys = db.execute("SELECT count(*) FROM apiKeys WHERE isActive=1").fetchone()[0]
@@ -71,7 +76,9 @@ q.new_json(
         "namespace": binding["namespace"],
         "runtime_sha256": binding["runtime_sha256"],
         "enrollment": "complete",
-        "readiness_probe": "mandatory controller private and public authenticated completion",
+        ("readiness_probe"): (
+            "mandatory controller private and public authenticated completion"
+        ),
         "production_touched": False,
     },
 )

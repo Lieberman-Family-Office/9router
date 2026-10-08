@@ -33,7 +33,13 @@ def fixture(root, generation, state="done"):
     stage.mkdir(mode=0o700)
     app = sqlite3.connect(stage / "app.sqlite")
     app.executescript(
-        "CREATE TABLE providerConnections(id TEXT,provider TEXT,authType TEXT,isActive INTEGER,data TEXT); CREATE TABLE apiKeys(id TEXT,key TEXT,isActive INTEGER); CREATE TABLE settings(id INTEGER,data TEXT);"
+        (
+            "CREATE TABLE providerConnections(id TEXT"
+            ",provider TEXT,authType TEXT,isActive IN"
+            "TEGER,data TEXT); CREATE TABLE apiKeys(i"
+            "d TEXT,key TEXT,isActive INTEGER); CREAT"
+            "E TABLE settings(id INTEGER,data TEXT);"
+        )
     )
     for provider in ("claude", "codex"):
         app.execute(
@@ -62,7 +68,15 @@ def fixture(root, generation, state="done"):
     app.close()
     refresh = sqlite3.connect(stage / "refresh.sqlite")
     refresh.executescript(
-        "CREATE TABLE refresh_meta(id INTEGER,protocol INTEGER); INSERT INTO refresh_meta VALUES(1,1); CREATE TABLE refresh_sequence(id INTEGER,value INTEGER); CREATE TABLE refresh_flights(key TEXT,owner TEXT,state TEXT,result TEXT,generation INTEGER,started_at TEXT);"
+        (
+            "CREATE TABLE refresh_meta(id INTEGER,pro"
+            "tocol INTEGER); INSERT INTO refresh_meta"
+            " VALUES(1,1); CREATE TABLE refresh_seque"
+            "nce(id INTEGER,value INTEGER); CREATE TA"
+            "BLE refresh_flights(key TEXT,owner TEXT,"
+            "state TEXT,result TEXT,generation INTEGE"
+            "R,started_at TEXT);"
+        )
     )
     refresh.execute("INSERT INTO refresh_sequence VALUES(1,?)", (generation,))
     refresh.execute(
@@ -85,7 +99,15 @@ def fixture(root, generation, state="done"):
     refresh.commit()
     refresh.close()
     (stage / "env.sh").write_text(
-        'export DATA_DIR="/fictional/test/.9router"\nexport JWT_SECRET="fictional-jwt"\nexport API_KEY_SECRET="fictional-api"\nexport MACHINE_ID_SALT="fictional-salt"\nexport INITIAL_PASSWORD="fictional-password"\nexport NODE_ENV="production"\nexport REQUEST_DETAILS_MODE="disabled"\n'
+        (
+            'export DATA_DIR="/fictional/test/.9route'
+            'r"\nexport JWT_SECRET="fictional-jwt"\nexp'
+            'ort API_KEY_SECRET="fictional-api"\nexpor'
+            't MACHINE_ID_SALT="fictional-salt"\nexpor'
+            't INITIAL_PASSWORD="fictional-password"\n'
+            'export NODE_ENV="production"\nexport REQU'
+            'EST_DETAILS_MODE="disabled"\n'
+        )
     )
     (stage / "schema-manifest.json").write_text(
         '{"protocol":1,"persistenceFingerprint":"fictional-schema"}'
@@ -242,5 +264,10 @@ with tempfile.TemporaryDirectory(
         refused(lambda: c.publish(root, uncertain, c.digest(root / "latest.json")))
     refused(lambda: c.owner(root).__enter__())
 print(
-    "PASS: private fake latest-token/generation restore; second owner, schema/stale/uncertain state and failed export refuse; previous checkpoint preserved"
+    (
+        "PASS: private fake latest-token/generati"
+        "on restore; second owner, schema/stale/u"
+        "ncertain state and failed export refuse;"
+        " previous checkpoint preserved"
+    )
 )

@@ -22,7 +22,9 @@ evidence = run / "evidence"
 evidence.mkdir(mode=0o700)
 results = []
 record = {
-    "scope": "focused current-source packaged continuity reproduction, not qualification",
+    ("scope"): (
+        "focused current-source packaged continuity reproduction, not qualification"
+    ),
     "source_commit": binding["source_commit"],
     "namespace": binding["namespace"],
     "checks": results,
@@ -102,7 +104,12 @@ try:
     config.write_text(
         'import path from "node:path"; const root='
         + json.dumps(str(source))
-        + '; export default {root,test:{environment:"node",globals:true},resolve:{alias:[{find:"@",replacement:path.join(root,"src")}]}};'
+        + (
+            "; export default {root,test:{environment"
+            ':"node",globals:true},resolve:{alias:[{f'
+            'ind:"@",replacement:path.join(root,"src"'
+            ")}]}};"
+        )
     )
     mirror = run / "baseline-mirror"
     subprocess.run(

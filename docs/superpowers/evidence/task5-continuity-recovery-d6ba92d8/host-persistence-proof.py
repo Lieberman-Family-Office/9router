@@ -38,26 +38,47 @@ def command(*args):
     return q.output([cli, *args], source, timeout=360)
 
 
-program = """import hashlib,json,os,pathlib,sqlite3,subprocess,sys,plistlib
-root=pathlib.Path('/Volumes/devbox/9router/diagnostics')/sys.argv[1]
-phase=sys.argv[2]
-if phase=='create':
- root.mkdir(mode=0o700)
- home=root/'home';home.mkdir(mode=0o700);dbdir=home/'db';dbdir.mkdir(mode=0o700)
- p=dbdir/'data.sqlite';c=sqlite3.connect(p);c.execute('create table checkpoint(id integer primary key, purpose text)');c.execute("insert into checkpoint values(1,'noncredential durability fixture')");c.commit();c.close();p.chmod(0o600)
- marker=root/'binding.json'
- with marker.open('x') as f:json.dump({'run_id':sys.argv[1],'purpose':'noncredential durability fixture'},f);f.flush();os.fsync(f.fileno())
- marker.chmod(0o600)
- for path in [p,marker,dbdir,home,root,root.parent]:
-  fd=os.open(path,os.O_RDONLY);os.fsync(fd);os.close(fd)
- subprocess.run(['/bin/sync'],check=True)
-paths=[root,root/'binding.json',root/'home/db/data.sqlite']
-result={'phase':phase,'paths':[{'path':str(p),'exists':p.exists(),'device':p.stat().st_dev if p.exists() else None} for p in paths]}
-if all(p.exists() for p in paths):
- result['hashes']={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths[1:]}
- c=sqlite3.connect('file:'+str(paths[2])+'?mode=ro',uri=True);result['rows']=c.execute('select count(*) from checkpoint').fetchone()[0];c.close()
-v=plistlib.loads(subprocess.run(['/usr/sbin/diskutil','info','-plist','/Volumes/devbox'],capture_output=True,check=True).stdout);result['volume_uuid']=v.get('VolumeUUID')
-print(json.dumps(result))"""
+program = (
+    "import hashlib,json,os,pathlib,sqlite3,s"
+    "ubprocess,sys,plistlib\nroot=pathlib.Path"
+    "('/Volumes/devbox/9router/diagnostics')/"
+    "sys.argv[1]\nphase=sys.argv[2]\nif phase=="
+    "'create':\n root.mkdir(mode=0o700)\n home="
+    "root/'home';home.mkdir(mode=0o700);dbdir"
+    "=home/'db';dbdir.mkdir(mode=0o700)\n p=db"
+    "dir/'data.sqlite';c=sqlite3.connect(p);c"
+    ".execute('create table checkpoint(id int"
+    "eger primary key, purpose text)');c.exec"
+    "ute(\"insert into checkpoint values(1,'no"
+    "ncredential durability fixture')\");c.com"
+    "mit();c.close();p.chmod(0o600)\n marker=r"
+    "oot/'binding.json'\n with marker.open('x'"
+    ") as f:json.dump({'run_id':sys.argv[1],'"
+    "purpose':'noncredential durability fixtu"
+    "re'},f);f.flush();os.fsync(f.fileno())\n "
+    "marker.chmod(0o600)\n for path in [p,mark"
+    "er,dbdir,home,root,root.parent]:\n  fd=os"
+    ".open(path,os.O_RDONLY);os.fsync(fd);os."
+    "close(fd)\n subprocess.run(['/bin/sync'],"
+    "check=True)\npaths=[root,root/'binding.js"
+    "on',root/'home/db/data.sqlite']\nresult={"
+    "'phase':phase,'paths':[{'path':str(p),'e"
+    "xists':p.exists(),'device':p.stat().st_d"
+    "ev if p.exists() else None} for p in pat"
+    "hs]}\nif all(p.exists() for p in paths):\n"
+    " result['hashes']={str(p.relative_to(roo"
+    "t)):hashlib.sha256(p.read_bytes()).hexdi"
+    "gest() for p in paths[1:]}\n c=sqlite3.co"
+    "nnect('file:'+str(paths[2])+'?mode=ro',u"
+    "ri=True);result['rows']=c.execute('selec"
+    "t count(*) from checkpoint').fetchone()["
+    "0];c.close()\nv=plistlib.loads(subprocess"
+    ".run(['/usr/sbin/diskutil','info','-plis"
+    "t','/Volumes/devbox'],capture_output=Tru"
+    "e,check=True).stdout);result['volume_uui"
+    "d']=v.get('VolumeUUID')\nprint(json.dumps"
+    "(result))"
+)
 
 
 def work(phase):
@@ -122,7 +143,11 @@ try:
         {
             "success": success,
             "run_id": run_id,
-            "scope": "noncredential nested SQLite and marker retained after exact guest stop/reactivation",
+            ("scope"): (
+                "noncredential nested SQLite and marker r"
+                "etained after exact guest stop/reactivat"
+                "ion"
+            ),
             "production_touched": False,
         },
     )
@@ -131,7 +156,10 @@ try:
         path.unlink()
     if not success:
         raise SystemExit(
-            "RED: synced nested guest checkpoint missing or changed after stop/reactivation"
+            (
+                "RED: synced nested guest checkpoint miss"
+                "ing or changed after stop/reactivation"
+            )
         )
 finally:
     for fd, path in claims:

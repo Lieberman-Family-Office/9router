@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host orchestration only. All dependency, build and fixture processes run in Namespace."""
+"Host orchestration only. All dependency, build and fixture processes run in Namespace."
 
 import fcntl
 import importlib.util
@@ -123,7 +123,22 @@ def work():
     q.new_json(local / "staged.json", binding)
     command("upload", name, str(bundle), str(remote / "source.bundle"))
     command("upload", name, str(stage / "input.json"), str(remote / "input.json"))
-    setup = "import hashlib,json,pathlib,subprocess,sys; r=pathlib.Path(sys.argv[1]); b=json.loads((r/'input.json').read_text()); assert hashlib.sha256((r/'source.bundle').read_bytes()).hexdigest()==b['bundle_sha256']; assert hashlib.sha256((r/'guest-reproduce.py').read_bytes()).hexdigest()==b['guest_program_sha256']; subprocess.run(['git','clone','--no-checkout',str(r/'source.bundle'),str(r/'source')],check=True); subprocess.run(['git','checkout','--detach',b['source_commit']],cwd=r/'source',check=True); (r/'source/qualification.patch').write_bytes(b'')"
+    setup = (
+        "import hashlib,json,pathlib,subprocess,s"
+        "ys; r=pathlib.Path(sys.argv[1]); b=json."
+        "loads((r/'input.json').read_text()); ass"
+        "ert hashlib.sha256((r/'source.bundle').r"
+        "ead_bytes()).hexdigest()==b['bundle_sha2"
+        "56']; assert hashlib.sha256((r/'guest-re"
+        "produce.py').read_bytes()).hexdigest()=="
+        "b['guest_program_sha256']; subprocess.ru"
+        "n(['git','clone','--no-checkout',str(r/'"
+        "source.bundle'),str(r/'source')],check=T"
+        "rue); subprocess.run(['git','checkout','"
+        "--detach',b['source_commit']],cwd=r/'sou"
+        "rce',check=True); (r/'source/qualificati"
+        "on.patch').write_bytes(b'')"
+    )
     command("exec", name, "--", "python3", "-c", setup, str(remote), timeout=300)
     detached = command(
         "exec",

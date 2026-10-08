@@ -24,43 +24,91 @@ local = Path(__file__).parent / run_id
 local.mkdir(mode=0o700)
 claims = []
 
-program = """import hashlib,json,os,pathlib,plistlib,subprocess,sys,time
-root=pathlib.Path('/Volumes/devbox');workspace=pathlib.Path('/Users/runner/workspaces').resolve()
-paths=[root/(sys.argv[1]+'.json'),workspace/(sys.argv[1]+'.json'),root/'9router/diagnostics'/sys.argv[1]/'home/db/checkpoint.json']
-phase=sys.argv[2]
-observations=[]
-if phase=='create':
- for p in paths:
-  assert not p.exists();p.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
-  with p.open('x') as f:json.dump({'purpose':'noncredential root/workspace durability check','id':sys.argv[1]},f);f.flush();os.fsync(f.fileno())
-  p.chmod(0o600)
-  for parent in [p.parent,root]:
-   fd=os.open(parent,os.O_RDONLY);os.fsync(fd);os.close(fd)
- subprocess.run(['/bin/sync'],check=True)
- for index in range(3):
-  observations.append({'at':time.time(),'hashes':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}});time.sleep(2)
-volume=plistlib.loads(subprocess.run(['/usr/sbin/diskutil','info','-plist',str(root)],capture_output=True,check=True).stdout)
-result={'phase':phase,'at':time.time(),'workspace_resolved':str(workspace),'volume_uuid':volume.get('VolumeUUID'),'device':volume.get('DeviceIdentifier'),'paths':[{'path':str(p),'exists':p.exists(),'sha256':hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None,'device':p.stat().st_dev if p.exists() else None} for p in paths],'within_process':observations,'hostname':subprocess.run(['/bin/hostname'],capture_output=True,text=True,check=True).stdout.strip()}
-if phase=='create':
- services=[]
- for directory in ['/Library/LaunchDaemons','/Library/LaunchAgents','/Users/runner/Library/LaunchAgents']:
-  d=pathlib.Path(directory)
-  if not d.exists():continue
-  for p in d.glob('*.plist'):
-   if not any(x in p.name.lower() for x in ['namespace','devbox','9router']):continue
-   v=plistlib.loads(p.read_bytes());args=v.get('ProgramArguments',[]);services.append({'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'label':v.get('Label'),'program':v.get('Program'),'argument_executable':args[0] if args else None,'arguments_count':len(args),'run_at_load':v.get('RunAtLoad'),'keep_alive':v.get('KeepAlive'),'working_directory':v.get('WorkingDirectory')})
- result['scoped_startup_services']=services
- surface=[]
- candidates=[pathlib.Path('/Library/LaunchDaemons/so.namespace.vmguest.plist'),root/'9router/start.sh',root/'9router/task5-dashboard-guest.py']
- for item in services:
-  plist=pathlib.Path(item['file']);v=plistlib.loads(plist.read_bytes());args=v.get('ProgramArguments',[])
-  if len(args)>1 and args[0] in ['/bin/bash','/bin/sh']:candidates.append(pathlib.Path(args[1]))
- for p in candidates:
-  if not p.is_file():continue
-  text=p.read_text(errors='replace');safe=[{'line':i+1,'text':line[:240]} for i,line in enumerate(text.splitlines()) if any(word in line.lower() for word in ['rm ','delete','unlink','rmtree','rsync','restore','snapshot','mount','apfs','sync','9router','workspace','devbox']) and not any(word in line.lower() for word in ['token','password','secret','credential','authorization','cookie','bearer'])]
-  surface.append({'path':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'line_count':len(text.splitlines()),'scoped_relevant_lines':safe})
- result['startup_source_observation']=surface
-print(json.dumps(result))"""
+program = (
+    "import hashlib,json,os,pathlib,plistlib,"
+    "subprocess,sys,time\nroot=pathlib.Path('/"
+    "Volumes/devbox');workspace=pathlib.Path("
+    "'/Users/runner/workspaces').resolve()\npa"
+    "ths=[root/(sys.argv[1]+'.json'),workspac"
+    "e/(sys.argv[1]+'.json'),root/'9router/di"
+    "agnostics'/sys.argv[1]/'home/db/checkpoi"
+    "nt.json']\nphase=sys.argv[2]\nobservations"
+    "=[]\nif phase=='create':\n for p in paths:"
+    "\n  assert not p.exists();p.parent.mkdir("
+    "mode=0o700,parents=True,exist_ok=True)\n "
+    " with p.open('x') as f:json.dump({'purpo"
+    "se':'noncredential root/workspace durabi"
+    "lity check','id':sys.argv[1]},f);f.flush"
+    "();os.fsync(f.fileno())\n  p.chmod(0o600)"
+    "\n  for parent in [p.parent,root]:\n   fd="
+    "os.open(parent,os.O_RDONLY);os.fsync(fd)"
+    ";os.close(fd)\n subprocess.run(['/bin/syn"
+    "c'],check=True)\n for index in range(3):\n"
+    "  observations.append({'at':time.time(),"
+    "'hashes':{str(p):hashlib.sha256(p.read_b"
+    "ytes()).hexdigest() for p in paths}});ti"
+    "me.sleep(2)\nvolume=plistlib.loads(subpro"
+    "cess.run(['/usr/sbin/diskutil','info','-"
+    "plist',str(root)],capture_output=True,ch"
+    "eck=True).stdout)\nresult={'phase':phase,"
+    "'at':time.time(),'workspace_resolved':st"
+    "r(workspace),'volume_uuid':volume.get('V"
+    "olumeUUID'),'device':volume.get('DeviceI"
+    "dentifier'),'paths':[{'path':str(p),'exi"
+    "sts':p.exists(),'sha256':hashlib.sha256("
+    "p.read_bytes()).hexdigest() if p.exists("
+    ") else None,'device':p.stat().st_dev if "
+    "p.exists() else None} for p in paths],'w"
+    "ithin_process':observations,'hostname':s"
+    "ubprocess.run(['/bin/hostname'],capture_"
+    "output=True,text=True,check=True).stdout"
+    ".strip()}\nif phase=='create':\n services="
+    "[]\n for directory in ['/Library/LaunchDa"
+    "emons','/Library/LaunchAgents','/Users/r"
+    "unner/Library/LaunchAgents']:\n  d=pathli"
+    "b.Path(directory)\n  if not d.exists():co"
+    "ntinue\n  for p in d.glob('*.plist'):\n   "
+    "if not any(x in p.name.lower() for x in "
+    "['namespace','devbox','9router']):contin"
+    "ue\n   v=plistlib.loads(p.read_bytes());a"
+    "rgs=v.get('ProgramArguments',[]);service"
+    "s.append({'file':str(p),'sha256':hashlib"
+    ".sha256(p.read_bytes()).hexdigest(),'lab"
+    "el':v.get('Label'),'program':v.get('Prog"
+    "ram'),'argument_executable':args[0] if a"
+    "rgs else None,'arguments_count':len(args"
+    "),'run_at_load':v.get('RunAtLoad'),'keep"
+    "_alive':v.get('KeepAlive'),'working_dire"
+    "ctory':v.get('WorkingDirectory')})\n resu"
+    "lt['scoped_startup_services']=services\n "
+    "surface=[]\n candidates=[pathlib.Path('/L"
+    "ibrary/LaunchDaemons/so.namespace.vmgues"
+    "t.plist'),root/'9router/start.sh',root/'"
+    "9router/task5-dashboard-guest.py']\n for "
+    "item in services:\n  plist=pathlib.Path(i"
+    "tem['file']);v=plistlib.loads(plist.read"
+    "_bytes());args=v.get('ProgramArguments',"
+    "[])\n  if len(args)>1 and args[0] in ['/b"
+    "in/bash','/bin/sh']:candidates.append(pa"
+    "thlib.Path(args[1]))\n for p in candidate"
+    "s:\n  if not p.is_file():continue\n  text="
+    "p.read_text(errors='replace');safe=[{'li"
+    "ne':i+1,'text':line[:240]} for i,line in"
+    " enumerate(text.splitlines()) if any(wor"
+    "d in line.lower() for word in ['rm ','de"
+    "lete','unlink','rmtree','rsync','restore"
+    "','snapshot','mount','apfs','sync','9rou"
+    "ter','workspace','devbox']) and not any("
+    "word in line.lower() for word in ['token"
+    "','password','secret','credential','auth"
+    "orization','cookie','bearer'])]\n  surfac"
+    "e.append({'path':str(p),'sha256':hashlib"
+    ".sha256(p.read_bytes()).hexdigest(),'lin"
+    "e_count':len(text.splitlines()),'scoped_"
+    "relevant_lines':safe})\n result['startup_"
+    "source_observation']=surface\nprint(json."
+    "dumps(result))"
+)
 
 
 def metadata(_identity):
@@ -129,7 +177,9 @@ def work(phase):
     api_snapshot(phase + "-after-work")
     return {
         "guest_result": "unrun",
-        "scope": "root/workspace checkpoint persistence and scoped startup metadata only",
+        ("scope"): (
+            "root/workspace checkpoint persistence and scoped startup metadata only"
+        ),
         "namespace": active,
     }
 

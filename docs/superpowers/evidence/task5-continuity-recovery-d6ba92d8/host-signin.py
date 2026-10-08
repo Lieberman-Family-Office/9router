@@ -22,7 +22,11 @@ spec.loader.exec_module(q)
 identity, name = "2tc0b2eg4mveo", "9router-qualify-recovery"
 sdk = Path("/tmp").resolve() / "namespace-runtime-check-ef67fdaa"
 cli = str(Path.home() / ".local/bin/devbox")
-quote = "Yes—provision the guest baseline; I will complete independent provider sign-in when prompted (Recommended)"
+quote = (
+    "Yes—provision the guest baseline; I will"
+    " complete independent provider sign-in w"
+    "hen prompted (Recommended)"
+)
 run_id = "task5-signin-" + uuid.uuid4().hex[:16]
 remote = q.GUEST_ROOT / run_id
 local = Path(__file__).parent / run_id
@@ -75,19 +79,29 @@ def wait_baseline_export(active):
     while time.monotonic() < until:
         observed = metadata(identity)
         q.require(
-            observed['state'] == 'running'
-            and observed['instance_id'] == active['instance_id'],
-            'Guest identity changed',
+            observed["state"] == "running"
+            and observed["instance_id"] == active["instance_id"],
+            "Guest identity changed",
         )
         seen = subprocess.run(
-            [cli, 'exec', name, '--', '/bin/test', '-s', str(remote / 'evidence/export.json')],
-            env=cli_env, capture_output=True, timeout=45,
+            [
+                cli,
+                ("exec"),
+                name,
+                ("--"),
+                ("/bin/test"),
+                ("-s"),
+                str(remote / ("evidence/export.json")),
+            ],
+            env=cli_env,
+            capture_output=True,
+            timeout=45,
         )
-        q.require(seen.returncode in {0, 1}, 'Guest export observation failed')
+        q.require(seen.returncode in {0, 1}, "Guest export observation failed")
         if seen.returncode == 0:
             return
         time.sleep(10)
-    raise TimeoutError('Guest baseline setup deadline')
+    raise TimeoutError("Guest baseline setup deadline")
 
 
 def work():
@@ -108,7 +122,10 @@ def work():
         authorization={
             "quote": quote,
             "turn": "2026-10-07 16:33 EDT chat_selection task5_guest_authentication",
-            "activation_quote": "Namespace activation needs your explicit approval - EXPLICIT APPROVAL GRANTED",
+            ("activation_quote"): (
+                "Namespace activation needs your explicit"
+                " approval - EXPLICIT APPROVAL GRANTED"
+            ),
             "activation_turn": "2026-10-07 15:09 EDT",
         },
     )
@@ -138,7 +155,25 @@ def work():
     for file in ["source.bundle", "qualification.patch", "candidate.tgz", "input.json"]:
         command("upload", name, str(stage / file), str(remote / file), timeout=300)
     command("upload", name, str(guest), str(remote / "guest-signin.py"))
-    setup = "import hashlib,json,pathlib,subprocess,sys; r=pathlib.Path(sys.argv[1]); b=json.loads((r/'input.json').read_text()); assert hashlib.sha256((r/'source.bundle').read_bytes()).hexdigest()==b['bundle_sha256']; subprocess.run(['git','clone','--no-checkout',str(r/'source.bundle'),str(r/'source')],check=True); subprocess.run(['git','checkout','--detach',b['source_commit']],cwd=r/'source',check=True); p=r/'qualification.patch'; assert hashlib.sha256(p.read_bytes()).hexdigest()==b['source_patch_sha256']; p.stat().st_size and subprocess.run(['git','apply','--binary',str(p)],cwd=r/'source',check=True); (r/'source/qualification.patch').write_bytes(p.read_bytes())"
+    setup = (
+        "import hashlib,json,pathlib,subprocess,s"
+        "ys; r=pathlib.Path(sys.argv[1]); b=json."
+        "loads((r/'input.json').read_text()); ass"
+        "ert hashlib.sha256((r/'source.bundle').r"
+        "ead_bytes()).hexdigest()==b['bundle_sha2"
+        "56']; subprocess.run(['git','clone','--n"
+        "o-checkout',str(r/'source.bundle'),str(r"
+        "/'source')],check=True); subprocess.run("
+        "['git','checkout','--detach',b['source_c"
+        "ommit']],cwd=r/'source',check=True); p=r"
+        "/'qualification.patch'; assert hashlib.s"
+        "ha256(p.read_bytes()).hexdigest()==b['so"
+        "urce_patch_sha256']; p.stat().st_size an"
+        "d subprocess.run(['git','apply','--binar"
+        "y',str(p)],cwd=r/'source',check=True); ("
+        "r/'source/qualification.patch').write_by"
+        "tes(p.read_bytes())"
+    )
     command("exec", name, "--", "python3", "-c", setup, str(remote), timeout=300)
     execution = command(
         "exec",
@@ -245,7 +280,10 @@ def work():
         "stop_file": str(local / "stop.request"),
         "completion_file": str(local / "signin-confirmed.json"),
         "sign_in_deadline_epoch": time.time() + 1200,
-        "dashboard_password_delivery": "Run the secret-to-clipboard command locally; no password enters chat or evidence",
+        ("dashboard_password_delivery"): (
+            "Run the secret-to-clipboard command loca"
+            "lly; no password enters chat or evidence"
+        ),
     }
     q.new_json(local / "signin-ready.json", ready)
     print(
@@ -271,7 +309,9 @@ def work():
             )
             return {
                 "guest_result": "unrun",
-                "checkpoint": "manual confirmation received; baseline completion still required",
+                ("checkpoint"): (
+                    "manual confirmation received; baseline completion still required"
+                ),
                 "evidence": str(local),
             }
         time.sleep(2)

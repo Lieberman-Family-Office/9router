@@ -48,28 +48,76 @@ def work():
         active["state"] == "running" and active["instance_id"],
         "Active instance identity missing",
     )
-    program = """import json,pathlib,sqlite3,subprocess,os,plistlib,hashlib
-r=pathlib.Path('/Volumes/devbox/9router');h=r/'qualification/task5-signin-5a004deda56e459b/home';b=r/'baseline.json';db=h/'.9router/db/data.sqlite'
-o={'baseline_exists':b.exists(),'baseline_is_symlink':b.is_symlink(),'signin_home_exists':h.exists(),'database_exists':db.exists(),'qualification_directories':sorted(p.name for p in (r/'qualification').iterdir()) if (r/'qualification').exists() else [],'mounts':subprocess.run(['/sbin/mount'],capture_output=True,text=True,check=True).stdout,'root_listing':[p.name for p in r.iterdir()]}
-v=plistlib.loads(subprocess.run(['/usr/sbin/diskutil','info','-plist','/Volumes/devbox'],capture_output=True,check=True).stdout);o['volume']={k:v.get(k) for k in ['DeviceIdentifier','VolumeUUID','APFSVolumeUUID','APFSContainerReference','TotalSize','VolumeFreeSpace','MountPoint','VolumeName']}
-o['roots']=[{'path':str(p),'exists':p.exists(),'symlink':p.is_symlink(),'resolved':str(p.resolve())} for p in [pathlib.Path('/Volumes/devbox'),pathlib.Path('/Users/runner/workspaces')]]
-subjects=[];walked=0;errors=[]
-for base in [pathlib.Path('/Volumes/devbox'),pathlib.Path('/Users/runner/workspaces')]:
- if not base.exists():continue
- for directory,dirs,files in os.walk(base,followlinks=False,onerror=lambda e:errors.append(type(e).__name__)):
-  dirs[:]=[x for x in dirs if x not in ['node_modules','.git','Library','Caches','.next-cli-build','app','releases','python-tools','npm-cache']]
-  walked+=len(files)
-  if 'task5-signin-5a004deda56e459b' in directory or 'baseline.json' in files:
-   subjects.append({'directory':directory,'names':files,'directories':dirs})
-  if 'data.sqlite' in files and '/9router/' in directory:
-   p=pathlib.Path(directory)/'data.sqlite'
-   c=sqlite3.connect('file:'+str(p)+'?mode=ro',uri=True);c.execute('pragma query_only=on')
-   try: subjects.append({'database':str(p),'active_provider_counts':[{'provider':x[0],'authType':x[1],'count':x[2]} for x in c.execute("select provider,authType,count(*) from providerConnections where isActive=1 and provider in ('codex','claude') group by provider,authType")],'active_api_key_count':c.execute('select count(*) from apiKeys where isActive=1').fetchone()[0]})
-   except sqlite3.Error as e:subjects.append({'database':str(p),'error':type(e).__name__})
-   finally:c.close()
-o['scoped_discovery']={'files_observed':walked,'errors':errors,'subjects':subjects,'excluded':['node_modules','.git','Library','Caches','.next-cli-build','app','releases','python-tools','npm-cache']}
-m=r/'diagnostics/storage-diagnostic-checkpoint.json';o['retained_marker_sha256']=hashlib.sha256(m.read_bytes()).hexdigest() if m.exists() else None
-print(json.dumps(o))"""
+    program = (
+        "import json,pathlib,sqlite3,subprocess,o"
+        "s,plistlib,hashlib\nr=pathlib.Path('/Volu"
+        "mes/devbox/9router');h=r/'qualification/"
+        "task5-signin-5a004deda56e459b/home';b=r/"
+        "'baseline.json';db=h/'.9router/db/data.s"
+        "qlite'\no={'baseline_exists':b.exists(),'"
+        "baseline_is_symlink':b.is_symlink(),'sig"
+        "nin_home_exists':h.exists(),'database_ex"
+        "ists':db.exists(),'qualification_directo"
+        "ries':sorted(p.name for p in (r/'qualifi"
+        "cation').iterdir()) if (r/'qualification"
+        "').exists() else [],'mounts':subprocess."
+        "run(['/sbin/mount'],capture_output=True,"
+        "text=True,check=True).stdout,'root_listi"
+        "ng':[p.name for p in r.iterdir()]}\nv=pli"
+        "stlib.loads(subprocess.run(['/usr/sbin/d"
+        "iskutil','info','-plist','/Volumes/devbo"
+        "x'],capture_output=True,check=True).stdo"
+        "ut);o['volume']={k:v.get(k) for k in ['D"
+        "eviceIdentifier','VolumeUUID','APFSVolum"
+        "eUUID','APFSContainerReference','TotalSi"
+        "ze','VolumeFreeSpace','MountPoint','Volu"
+        "meName']}\no['roots']=[{'path':str(p),'ex"
+        "ists':p.exists(),'symlink':p.is_symlink("
+        "),'resolved':str(p.resolve())} for p in "
+        "[pathlib.Path('/Volumes/devbox'),pathlib"
+        ".Path('/Users/runner/workspaces')]]\nsubj"
+        "ects=[];walked=0;errors=[]\nfor base in ["
+        "pathlib.Path('/Volumes/devbox'),pathlib."
+        "Path('/Users/runner/workspaces')]:\n if n"
+        "ot base.exists():continue\n for directory"
+        ",dirs,files in os.walk(base,followlinks="
+        "False,onerror=lambda e:errors.append(typ"
+        "e(e).__name__)):\n  dirs[:]=[x for x in d"
+        "irs if x not in ['node_modules','.git','"
+        "Library','Caches','.next-cli-build','app"
+        "','releases','python-tools','npm-cache']"
+        "]\n  walked+=len(files)\n  if 'task5-signi"
+        "n-5a004deda56e459b' in directory or 'bas"
+        "eline.json' in files:\n   subjects.append"
+        "({'directory':directory,'names':files,'d"
+        "irectories':dirs})\n  if 'data.sqlite' in"
+        " files and '/9router/' in directory:\n   "
+        "p=pathlib.Path(directory)/'data.sqlite'\n"
+        "   c=sqlite3.connect('file:'+str(p)+'?mo"
+        "de=ro',uri=True);c.execute('pragma query"
+        "_only=on')\n   try: subjects.append({'dat"
+        "abase':str(p),'active_provider_counts':["
+        "{'provider':x[0],'authType':x[1],'count'"
+        ':x[2]} for x in c.execute("select provid'
+        "er,authType,count(*) from providerConnec"
+        "tions where isActive=1 and provider in ("
+        "'codex','claude') group by provider,auth"
+        "Type\")],'active_api_key_count':c.execute"
+        "('select count(*) from apiKeys where isA"
+        "ctive=1').fetchone()[0]})\n   except sqli"
+        "te3.Error as e:subjects.append({'databas"
+        "e':str(p),'error':type(e).__name__})\n   "
+        "finally:c.close()\no['scoped_discovery']="
+        "{'files_observed':walked,'errors':errors"
+        ",'subjects':subjects,'excluded':['node_m"
+        "odules','.git','Library','Caches','.next"
+        "-cli-build','app','releases','python-too"
+        "ls','npm-cache']}\nm=r/'diagnostics/stora"
+        "ge-diagnostic-checkpoint.json';o['retain"
+        "ed_marker_sha256']=hashlib.sha256(m.read"
+        "_bytes()).hexdigest() if m.exists() else"
+        " None\nprint(json.dumps(o))"
+    )
     observed = json.loads(command("exec", name, "--", "python3", "-c", program))
     q.new_json(
         evidence / "storage.json",

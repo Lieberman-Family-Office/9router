@@ -36,7 +36,7 @@ import urllib.error
 import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -56,7 +56,11 @@ RUNTIME_SOURCES = {
     "proxy_template": "scripts/mac/templates/com.lfenergy.9router-proxy.plist",
 }
 RUNTIME_KEYS = RUNTIME_SOURCES.keys() | {"node", "caddy"}
-CADDY_URL = "https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_mac_arm64.tar.gz"
+CADDY_URL = (
+    "https://github.com/caddyserver/caddy/rel"
+    "eases/download/v2.11.4/caddy_2.11.4_mac_"
+    "arm64.tar.gz"
+)
 CADDY_ARCHIVE_SHA256 = (
     "9efb0af2d6cf09cfb5053c0e51721b9b3d4956d346234f39368d943d25a3c9a7"
 )
@@ -583,7 +587,11 @@ ROOT = HERE.parents[1]
 GUEST_ROOT = Path("/Volumes/devbox/9router/qualification")
 BASELINE = Path("/Volumes/devbox/9router/baseline.json")
 TEST_LOCK = Path(
-    "docs/superpowers/evidence/task-2-retry-f76093a4f8ec-de12e533/tests-package-lock.json"
+    (
+        "docs/superpowers/evidence/task-2-retry-f"
+        "76093a4f8ec-de12e533/tests-package-lock."
+        "json"
+    )
 )
 TASK2_MODULES = (
     "managed-buffer",
@@ -664,7 +672,11 @@ NATIVE = (
     (
         "review-counterfactual",
         ["node", "tests/unit/managed-review-counterfactual.check.mjs"],
-        "RED: baseline mirror fails all eight named review mechanisms while pending/uncertain safety passes",
+        (
+            "RED: baseline mirror fails all eight nam"
+            "ed review mechanisms while pending/uncer"
+            "tain safety passes"
+        ),
         360,
     ),
 )
@@ -1414,7 +1426,11 @@ def guest_command(argv, cwd, env, timeout, *, expected_exit=0):
                 r"\b(?:nsct_|ghp_|github_pat_|sk-)[A-Za-z0-9_.-]+", "[REDACTED]", text
             )
             sanitized = re.sub(
-                r"(?i)(access_token|refresh_token|api_key|password|authorization)([\"'\s:=]+)[^\s,\"'}]+",
+                (
+                    "(?i)(access_token|refresh_token|api_key|"
+                    "password|authorization)([\\\"'\\s:=]+)[^\\s,"
+                    "\\\"'}]+"
+                ),
                 r"\1\2[REDACTED]",
                 sanitized,
             )
@@ -2103,7 +2119,12 @@ def interactive_baseline(tgz, binding, run_root, timeout):
     ) as db:
         providers = dict(
             db.execute(
-                "SELECT provider,COUNT(*) FROM providerConnections WHERE isActive=1 AND authType='oauth' AND provider IN ('codex','claude') GROUP BY provider"
+                (
+                    "SELECT provider,COUNT(*) FROM providerCo"
+                    "nnections WHERE isActive=1 AND authType="
+                    "'oauth' AND provider IN ('codex','claude"
+                    "') GROUP BY provider"
+                )
             )
         )
         keys = db.execute("SELECT COUNT(*) FROM apiKeys WHERE isActive=1").fetchone()[0]
@@ -2141,7 +2162,11 @@ def live_scope_for_run(args, binding, run_root):
         )
     require(
         BASELINE.is_file() and not BASELINE.is_symlink(),
-        "BLOCKED: existing guest-owned persistent baseline is absent; manual provider login needs separate authorization",
+        (
+            "BLOCKED: existing guest-owned persistent"
+            " baseline is absent; manual provider log"
+            "in needs separate authorization"
+        ),
     )
     baseline = private_json(BASELINE)
     require(
@@ -2728,44 +2753,100 @@ def validate_host_qualification(args):
 
 def launch_guest_qualification(args, remote, stage, binding, devbox, credentials):
     detached = devbox(
-        'exec', '--detach', args.devbox_name, '--', 'python3',
-        str(remote / 'source/scripts/mac/9router_vm_qualify.py'),
-        'guest', str(remote / 'candidate.tgz'), '--input', str(remote / 'input.json'),
-        *(['--interactive-signin', '--signin-timeout', str(args.signin_timeout)]
-          if getattr(args, 'interactive_signin', False) else []),
-        *(['--credential-checkpoint'] if credentials else []),
-        *[argument for model in args.models or QUALIFY_MODELS
-          for argument in ('--model', model)],
+        "exec",
+        "--detach",
+        args.devbox_name,
+        "--",
+        "python3",
+        str(remote / "source/scripts/mac/9router_vm_qualify.py"),
+        "guest",
+        str(remote / "candidate.tgz"),
+        "--input",
+        str(remote / "input.json"),
+        *(
+            ["--interactive-signin", "--signin-timeout", str(args.signin_timeout)]
+            if getattr(args, "interactive_signin", False)
+            else []
+        ),
+        *(["--credential-checkpoint"] if credentials else []),
+        *[
+            argument
+            for model in args.models or QUALIFY_MODELS
+            for argument in ("--model", model)
+        ],
     )
-    match = re.search(r'\bexec_[a-z0-9]+\b', detached)
-    require(match, 'Namespace execution ID missing')
-    new_json(stage / 'execution.json', {'run_id': binding['run_id'], 'execution_id': match[0]})
-    devbox('upload', args.devbox_name, str(stage / 'execution.json'), str(remote / 'execution.json'))
+    match = re.search(r"\bexec_[a-z0-9]+\b", detached)
+    require(match, "Namespace execution ID missing")
+    new_json(
+        stage / ("execution.json"),
+        {("run_id"): binding[("run_id")], ("execution_id"): match[0]},
+    )
+    devbox(
+        ("upload"),
+        args.devbox_name,
+        str(stage / ("execution.json")),
+        str(remote / ("execution.json")),
+    )
     return match[0]
 
 
 def collect_host_qualification(
-    args, remote, evidence, devbox, binding, tgz, execution_id, exported_expected,
+    args,
+    remote,
+    evidence,
+    devbox,
+    binding,
+    tgz,
+    execution_id,
+    exported_expected,
 ):
     manifest_hash = devbox(
-        'exec', args.devbox_name, '--', '/usr/bin/shasum', '-a', '256',
-        str(remote / 'evidence/manifest.json'),
+        "exec",
+        args.devbox_name,
+        "--",
+        "/usr/bin/shasum",
+        "-a",
+        "256",
+        str(remote / "evidence/manifest.json"),
     ).split()[0]
-    devbox('download', args.devbox_name, str(remote / 'evidence/manifest.json'), str(evidence / 'manifest.json'))
-    require(digest(manifest_hash) and sha256(regular(evidence / 'manifest.json')) == manifest_hash, 'guest manifest export mismatch')
+    devbox(
+        ("download"),
+        args.devbox_name,
+        str(remote / ("evidence/manifest.json")),
+        str(evidence / ("manifest.json")),
+    )
+    require(
+        digest(manifest_hash)
+        and sha256(regular(evidence / ("manifest.json"))) == manifest_hash,
+        ("guest manifest export mismatch"),
+    )
     download_guest_evidence(args, remote, evidence, devbox)
-    guest_record = private_json(evidence / 'guest.json')
-    if guest_record.get('guest_result') == 'pass':
-        exported_expected.update(host_export_expectations(evidence, binding, tgz, execution_id, manifest_hash))
+    guest_record = private_json(evidence / "guest.json")
+    if guest_record.get("guest_result") == "pass":
+        exported_expected.update(
+            host_export_expectations(
+                evidence, binding, tgz, execution_id, manifest_hash
+            )
+        )
     return guest_record
 
 
 def stage_credential_input(args, remote, devbox, credentials, credential_seed):
-    devbox('exec', args.devbox_name, '--', '/bin/mkdir', '-m', '700', str(remote / 'credential-input'))
-    for name in (*credentials.FILES, 'manifest.json'):
-        destination = remote / 'credential-input' / name
-        devbox('upload', args.devbox_name, str(credential_seed / name), str(destination))
-        devbox('exec', args.devbox_name, '--', '/bin/chmod', '600', str(destination))
+    devbox(
+        ("exec"),
+        args.devbox_name,
+        ("--"),
+        ("/bin/mkdir"),
+        ("-m"),
+        ("700"),
+        str(remote / ("credential-input")),
+    )
+    for name in (*credentials.FILES, "manifest.json"):
+        destination = remote / "credential-input" / name
+        devbox(
+            ("upload"), args.devbox_name, str(credential_seed / name), str(destination)
+        )
+        devbox("exec", args.devbox_name, "--", "/bin/chmod", "600", str(destination))
 
 
 def wait_signin_ready(args, active, remote, metadata, require_claim, cli, cli_env):
@@ -2774,114 +2855,230 @@ def wait_signin_ready(args, active, remote, metadata, require_claim, cli, cli_en
         require_claim()
         observed = metadata(args.devbox_id)
         require(
-            observed.get('instance_id') == active['instance_id']
-            and observed.get('state') == 'running',
-            'sign-in guest instance changed',
+            observed.get("instance_id") == active["instance_id"]
+            and observed.get("state") == "running",
+            "sign-in guest instance changed",
         )
-        for filename in ('signin-ready.json', 'evidence/manifest.json'):
+        for filename in ("signin-ready.json", "evidence/manifest.json"):
             result = subprocess.run(
-                [cli, 'exec', args.devbox_name, '--', '/bin/test', '-s', str(remote / filename)],
-                env=cli_env, capture_output=True, timeout=30,
+                [
+                    cli,
+                    ("exec"),
+                    args.devbox_name,
+                    ("--"),
+                    ("/bin/test"),
+                    ("-s"),
+                    str(remote / filename),
+                ],
+                env=cli_env,
+                capture_output=True,
+                timeout=30,
             )
-            require(result.returncode in {0, 1}, 'sign-in readiness observation failed')
+            require(result.returncode in {0, 1}, "sign-in readiness observation failed")
             if result.returncode == 0:
-                return filename == 'signin-ready.json'
+                return filename == "signin-ready.json"
         time.sleep(5)
-    raise TimeoutError('sign-in readiness deadline')
+    raise TimeoutError("sign-in readiness deadline")
 
 
 def open_signin_forward(args, evidence, cli, cli_env, forwards):
     for port in (32128, 1455):
         reservation = socket.socket()
         try:
-            reservation.bind(('127.0.0.1', port))
+            reservation.bind(("127.0.0.1", port))
         finally:
             reservation.close()
-    log = (evidence / 'signin-forward.log').open('x')
+    log = (evidence / "signin-forward.log").open("x")
     child = subprocess.Popen(
-        [cli, 'port-forward', args.devbox_name, '--ports', '32128:21128,1455:1455'],
-        env=cli_env, stdout=log, stderr=subprocess.STDOUT,
+        [cli, "port-forward", args.devbox_name, "--ports", "32128:21128,1455:1455"],
+        env=cli_env,
+        stdout=log,
+        stderr=subprocess.STDOUT,
     )
     forwards.append((child, log))
     until = time.monotonic() + 60
     names = []
     while time.monotonic() < until:
-        require(child.poll() is None, 'owned sign-in forward exited')
+        require(child.poll() is None, "owned sign-in forward exited")
         listener = subprocess.run(
-            ['/usr/sbin/lsof', '-nP', '-a', '-p', str(child.pid), '-iTCP:32128', '-sTCP:LISTEN', '-Fpn'],
-            capture_output=True, text=True,
+            [
+                ("/usr/sbin/lsof"),
+                ("-nP"),
+                ("-a"),
+                ("-p"),
+                str(child.pid),
+                ("-iTCP:32128"),
+                ("-sTCP:LISTEN"),
+                ("-Fpn"),
+            ],
+            capture_output=True,
+            text=True,
         )
-        names = [line[1:] for line in listener.stdout.splitlines() if line.startswith('n')]
+        names = [
+            line[1:] for line in listener.stdout.splitlines() if line.startswith(("n"))
+        ]
         if names:
-            require(all(value == '127.0.0.1:32128' for value in names), 'sign-in access is not loopback-only')
+            require(
+                all(value == ("127.0.0.1:32128") for value in names),
+                ("sign-in access is not loopback-only"),
+            )
             break
         time.sleep(1)
-    require(names, 'owned sign-in forward unavailable')
+    require(names, "owned sign-in forward unavailable")
     return child
 
 
 def host_signin_handoff(
-    args, active, remote, metadata, require_claim, cli, cli_env,
-    devbox, evidence, binding, forwards, close,
+    args,
+    active,
+    remote,
+    metadata,
+    require_claim,
+    cli,
+    cli_env,
+    devbox,
+    evidence,
+    binding,
+    forwards,
+    close,
 ):
-    if not wait_signin_ready(args, active, remote, metadata, require_claim, cli, cli_env):
+    if not getattr(args, 'interactive_signin', False):
+        return
+    if not wait_signin_ready(
+        args, active, remote, metadata, require_claim, cli, cli_env
+    ):
         return
     ready_digest = devbox(
-        'exec', args.devbox_name, '--', '/usr/bin/shasum', '-a', '256', str(remote / 'signin-ready.json'),
+        ("exec"),
+        args.devbox_name,
+        ("--"),
+        ("/usr/bin/shasum"),
+        ("-a"),
+        ("256"),
+        str(remote / ("signin-ready.json")),
     ).split()[0]
-    download_private(cli, cli_env, args.devbox_name, remote / 'signin-ready.json', evidence / 'signin-ready.json', ready_digest)
-    handoff = private_json(evidence / 'signin-ready.json')
-    require(handoff['namespace'] == binding['namespace'] and handoff['run_id'] == binding['run_id'], 'sign-in handoff differs')
+    download_private(
+        cli,
+        cli_env,
+        args.devbox_name,
+        remote / ("signin-ready.json"),
+        evidence / ("signin-ready.json"),
+        ready_digest,
+    )
+    handoff = private_json(evidence / "signin-ready.json")
+    require(
+        handoff[("namespace")] == binding[("namespace")]
+        and handoff[("run_id")] == binding[("run_id")],
+        ("sign-in handoff differs"),
+    )
     child = open_signin_forward(args, evidence, cli, cli_env, forwards)
-    print(json.dumps({
-        'phase': 'independent-signin-required', 'url': 'http://localhost:32128/login',
-        'home': handoff['home'], 'run_id': binding['run_id'], 'namespace': binding['namespace'],
-        'confirmation_file': args.confirmation_file, 'forward_pid': child.pid,
-        'deadline_epoch': handoff['deadline_epoch'],
-    }), flush=True)
+    print(
+        json.dumps(
+            {
+                "phase": "independent-signin-required",
+                "url": "http://localhost:32128/login",
+                ("home"): handoff[("home")],
+                ("run_id"): binding[("run_id")],
+                ("namespace"): binding[("namespace")],
+                "confirmation_file": args.confirmation_file,
+                "forward_pid": child.pid,
+                "deadline_epoch": handoff["deadline_epoch"],
+            }
+        ),
+        flush=True,
+    )
     confirmation_path = Path(args.confirmation_file)
     until = time.monotonic() + args.signin_timeout
     while not confirmation_path.exists() and time.monotonic() < until:
         require_claim()
-        require(child.poll() is None and metadata(args.devbox_id).get('instance_id') == active['instance_id'], 'sign-in owner or instance changed')
+        require(
+            child.poll() is None
+            and metadata(args.devbox_id).get(("instance_id"))
+            == active[("instance_id")],
+            ("sign-in owner or instance changed"),
+        )
         time.sleep(1)
-    require(confirmation_path.exists(), 'manual sign-in deadline expired')
+    require(confirmation_path.exists(), "manual sign-in deadline expired")
     validate_signin_confirmation(private_json(confirmation_path), binding)
-    devbox('upload', args.devbox_name, str(confirmation_path), str(remote / 'signin-confirmation.json'))
+    devbox(
+        ("upload"),
+        args.devbox_name,
+        str(confirmation_path),
+        str(remote / ("signin-confirmation.json")),
+    )
     close()
 
 
 def save_final_checkpoint(
-    args, remote, devbox, credentials, credential_root,
-    credential_previous, cli, cli_env, evidence, binding, run_id,
+    args,
+    remote,
+    devbox,
+    credentials,
+    credential_root,
+    credential_previous,
+    cli,
+    cli_env,
+    evidence,
+    binding,
+    run_id,
+    armed,
 ):
+    if not credentials or not armed:
+        return
     try:
-        summary = json.loads(devbox(
-            'exec', args.devbox_name, '--', 'python3',
-            str(remote / 'source/scripts/mac/9router_vm_qualify.py'),
-            'credential-export', '--input', str(remote / 'input.json'), timeout=180,
-        ))
-        private_stage = credential_root / ('.stage-' + uuid.uuid4().hex)
+        summary = json.loads(
+            devbox(
+                "exec",
+                args.devbox_name,
+                "--",
+                "python3",
+                str(remote / "source/scripts/mac/9router_vm_qualify.py"),
+                "credential-export",
+                "--input",
+                str(remote / "input.json"),
+                timeout=180,
+            )
+        )
+        private_stage = credential_root / (".stage-" + uuid.uuid4().hex)
         private_stage.mkdir(mode=0o700)
         require(
-            set(summary['files']) == set(credentials.FILES) | {'manifest.json'},
-            'private checkpoint export population differs',
+            set(summary["files"]) == set(credentials.FILES) | {"manifest.json"},
+            "private checkpoint export population differs",
         )
-        for name, expected in summary['files'].items():
+        for name, expected in summary["files"].items():
             download_private(
-                cli, cli_env, args.devbox_name, Path(summary['export_dir']) / name,
-                private_stage / name, expected,
+                cli,
+                cli_env,
+                args.devbox_name,
+                Path(summary["export_dir"]) / name,
+                private_stage / name,
+                expected,
             )
-        counts = credentials.publish(credential_root, private_stage, credential_previous)
-        new_json(evidence / 'credential-checkpoint.json', {
-            'saved': True, 'run_id': run_id, 'namespace': binding['namespace'], **counts,
-        })
+        counts = credentials.publish(
+            credential_root, private_stage, credential_previous
+        )
+        new_json(
+            evidence / "credential-checkpoint.json",
+            {
+                ("saved"): True,
+                ("run_id"): run_id,
+                ("namespace"): binding[("namespace")],
+                **counts,
+            },
+        )
     except BaseException:
-        if not (evidence / 'credential-checkpoint.json').exists():
-            new_json(evidence / 'credential-checkpoint.json', {
-                'saved': False, 'uncertain_state_retained': True, 'run_id': run_id,
-            })
-        raise ValueError('Private test credential final export failed; reuse refused') from None
+        if not (evidence / "credential-checkpoint.json").exists():
+            new_json(
+                evidence / "credential-checkpoint.json",
+                {
+                    "saved": False,
+                    "uncertain_state_retained": True,
+                    "run_id": run_id,
+                },
+            )
+        raise ValueError(
+            ("Private test credential final export failed; reuse refused")
+        ) from None
 
 
 def close_owned_forwards(forwards):
@@ -2894,6 +3091,23 @@ def close_owned_forwards(forwards):
                 child.kill()
                 child.wait(timeout=5)
         log.close()
+
+
+def validate_active_devbox(args, active):
+    require(
+        active.get('id') == args.devbox_id and active.get('name') == args.devbox_name
+        and active.get('state') == 'running' and active.get('instance_id'),
+        'activated devbox identity differs',
+    )
+
+
+def verify_lifecycle_claim(claim, claim_path):
+    held, live = os.fstat(claim), claim_path.lstat()
+    require(
+        stat.S_ISREG(live.st_mode) and live.st_uid == os.getuid()
+        and (held.st_dev, held.st_ino) == (live.st_dev, live.st_ino),
+        'exclusive Namespace lifecycle claim changed',
+    )
 
 
 def cmd_run(args):
@@ -2948,33 +3162,20 @@ def cmd_run(args):
 
     def final_checkpoint():
         close()
-        if credentials and credential_armed:
-            save_final_checkpoint(
-                args, remote, devbox, credentials, credential_root,
-                credential_previous, cli, cli_env, evidence, binding, run_id,
-            )
+        save_final_checkpoint(
+            args, remote, devbox, credentials, credential_root, credential_previous,
+            cli, cli_env, evidence, binding, run_id, credential_armed,
+        )
 
     def require_claim():
-        held, live = os.fstat(claim), claim_path.lstat()
-        require(
-            stat.S_ISREG(live.st_mode)
-            and live.st_uid == os.getuid()
-            and (held.st_dev, held.st_ino) == (live.st_dev, live.st_ino),
-            "exclusive Namespace lifecycle claim changed",
-        )
+        verify_lifecycle_claim(claim, claim_path)
 
     def work():
         nonlocal credential_armed
         require_claim()
         devbox("exec", args.devbox_name, "--", "/usr/bin/uname", "-m", timeout=180)
         active = metadata(args.devbox_id)
-        require(
-            active.get("id") == args.devbox_id
-            and active.get("name") == args.devbox_name
-            and active.get("state") == "running"
-            and active.get("instance_id"),
-            "activated devbox identity differs",
-        )
+        validate_active_devbox(args, active)
         binding["namespace"] = {
             "devbox_id": args.devbox_id,
             "instance_id": active["instance_id"],
@@ -3018,7 +3219,12 @@ def cmd_run(args):
                 "--",
                 "python3",
                 "-c",
-                "import json,shutil; d=shutil.disk_usage('/Volumes/devbox'); print(json.dumps({'total_bytes':d.total,'free_bytes':d.free}))",
+                (
+                    "import json,shutil; d=shutil.disk_usage("
+                    "'/Volumes/devbox'); print(json.dumps({'t"
+                    "otal_bytes':d.total,'free_bytes':d.free}"
+                    "))"
+                ),
             )
         )
         new_json(
@@ -3068,23 +3274,29 @@ def cmd_run(args):
             credentials.begin(credential_root, binding)
             credential_armed = True
             stage_credential_input(args, remote, devbox, credentials, credential_seed)
-        execution_id = launch_guest_qualification(args, remote, stage, binding, devbox, credentials)
-        if getattr(args, "interactive_signin", False):
-            host_signin_handoff(
-                args, active, remote, metadata, require_claim, cli, cli_env,
-                devbox, evidence, binding, forwards, close,
-            )
+        execution_id = launch_guest_qualification(
+            args, remote, stage, binding, devbox, credentials
+        )
+        host_signin_handoff(
+            args, active, remote, metadata, require_claim, cli, cli_env,
+            devbox, evidence, binding, forwards, close,
+        )
         wait_guest_manifest(args, active, remote, metadata, require_claim, cli, cli_env)
         return collect_host_qualification(
-            args, remote, evidence, devbox, binding, tgz, execution_id, exported_expected,
+            args,
+            remote,
+            evidence,
+            devbox,
+            binding,
+            tgz,
+            execution_id,
+            exported_expected,
         )
 
     claim_path = Path(tempfile.gettempdir()) / (
         "namespace-owner-" + args.devbox_id + ".lock"
     )
-    probe = credentials.owner(Path(args.credential_checkpoint)) if credentials else None
-    if probe:
-        credential_root = probe.__enter__()
+    probe = credentials.owner(Path(args.credential_checkpoint)) if credentials else nullcontext()
     claim = None
 
     def complete():
@@ -3101,52 +3313,58 @@ def cmd_run(args):
             final_checkpoint,
         )
 
-    try:
-        if credentials:
-            credential_seed = credentials.current(credential_root)
-            credential_previous = credentials.digest(credential_root / "latest.json")
-        claim = os.open(claim_path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
-        fcntl.flock(claim, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        return complete()
-    finally:
-        if claim is not None:
-            os.close(claim)
-        if probe:
-            probe.__exit__(None, None, None)
+    with probe as credential_root:
+        try:
+            if credentials:
+                credential_seed = credentials.current(credential_root)
+                credential_previous = credentials.digest(credential_root / 'latest.json')
+            claim = os.open(claim_path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
+            fcntl.flock(claim, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return complete()
+        finally:
+            if claim is not None:
+                os.close(claim)
 
 
 def add_run_arguments(command):
-    command.add_argument('--confirmation-file')
+    command.add_argument("--confirmation-file")
     command.add_argument(
-        '--credential-checkpoint', nargs='?',
-        const=str(Path.home() / 'dev/9router_test_credentials'),
+        "--credential-checkpoint",
+        nargs="?",
+        const=str(Path.home() / "dev/9router_test_credentials"),
     )
-    command.add_argument('--acknowledge-namespace', action='store_true')
-    command.add_argument('--authorization-quote')
-    command.add_argument('--authorization-turn')
-    command.add_argument('--devbox-id', default=os.environ.get('NINEROUTER_QUALIFY_DEVBOX_ID'))
-    command.add_argument('--devbox-name', default=os.environ.get('NINEROUTER_QUALIFY_DEVBOX_NAME'))
-    command.add_argument('--sdk-root', default=os.environ.get('NINEROUTER_NAMESPACE_SDK_ROOT'))
-    command.add_argument('--source-file', action='append')
-    command.add_argument('--evidence', required=True)
-    command.add_argument('--timeout', type=int, default=7200)
+    command.add_argument("--acknowledge-namespace", action="store_true")
+    command.add_argument("--authorization-quote")
+    command.add_argument("--authorization-turn")
+    command.add_argument(
+        ("--devbox-id"), default=os.environ.get(("NINEROUTER_QUALIFY_DEVBOX_ID"))
+    )
+    command.add_argument(
+        ("--devbox-name"), default=os.environ.get(("NINEROUTER_QUALIFY_DEVBOX_NAME"))
+    )
+    command.add_argument(
+        ("--sdk-root"), default=os.environ.get(("NINEROUTER_NAMESPACE_SDK_ROOT"))
+    )
+    command.add_argument("--source-file", action="append")
+    command.add_argument("--evidence", required=True)
+    command.add_argument("--timeout", type=int, default=7200)
 
 
 def add_qualification_command(commands, name, function):
     command = commands.add_parser(name)
-    if name not in {'restore', 'credential-export'}:
-        command.add_argument('tgz')
-    if name in {'guest', 'baseline', 'credential-export'}:
-        command.add_argument('--input', required=True)
-    if name == 'restore':
-        command.add_argument('--scope', required=True)
-    if name in {'run', 'guest'}:
-        command.add_argument('--model', dest='models', action='append')
-        command.add_argument('--interactive-signin', action='store_true')
-        command.add_argument('--signin-timeout', type=int, default=1200)
-    if name == 'guest':
-        command.add_argument('--credential-checkpoint', action='store_true')
-    if name == 'run':
+    if name not in {"restore", "credential-export"}:
+        command.add_argument("tgz")
+    if name in {"guest", "baseline", "credential-export"}:
+        command.add_argument("--input", required=True)
+    if name == "restore":
+        command.add_argument("--scope", required=True)
+    if name in {"run", "guest"}:
+        command.add_argument("--model", dest="models", action="append")
+        command.add_argument("--interactive-signin", action="store_true")
+        command.add_argument("--signin-timeout", type=int, default=1200)
+    if name == "guest":
+        command.add_argument("--credential-checkpoint", action="store_true")
+    if name == "run":
         add_run_arguments(command)
     command.set_defaults(function=function)
 

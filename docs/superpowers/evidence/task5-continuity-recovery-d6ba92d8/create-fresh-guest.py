@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create exactly one approved stopped guest. Preserve any returned storage on failure."""
+"Create exactly one approved stopped guest. Preserve any returned storage on failure."
 
 import fcntl
 import importlib.util
@@ -51,7 +51,12 @@ os.write(
 )
 record = {
     "authorization": {
-        "quote": "Create one new isolated 300 GB macOS guest, preserve the old guest, and prove SQLite persistence before another independent sign-in (Recommended)",
+        ("quote"): (
+            "Create one new isolated 300 GB macOS gue"
+            "st, preserve the old guest, and prove SQ"
+            "Lite persistence before another independ"
+            "ent sign-in (Recommended)"
+        ),
         "turn": "2026-10-07 18:11 EDT guest_persistence_path answer",
     },
     "name": name,
