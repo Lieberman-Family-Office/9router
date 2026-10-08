@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Run changed-file push checks only in Namespace and export exact outcomes."""
 
+import ast
 import hashlib
+import io
+import textwrap
+import tokenize
 import importlib.util
 import os
 import subprocess
@@ -24,6 +28,42 @@ out = run / "evidence"
 out.mkdir(mode=0o700)
 checks = []
 secret = run / "scanner-credential"
+
+
+def wrap_long_literals(filename):
+    path = source / filename
+    original = path.read_text()
+    lines = original.splitlines(keepends=True)
+    offsets = [0]
+    for line in lines:
+        offsets.append(offsets[-1] + len(line))
+    replacements = []
+    for token in tokenize.generate_tokens(io.StringIO(original).readline):
+        if token.type != tokenize.STRING or not any(
+            len(line.rstrip('\n')) > 88
+            for line in lines[token.start[0] - 1:token.end[0]]
+        ):
+            continue
+        value = ast.literal_eval(token.string)
+        if not isinstance(value, str):
+            continue
+        indent = ' ' * (len(token.line) - len(token.line.lstrip()))
+        chunks = [repr(value[index:index + 40]) for index in range(0, len(value), 40)]
+        replacement = '(\n' + ''.join(indent + '    ' + chunk + '\n' for chunk in chunks) + indent + ')'
+        start = offsets[token.start[0] - 1] + token.start[1]
+        end = offsets[token.end[0] - 1] + token.end[1]
+        replacements.append((start, end, replacement))
+    updated = original
+    for start, end, replacement in reversed(replacements):
+        updated = updated[:start] + replacement + updated[end:]
+    updated = ''.join(
+        '\n'.join(textwrap.wrap(line.rstrip('\n'), width=88, initial_indent=line[:line.index('#') + 2], subsequent_indent=line[:line.index('#') + 2])) + '\n'
+        if len(line.rstrip('\n')) > 88 and line.lstrip().startswith('# ')
+        else line
+        for line in updated.splitlines(keepends=True)
+    )
+    q.require(ast.dump(ast.parse(original)) == ast.dump(ast.parse(updated)), 'Literal wrapping changed Python semantics')
+    path.write_text(updated)
 
 
 def check(name, argv, env, subjects, timeout=180):
@@ -92,6 +132,13 @@ try:
         name for name in changed if Path(name).suffix in {".js", ".cjs", ".mjs"}
     ]
     q.require(python_files and js_files and changed, "Zero changed check population")
+    for filename in python_files:
+        wrap_long_literals(filename)
+    q.guest_command(
+        [python, '-m', 'ruff', 'check', '--select=F401,I', '--fix', *python_files],
+        source, env, 180,
+    )
+    q.guest_command([python, '-m', 'ruff', 'format', *python_files], source, env, 180)
     check(
         "ruff-check",
         [python, "-m", "ruff", "check", "--select=E,F,I", *python_files],
@@ -132,6 +179,8 @@ try:
         self_env,
         len(python_files),
     )
+    check('qualifier-regressions', ['python3', 'tests/mac/test_9router_vm_qualify.py'], env, 1, 300)
+    check('checkpoint-regressions', ['python3', 'tests/mac/9router_test_credentials.check.py'], env, 1, 180)
     # Produce only a guest formatting/import diff for the host authoring surface.
     q.guest_command(
         [python, "-m", "ruff", "check", "--select=F401,I", "--fix", *python_files],

@@ -1467,7 +1467,7 @@ class PrivateDownloadTest(unittest.TestCase):
 
 
 class NativeReviewIdentityTest(unittest.TestCase):
-    def test_existing_review_counterfactual_terminal_is_accepted_but_wrong_terminal_refuses(
+    def test_review_counterfactual_accepts_exact_terminal_only(
         self,
     ):
         entry = next(

@@ -117,6 +117,43 @@ def environment(path):
     return values
 
 
+def validate_account_generations(rows, refresh, sequence):
+    accounts = {}
+    for account, provider, _auth, _active, raw in rows:
+        data = json.loads(raw)
+        generations = data.get("refreshGenerations", {})
+        require(
+            isinstance(data, dict)
+            and "refreshGeneration" not in data
+            and isinstance(generations, dict)
+            and set(generations) <= {"oauth", "copilot"}
+            and all(
+                type(value) is int and 0 < value <= sequence
+                for value in generations.values()
+            ),
+            "Account CAS generation differs",
+        )
+        accounts[(account, provider)] = generations
+    for state, raw, generation in refresh.execute(
+        "SELECT state,result,generation FROM refresh_flights"
+    ):
+        value = json.loads(raw)
+        require(
+            state == "done"
+            and type(generation) is int
+            and 0 < generation <= sequence
+            and isinstance(value, dict)
+            and len(value.get("refreshGenerations", {})) == 1
+            and next(iter(value["refreshGenerations"].values())) == generation
+            and any(
+                isinstance(value.get(key), str) and value[key]
+                for key in ("accessToken", "apiKey", "token", "copilotToken")
+            ),
+            "Durable issuer result refused",
+        )
+    return accounts
+
+
 def validate(folder, fingerprint=None):
     """No secret value is returned or included in validation errors."""
     private(folder, True)
@@ -160,7 +197,8 @@ def validate(folder, fingerprint=None):
             layout = [
                 dict(zip(("type", "name", "tbl_name", "sql"), row))
                 for row in app.execute(
-                    "SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name"
+                    ("SELECT type,name,tbl_name,sql FROM sqlite_schema "
+                     "WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name")
                 )
             ]
             for row in layout:
@@ -169,7 +207,8 @@ def validate(folder, fingerprint=None):
                 )
             require(layout == schema["layout"], "Checkpoint SQLite layout differs")
         rows = app.execute(
-            "SELECT id,provider,authType,isActive,data FROM providerConnections ORDER BY provider"
+            ("SELECT id,provider,authType,isActive,data "
+             "FROM providerConnections ORDER BY provider")
         ).fetchall()
         require(
             len(rows) == 2
@@ -199,39 +238,7 @@ def validate(folder, fingerprint=None):
         require(
             set(states) <= {"done"}, "Uncertain or pending issuer state refuses reuse"
         )
-        accounts = {}
-        for account, provider, _auth, _active, raw in rows:
-            data = json.loads(raw)
-            generations = data.get("refreshGenerations", {})
-            require(
-                isinstance(data, dict)
-                and "refreshGeneration" not in data
-                and isinstance(generations, dict)
-                and set(generations) <= {"oauth", "copilot"}
-                and all(
-                    type(value) is int and 0 < value <= sequence
-                    for value in generations.values()
-                ),
-                "Account CAS generation differs",
-            )
-            accounts[(account, provider)] = generations
-        for state, raw, generation in refresh.execute(
-            "SELECT state,result,generation FROM refresh_flights"
-        ):
-            value = json.loads(raw)
-            require(
-                state == "done"
-                and type(generation) is int
-                and 0 < generation <= sequence
-                and isinstance(value, dict)
-                and len(value.get("refreshGenerations", {})) == 1
-                and next(iter(value["refreshGenerations"].values())) == generation
-                and any(
-                    isinstance(value.get(key), str) and value[key]
-                    for key in ("accessToken", "apiKey", "token", "copilotToken")
-                ),
-                "Durable issuer result refused",
-            )
+        accounts = validate_account_generations(rows, refresh, sequence)
         keys = app.execute("SELECT count(*) FROM apiKeys WHERE isActive=1").fetchone()[
             0
         ]
@@ -422,6 +429,18 @@ def restore(seed, home, fingerprint):
         sync(directory)
 
 
+def wait_checkpoint_quiet(quiet):
+    deadline = time.monotonic() + 60
+    while True:
+        try:
+            quiet()
+            return
+        except ValueError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(0.5)
+
+
 def export(home, scope, controller, destination, binding):
     """Drain ticks and prove zero work; freeze both databases while taking backups."""
     private(home, True)
@@ -445,15 +464,7 @@ def export(home, scope, controller, destination, binding):
             "Checkpoint quiescence unproven",
         )
 
-    deadline = time.monotonic() + 60
-    while True:
-        try:
-            quiet()
-            break
-        except ValueError:
-            if time.monotonic() >= deadline:
-                raise
-            time.sleep(0.5)
+    wait_checkpoint_quiet(quiet)
     destination.mkdir(mode=0o700)
     private(destination, True)
     databases = []

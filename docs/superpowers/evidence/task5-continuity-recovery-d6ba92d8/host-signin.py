@@ -70,6 +70,26 @@ def close():
         log.close()
 
 
+def wait_baseline_export(active):
+    until = time.monotonic() + 1500
+    while time.monotonic() < until:
+        observed = metadata(identity)
+        q.require(
+            observed['state'] == 'running'
+            and observed['instance_id'] == active['instance_id'],
+            'Guest identity changed',
+        )
+        seen = subprocess.run(
+            [cli, 'exec', name, '--', '/bin/test', '-s', str(remote / 'evidence/export.json')],
+            env=cli_env, capture_output=True, timeout=45,
+        )
+        q.require(seen.returncode in {0, 1}, 'Guest export observation failed')
+        if seen.returncode == 0:
+            return
+        time.sleep(10)
+    raise TimeoutError('Guest baseline setup deadline')
+
+
 def work():
     command("exec", name, "--", "/usr/bin/uname", "-m")
     active = metadata(identity)
@@ -139,34 +159,7 @@ def work():
             "remote": str(remote),
         },
     )
-    until = time.monotonic() + 1500
-    while time.monotonic() < until:
-        observed = metadata(identity)
-        q.require(
-            observed["state"] == "running"
-            and observed["instance_id"] == active["instance_id"],
-            "Guest identity changed",
-        )
-        seen = subprocess.run(
-            [
-                cli,
-                "exec",
-                name,
-                "--",
-                "/bin/test",
-                "-s",
-                str(remote / "evidence/export.json"),
-            ],
-            env=cli_env,
-            capture_output=True,
-            timeout=45,
-        )
-        q.require(seen.returncode in {0, 1}, "Guest export observation failed")
-        if seen.returncode == 0:
-            break
-        time.sleep(10)
-    else:
-        raise TimeoutError("Guest baseline setup deadline")
+    wait_baseline_export(active)
     command(
         "download",
         name,
