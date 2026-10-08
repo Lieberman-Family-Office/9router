@@ -651,6 +651,13 @@ def trim_homebrew_cache(
     return f"{prefix}cache:homebrew:removed={removed}:bytes={bytes_freed}"
 
 
+def memory_kick(target, home, uid, dry_run, runner):
+    # ponytail: path watchdog owns recovery; memory never retires managed work.
+    if target == "9router" and os.path.lexists(home / ".9router/hotswap"):
+        return "kick_suppressed:managed_9router"
+    return apply_kick(target, uid=uid, dry_run=dry_run, runner=runner)
+
+
 def apply_actions(
     actions: Sequence[str],
     *,
@@ -669,12 +676,9 @@ def apply_actions(
                 state.last_remediation_mono[CLASS_PURGE] = now_mono
         elif action.startswith("kick:"):
             target = action.split(":", 1)[1]
-            # ponytail: path watchdog owns recovery; memory never retires managed work.
-            if target == "9router" and os.path.lexists(home / ".9router/hotswap"):
-                results.append("kick_suppressed:managed_9router")
-                continue
-            results.append(apply_kick(target, uid=uid, dry_run=dry_run, runner=runner))
-            if not dry_run:
+            result = memory_kick(target, home, uid, dry_run, runner)
+            results.append(result)
+            if not dry_run and result != "kick_suppressed:managed_9router":
                 state.last_remediation_mono[CLASS_KICK] = now_mono
         elif action == "cache:homebrew":
             results.append(trim_homebrew_cache(home, dry_run=dry_run))

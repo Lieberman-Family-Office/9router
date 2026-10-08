@@ -3215,6 +3215,10 @@ def checkpoint_seed_binding(credentials, credential_root):
     )
 
 
+def portable_runtime_arguments(args):
+    return ["--portable-node"] if getattr(args, "portable_node", False) is True else []
+
+
 def cmd_run(args):
     validate_host_qualification(args)
     sdk_root = Path(args.sdk_root).resolve()
@@ -3322,7 +3326,7 @@ def cmd_run(args):
                 "runtime",
                 "--tools",
                 str(GUEST_ROOT / "tools" / CADDY_ARCHIVE_SHA256),
-                *(["--portable-node"] if getattr(args, "portable_node", False) else []),
+                *portable_runtime_arguments(args),
                 timeout=180,
             )
         )
