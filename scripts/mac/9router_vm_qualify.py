@@ -2723,6 +2723,7 @@ def cmd_run(args):
                 time.sleep(5)
             if ready.returncode == 0:
                 devbox("download", args.devbox_name, str(remote / "signin-ready.json"), str(evidence / "signin-ready.json"))
+                (evidence / "signin-ready.json").chmod(0o600)
                 handoff = private_json(evidence / "signin-ready.json")
                 require(handoff["namespace"] == binding["namespace"] and handoff["run_id"] == run_id, "sign-in handoff differs")
                 for port in (32128, 1455):
