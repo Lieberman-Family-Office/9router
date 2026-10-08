@@ -1,0 +1,49 @@
+TAP version 13
+# (node:3625) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/source/open-sse/handlers/responsesWs/index.js is not specified and it doesn't parse as CommonJS.
+# Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+# To eliminate this warning, add "type": "module" to /Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/source/package.json.
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [ResponsesWS] mid-turn steering enabled on /v1/responses (port 49757)
+# Subtest: serves split h2c POST requests as HTTP/1.1
+# [ResponsesWS] mid-turn steering enabled on /v1/responses (port 49759)
+ok 1 - serves split h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 39.482042
+  type: 'test'
+  ...
+# Subtest: serves coalesced h2c POST requests as HTTP/1.1
+# [ResponsesWS] mid-turn steering enabled on /v1/responses (port 49761)
+ok 2 - serves coalesced h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 2.121667
+  type: 'test'
+  ...
+# Subtest: serves chunked h2c POST requests as HTTP/1.1
+# [ResponsesWS] mid-turn steering enabled on /v1/responses (port 49763)
+ok 3 - serves chunked h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 35.212208
+  type: 'test'
+  ...
+# Subtest: serves empty h2c POST requests as HTTP/1.1
+# [ResponsesWS] mid-turn steering enabled on /v1/responses (port 49765)
+ok 4 - serves empty h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 1.116791
+  type: 'test'
+  ...
+# Subtest: preserves non-h2c upgrade selection
+ok 5 - preserves non-h2c upgrade selection
+  ---
+  duration_ms: 1.314209
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 125.468458

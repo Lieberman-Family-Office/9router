@@ -1,0 +1,1 @@
+{"blocker": "guest execution failed", "diagnostic": null, "errno": null, "frames": ["cmd_guest", "live_scope_for_run", "checkpoint_baseline", "controller_call", "output", "run"], "type": "CalledProcessError"}
