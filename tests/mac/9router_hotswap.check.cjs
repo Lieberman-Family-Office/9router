@@ -325,7 +325,7 @@ async function main() {
       fs.writeFileSync(path.join(root, 'assets', 'old-build.js'), 'immutable old chunk');
       fs.writeFileSync(config, template.replace('http://:20128', `http://:${port}`)
         .replaceAll('__RUNTIME__', root).replaceAll('__STATE__', root), { mode: 0o600 });
-      const caddy = process.env.CADDY_BIN || (fs.existsSync('/opt/homebrew/bin/caddy') ? '/opt/homebrew/bin/caddy' : 'caddy');
+      const caddy = process.env.CADDY_BIN || 'caddy';
       const isolatedEnv = { ...process.env, HOME: root, XDG_DATA_HOME: root, XDG_CONFIG_HOME: root };
       execFileSync(caddy, ['validate', '--config', config, '--adapter', 'caddyfile'], {
         timeout: 5000, stdio: 'pipe', env: isolatedEnv,
