@@ -335,6 +335,9 @@ def abort_precredential_run(root, evidence_path, inspection_path, expected):
     descriptor = os.open(root / "owner.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
         private(root / "owner.lock")
+        held, live = os.fstat(descriptor), (root / "owner.lock").lstat()
+        require((held.st_dev, held.st_ino) == (live.st_dev, live.st_ino),
+                "Checkpoint owner inode changed")
         fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         require(digest(evidence_path) == expected["evidence_sha256"]
                 and digest(inspection_path) == expected["inspection_sha256"],
@@ -371,7 +374,9 @@ def abort_precredential_run(root, evidence_path, inspection_path, expected):
                     "prerequisite_native_checks", "guest_command"]
                 and all(type(order[key]) is int for key in
                         ("prerequisite_checks", "live_scope_for_run", "live_authentication"))
-                and order["prerequisite_checks"] < order["live_scope_for_run"] < order["live_authentication"],
+                and order["prerequisite_checks"] < order["live_scope_for_run"] < order["live_authentication"]
+                and evidence["source_functions"]["cmd_guest"]["sha256"]
+                    == expected["preuse_control_sha256"],
                 "Credential-use boundary unproven")
         sources = evidence["source_files"]
         require(sources and all(value["matches_input_binding"] is True

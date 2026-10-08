@@ -282,6 +282,7 @@ def preuse_fixture(root):
                     "prerequisite_checks", "prerequisite_native_checks", "guest_command"]},
         "activation_order": {"prerequisite_checks": 10, "live_scope_for_run": 20,
                              "live_authentication": 30},
+        "source_functions": {"cmd_guest": {"sha256": "d" * 64}},
         "source_files": {"scripts/mac/9router_vm_qualify.py": {
             "sha256": "c" * 64, "matches_input_binding": True}},
         "artifact_observations": {name: {"exists": False, "observation": "os.lstat ENOENT"}
@@ -308,7 +309,8 @@ def preuse_fixture(root):
     }
     report = root / "inspection.json"
     c.save(report, inspection)
-    binding.update(evidence_sha256=c.digest(proof), inspection_sha256=c.digest(report))
+    binding.update(evidence_sha256=c.digest(proof), inspection_sha256=c.digest(report),
+                   preuse_control_sha256="d" * 64)
     return binding, proof, report, marker, latest, files
 
 
