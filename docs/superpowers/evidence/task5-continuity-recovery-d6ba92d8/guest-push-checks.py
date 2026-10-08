@@ -44,7 +44,10 @@ def wrap_long_literals(filename):
             for line in lines[token.start[0] - 1:token.end[0]]
         ):
             continue
-        value = ast.literal_eval(token.string)
+        try:
+            value = ast.literal_eval(token.string)
+        except (ValueError, SyntaxError):
+            continue
         if not isinstance(value, str):
             continue
         indent = ' ' * (len(token.line) - len(token.line.lstrip()))
@@ -229,6 +232,8 @@ try:
                 "failure": "Existing scanner credential missing",
             }
         )
+except BaseException as error:
+    q.new_json(out / 'runner-failure.json', {'failure': type(error).__name__, 'reason': str(error) if isinstance(error, ValueError) else 'Guest setup failed'})
 finally:
     secret.unlink(missing_ok=True)
     q.new_json(
