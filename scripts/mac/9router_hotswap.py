@@ -871,7 +871,8 @@ def verify_slot_journal(entry):
 
 def job_present(slot):
     # Enumerate the exact GUI domain: a failed per-job lookup is not absence proof.
-    # ponytail: strict launchctl layout; qualify guests before adding layouts.
+    # ponytail: strict three-column layout; qualify guests before adding layouts.
+    # The middle column is opaque status, not evidence of presence.
     domain = f"gui/{os.getuid()}"
     result = subprocess.run(
         ["launchctl", "print", domain],
@@ -881,23 +882,24 @@ def job_present(slot):
         timeout=5,
     )
     blocks = re.findall(
-        r"^([ \t]*)services = \{\n(.*?)^\1\}",
+        r"^([ \t]*)services = \{\n(.*?)^\1\}[ \t]*$",
         result.stdout,
         re.MULTILINE | re.DOTALL,
     )
     if (
         result.returncode
         or not result.stdout.startswith(f"{domain} = {{\n")
+        or not result.stdout.endswith("\n}\n")
         or len(blocks) != 1
     ):
         raise ValueError("launchd job population unreadable")
     labels = []
     for line in blocks[0][1].splitlines():
-        fields = line.split()
+        fields = line.split(maxsplit=2)
         if (
             len(fields) != 3
             or not re.fullmatch(r"-|[0-9]+", fields[0])
-            or not re.fullmatch(r"-|-?[0-9]+", fields[1])
+            or not re.fullmatch(r"[^\s{}]+", fields[2])
         ):
             raise ValueError("launchd job population malformed")
         labels.append(fields[2])
