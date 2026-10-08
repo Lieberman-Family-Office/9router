@@ -366,6 +366,8 @@ except BaseException as error:
             else ("Guest setup failed"),
         },
     )
+    if isinstance(error, (KeyboardInterrupt, SystemExit)):
+        raise
 finally:
     secret.unlink(missing_ok=True)
     q.new_json(

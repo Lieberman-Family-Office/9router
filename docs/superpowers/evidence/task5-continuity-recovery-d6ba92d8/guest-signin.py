@@ -100,6 +100,8 @@ except BaseException as error:
             else "Guest setup failed",
         },
     )
+    if isinstance(error, (KeyboardInterrupt, SystemExit)):
+        raise
 finally:
     q.new_json(
         evidence / "export.json",

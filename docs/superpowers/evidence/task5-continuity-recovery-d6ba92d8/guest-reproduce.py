@@ -271,6 +271,8 @@ try:
     record["transitions"] = fixture.get("transitions")
 except BaseException as error:
     record["failure"] = {"type": type(error).__name__, "diagnostic": str(error)}
+    if isinstance(error, (KeyboardInterrupt, SystemExit)):
+        raise
 finally:
     q.new_json(evidence / "guest-reproduction.json", record)
     q.new_json(

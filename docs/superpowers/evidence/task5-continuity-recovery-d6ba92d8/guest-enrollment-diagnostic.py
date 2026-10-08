@@ -92,6 +92,8 @@ except BaseException as error:
             else ("Guest diagnostic failed"),
         },
     )
+    if isinstance(error, (KeyboardInterrupt, SystemExit)):
+        raise
 finally:
     locator = run / "credential-scope.json"
     if locator.exists():
