@@ -263,6 +263,190 @@ with tempfile.TemporaryDirectory(
         uncertain = fixture(root, 4, "uncertain")
         refused(lambda: c.publish(root, uncertain, c.digest(root / "latest.json")))
     refused(lambda: c.owner(root).__enter__())
+
+
+def preuse_fixture(root):
+    seed = fixture(root, 1)
+    destination = root / ("checkpoint-" + "b" * 32)
+    os.rename(seed, destination)
+    c.save(
+        root / "latest.json",
+        {
+            "checkpoint": destination.name,
+            "manifest_sha256": c.digest(destination / "manifest.json"),
+        },
+    )
+    binding = {
+        "run_id": "qualify-fictional-preuse",
+        "source_commit": "a" * 40,
+        "source_patch_sha256": "b" * 64,
+        "namespace": {"devbox_id": "fake", "instance_id": "fake-instance"},
+    }
+    c.begin(root, binding)
+    marker = c.digest(root / "uncertain.json")
+    latest = c.digest(root / "latest.json")
+    files = json.loads((destination / "manifest.json").read_text())["files"]
+    evidence = {
+        "binding": binding,
+        "failure": {
+            "type": "GuestCheckFailure",
+            "frames": [
+                "cmd_guest",
+                "prerequisite_checks",
+                "prerequisite_native_checks",
+                "guest_command",
+            ],
+        },
+        "activation_order": {
+            "prerequisite_checks": 10,
+            "live_scope_for_run": 20,
+            "live_authentication": 30,
+        },
+        "source_functions": {"cmd_guest": {"sha256": "d" * 64}},
+        "source_files": {
+            "scripts/mac/9router_vm_qualify.py": {
+                "sha256": "c" * 64,
+                "matches_input_binding": True,
+            }
+        },
+        "artifact_observations": {
+            name: {"exists": False, "observation": "os.lstat ENOENT"}
+            for name in ("credential-scope.json", "live-home")
+        },
+        "seed_files": {
+            name: {
+                "guest_sha256": digest,
+                "host_retained_manifest_sha256": digest,
+                "equal": True,
+            }
+            for name, digest in files.items()
+        },
+        "fixture_facts": {
+            "provider_checkpoint_path_in_native_fixture": False,
+            "host_source_patch_bytes": 0,
+        },
+    }
+    proof = root / "preuse-evidence.json"
+    c.save(proof, evidence)
+    inspection = {
+        "inspection_completed": True,
+        "uncertainty_unchanged": True,
+        "evidence_sha256": c.digest(proof),
+        "uncertainty_sha256_before": marker,
+        "input": {
+            **binding,
+            "original_namespace": binding["namespace"],
+            "latest_pointer_sha256": latest,
+            "seed_files": files,
+            "seed_manifest_sha256": c.digest(destination / "manifest.json"),
+        },
+        "cleanup": {
+            "verified": True,
+            "stop_succeeded": True,
+            "observations": [
+                {
+                    "id": "fake",
+                    "name": "fake-guest",
+                    "state": "stopped",
+                    "instanceId": None,
+                    "at": "2026-10-08T00:00:00Z",
+                },
+                {
+                    "id": "fake",
+                    "name": "fake-guest",
+                    "state": "stopped",
+                    "instanceId": None,
+                    "at": "2026-10-08T00:01:01Z",
+                },
+            ],
+        },
+    }
+    report = root / "inspection.json"
+    c.save(report, inspection)
+    binding.update(
+        evidence_sha256=c.digest(proof),
+        inspection_sha256=c.digest(report),
+        preuse_control_sha256="d" * 64,
+    )
+    return binding, proof, report, marker, latest, files
+
+
+for mutation in (
+    None,
+    "missing",
+    "wrong-run",
+    "changed-seed",
+    "post-use",
+    "forged",
+    "shutdown",
+    "receipt-failure",
+    "disposition-failure",
+):
+    with tempfile.TemporaryDirectory(
+        prefix="preuse-check-", dir=str(Path.home())
+    ) as tmp:
+        root = Path(tmp).resolve()
+        binding, proof, report, marker, latest, files = preuse_fixture(root)
+        if mutation in {"wrong-run", "post-use"}:
+            value = json.loads(proof.read_text())
+            if mutation == "wrong-run":
+                value["binding"]["run_id"] = "different-run"
+            else:
+                value["artifact_observations"]["credential-scope.json"]["exists"] = True
+            proof.write_text(json.dumps(value))
+            binding["evidence_sha256"] = c.digest(proof)
+            inspection = json.loads(report.read_text())
+            inspection["evidence_sha256"] = binding["evidence_sha256"]
+            report.write_text(json.dumps(inspection))
+            binding["inspection_sha256"] = c.digest(report)
+        elif mutation == "changed-seed":
+            destination = (
+                root / json.loads((root / "latest.json").read_text())["checkpoint"]
+            )
+            (destination / "env.sh").write_text("changed seed")
+        elif mutation == "missing":
+            proof.unlink()
+        elif mutation == "forged":
+            proof.write_text(proof.read_text() + " ")
+        elif mutation == "shutdown":
+            inspection = json.loads(report.read_text())
+            inspection["cleanup"]["observations"][1]["state"] = "running"
+            report.write_text(json.dumps(inspection))
+            binding["inspection_sha256"] = c.digest(report)
+        try:
+            with (
+                patch.object(
+                    c.os, "rename", side_effect=OSError("fictional disposition failure")
+                )
+                if mutation == "disposition-failure"
+                else patch.object(
+                    c, "sync", side_effect=OSError("fictional receipt failure")
+                )
+                if mutation == "receipt-failure"
+                else __import__("contextlib").nullcontext()
+            ):
+                c.abort_precredential_run(root, proof, report, binding)
+        except (OSError, ValueError):
+            assert mutation is not None
+            assert c.digest(root / "uncertain.json") == marker
+            assert c.digest(root / "latest.json") == latest
+        else:
+            assert mutation is None
+            assert not (root / "uncertain.json").exists()
+            archived = root / ("preuse-aborted-" + binding["run_id"] + ".json")
+            assert c.digest(archived) == marker
+            assert c.digest(root / "latest.json") == latest
+            with c.owner(root):
+                seed = c.current(root)
+                assert all(
+                    c.digest(seed / name) == digest for name, digest in files.items()
+                )
+        if mutation == "forged":
+            refused(lambda: c.owner(root).__enter__())
+print(
+    "PASS: pre-use abort genuine recovery and eight mutated/failure cases; "
+    "seed/key unchanged"
+)
 print(
     (
         "PASS: private fake latest-token/generati"

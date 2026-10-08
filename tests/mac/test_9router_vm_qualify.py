@@ -633,6 +633,38 @@ class RuntimeBindingTest(unittest.TestCase):
                 qualify.sha256(stage / "qualification.patch"),
             )
 
+    def test_portable_node_provisioning_refuses_tampered_archive(self):
+        data = b"portable Node fixture"
+        archive_bytes = io.BytesIO()
+        with tarfile.open(fileobj=archive_bytes, mode="w:gz") as archive:
+            member = tarfile.TarInfo("node-v26.10.0-darwin-arm64/bin/node")
+            member.size = len(data)
+            archive.addfile(member, io.BytesIO(data))
+        for valid in (False, True):
+            with self.subTest(valid=valid), TemporaryDirectory() as directory:
+                tools = Path(directory).resolve()
+                tools.chmod(0o700)
+                archive_path = tools / "node.tgz"
+                archive_path.write_bytes(archive_bytes.getvalue())
+                archive_path.chmod(0o600)
+                with patch.object(
+                    qualify,
+                    "NODE_ARCHIVE_SHA256",
+                    qualify.sha256(archive_path) if valid else "0" * 64,
+                    create=True,
+                ):
+                    if valid:
+                        qualify.provision_guest_node(tools)
+                        self.assertEqual((tools / "node").read_bytes(), data)
+                        self.assertEqual((tools / "node").stat().st_mode & 0o777, 0o700)
+                        (tools / "node").write_bytes(b"tampered binary")
+                        with self.assertRaises(ValueError):
+                            qualify.provision_guest_node(tools)
+                    else:
+                        with self.assertRaises(ValueError):
+                            qualify.provision_guest_node(tools)
+                        self.assertFalse((tools / "node").exists())
+
     def test_guest_runtime_reuses_existing_pinned_caddy_without_download(self):
         with TemporaryDirectory() as directory:
             root = Path(directory).resolve()

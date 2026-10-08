@@ -757,6 +757,18 @@ def test_legacy_qualification_receipt_cannot_enroll_managed_release(hs):
         hs.qualification(digest)
 
 
+def test_explicit_runtime_binding_does_not_fall_back(hs, monkeypatch, tmp_path):
+    executable = tmp_path / "pinned-node"
+    executable.write_bytes(b"fixture executable bytes")
+    executable.chmod(0o700)
+    monkeypatch.setenv("NINEROUTER_NODE_BIN", str(executable))
+    monkeypatch.setattr(hs.shutil, "which", lambda name: "/wrong/global/node")
+    assert hs.executable("node") == str(executable)
+    executable.unlink()
+    with pytest.raises(ValueError, match="missing runtime executable"):
+        hs.executable("node")
+
+
 def test_runtime_binding_mismatch_refuses_before_native_checks(hs, monkeypatch):
     digest = "b" * 64
     private_json(
@@ -1051,6 +1063,41 @@ def test_asset_copy_failure_never_publishes_partial_bytes(hs, monkeypatch):
     assert not (hs.STATE_DIR / "assets/chunk.js").exists()
     hs.stage_assets(release)
     assert (hs.STATE_DIR / "assets/chunk.js").read_bytes() == b"complete bytes"
+
+
+def test_asset_seed_is_confined_nonempty_and_conflict_checked(hs, tmp_path):
+    source = tmp_path / "legacy-assets"
+    source.mkdir(mode=0o700)
+    with pytest.raises(ValueError, match="empty"):
+        hs.stage_asset_directory(source)
+    (source / "old.js").write_bytes(b"old dashboard chunk")
+    hs.stage_asset_directory(source)
+    target = hs.STATE_DIR / "assets" / "old.js"
+    assert target.read_bytes() == b"old dashboard chunk"
+    (source / "old.js").write_bytes(b"conflicting immutable bytes")
+    with pytest.raises(ValueError, match="conflict"):
+        hs.stage_asset_directory(source)
+    assert target.read_bytes() == b"old dashboard chunk"
+    (source / "old.js").unlink()
+    (source / "credential.sqlite").write_bytes(b"not an immutable asset")
+    with pytest.raises(ValueError, match="unsupported"):
+        hs.stage_asset_directory(source)
+    (source / "credential.sqlite").unlink()
+    (source / "outside.js").symlink_to(tmp_path / "outside")
+    with pytest.raises(ValueError, match="symlink"):
+        hs.stage_asset_directory(source)
+    link = tmp_path / "linked-assets"
+    link.symlink_to(source, target_is_directory=True)
+    with pytest.raises(ValueError, match="concrete"):
+        hs.stage_asset_directory(link)
+    with pytest.raises(ValueError, match="concrete"):
+        hs.stage_asset_directory(source / ".." / "legacy-assets")
+    (source / "outside.js").unlink()
+    (source / "old.js").write_bytes(b"old dashboard chunk")
+    with pytest.raises(ValueError, match="overlap"):
+        hs.stage_asset_directory(source, target=source)
+    with pytest.raises(ValueError, match="concrete"):
+        hs.stage_asset_directory(source, target=link)
 
 
 def test_enrollment_requires_explicit_maintenance_acknowledgement(hs):

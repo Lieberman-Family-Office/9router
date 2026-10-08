@@ -76,7 +76,7 @@ def update_gate_latch(
     persist_s: float,
     latch: GateLatchState,
 ) -> tuple[GateLatchState, Optional[str]]:
-    """Advance latch state. Returns (new_state, event) with event in {None, latch, clear}."""
+    """Advance latch state; return (new_state, None/latch/clear event)."""
     new = GateLatchState(
         purge_anchor_wall=latch.purge_anchor_wall,
         latched=latch.latched,
@@ -93,10 +93,7 @@ def update_gate_latch(
         return new, ("clear" if was else None)
 
     purge_signal = any(
-        a == "purge"
-        or a == "purged"
-        or a.startswith("dry_run:purge")
-        for a in applied
+        a == "purge" or a == "purged" or a.startswith("dry_run:purge") for a in applied
     ) or ("purge:cooldown" in notes and band == "critical")
 
     if band == "critical" and purge_signal and new.purge_anchor_wall is None:
@@ -494,9 +491,7 @@ def _note_kick_candidate(
         notes.append(f"{label}:not_found")
         return
     over_rss = proc.rss_mb >= rss_limit_mb
-    over_uptime = (
-        uptime_limit_s is not None and proc.etime_s >= uptime_limit_s
-    )
+    over_uptime = uptime_limit_s is not None and proc.etime_s >= uptime_limit_s
     if over_rss or over_uptime:
         actions.append(kick_token)
         notes.append(f"{label}:rss_mb={proc.rss_mb:.0f}:etime_s={proc.etime_s:.0f}")
@@ -656,6 +651,18 @@ def trim_homebrew_cache(
     return f"{prefix}cache:homebrew:removed={removed}:bytes={bytes_freed}"
 
 
+def memory_kick(target, home, uid, dry_run, runner):
+    # ponytail: path watchdog owns recovery; memory never retires managed work.
+    if target == "9router" and os.path.lexists(home / ".9router/hotswap"):
+        return "kick_suppressed:managed_9router"
+    return apply_kick(target, uid=uid, dry_run=dry_run, runner=runner)
+
+
+def record_memory_kick(state, now_mono, dry_run, result):
+    if not dry_run and result != "kick_suppressed:managed_9router":
+        state.last_remediation_mono[CLASS_KICK] = now_mono
+
+
 def apply_actions(
     actions: Sequence[str],
     *,
@@ -674,9 +681,9 @@ def apply_actions(
                 state.last_remediation_mono[CLASS_PURGE] = now_mono
         elif action.startswith("kick:"):
             target = action.split(":", 1)[1]
-            results.append(apply_kick(target, uid=uid, dry_run=dry_run, runner=runner))
-            if not dry_run:
-                state.last_remediation_mono[CLASS_KICK] = now_mono
+            result = memory_kick(target, home, uid, dry_run, runner)
+            results.append(result)
+            record_memory_kick(state, now_mono, dry_run, result)
         elif action == "cache:homebrew":
             results.append(trim_homebrew_cache(home, dry_run=dry_run))
             if not dry_run:

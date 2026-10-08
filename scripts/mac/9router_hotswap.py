@@ -272,8 +272,8 @@ def sha256(path):
 
 
 def executable(name):
-    found = shutil.which(name)
-    if not found:
+    found = os.environ.get("NINEROUTER_" + name.upper() + "_BIN") or shutil.which(name)
+    if not found or not Path(found).is_file() or not os.access(found, os.X_OK):
         raise ValueError(f"missing runtime executable: {name}")
     return str(Path(found).resolve())
 
@@ -601,24 +601,39 @@ def snapshot_db(dest):
 
 
 def stage_assets(dest):
-    source = dest / "app/.next-cli-build/static"
-    if not source.is_dir() or source.is_symlink():
-        raise ValueError("missing immutable dashboard assets")
-    target = STATE_DIR / "assets"
+    stage_asset_directory(dest / "app/.next-cli-build/static")
+
+
+def stage_asset_directory(source, *, target=None):
+    source = Path(source)
+    if not source.is_absolute() or source.resolve() != source or not source.is_dir():
+        raise ValueError("asset source must be a concrete directory")
+    entries = list(source.rglob("*"))
+    if any(path.is_symlink() for path in entries):
+        raise ValueError("symlink dashboard asset refused")
+    if not any(path.is_file() for path in entries):
+        raise ValueError("empty immutable dashboard asset population")
+    target = Path(target) if target is not None else STATE_DIR / "assets"
+    if not target.is_absolute() or target.resolve() != target:
+        raise ValueError("asset target must be a concrete directory")
     target.mkdir(mode=0o700, exist_ok=True)
     private_directory(target)
-    for path in source.rglob("*"):
-        if path.is_symlink():
-            raise ValueError("symlink dashboard asset refused")
-        relative = path.relative_to(source)
-        out = target / relative
-        if path.is_dir():
-            out.mkdir(mode=0o700, exist_ok=True)
-            private_directory(out)
-        elif path.is_file():
-            publish_asset(path, out)
-        else:
-            raise ValueError("non-regular dashboard asset refused")
+    if source == target or source in target.parents or target in source.parents:
+        raise ValueError("asset source and target must not overlap")
+    for path in entries:
+        stage_asset_entry(path, target / path.relative_to(source))
+
+
+def stage_asset_entry(path, out):
+    if path.is_dir():
+        out.mkdir(mode=0o700, exist_ok=True)
+        private_directory(out)
+    elif path.is_file():
+        if path.suffix not in {".js", ".css", ".woff2"}:
+            raise ValueError("unsupported immutable dashboard asset")
+        publish_asset(path, out)
+    else:
+        raise ValueError("non-regular dashboard asset refused")
 
 
 def publish_asset(path, out):
@@ -2023,6 +2038,9 @@ def main(argv=None):
     installed.add_argument("release", type=Path)
     installed.add_argument("--digest", required=True)
     sub.add_parser("restore")
+    assets = sub.add_parser("stage-assets")
+    assets.add_argument("source", type=Path)
+    assets.add_argument("target", type=Path)
     sub.add_parser("status")
     sub.add_parser("reconcile")
     args = parser.parse_args(argv)
@@ -2031,6 +2049,12 @@ def main(argv=None):
             configure_qualification(args.qualification_scope)
         except EXPECTED_ERRORS as error:
             return refusal("qualification scope", error)
+    if args.command == "stage-assets":
+        try:
+            stage_asset_directory(args.source, target=args.target)
+            return 0
+        except EXPECTED_ERRORS as error:
+            return refusal("immutable asset staging", error)
     if args.command == "deploy-installed":
         if QUALIFICATION_SCOPE is None:
             return refusal(

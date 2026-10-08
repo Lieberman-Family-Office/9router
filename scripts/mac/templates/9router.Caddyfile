@@ -2,6 +2,29 @@
     admin off
     auto_https off
 }
+http://:20131 {
+    bind "unix/__RUNTIME__/http-ingress.sock"
+    handle_path /_next/static/* {
+        root * "__STATE__/assets"
+        header Cache-Control "public, max-age=31536000, immutable"
+        file_server
+    }
+    handle {
+        reverse_proxy "unix/__RUNTIME__/active.sock" {
+            flush_interval -1
+            header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
+            header_up -X-Real-IP
+            header_up -X-9r-Real-Ip
+            header_up -X-9r-Peer-Token
+            header_up -X-9r-Via-Proxy
+            transport http {
+                keepalive off
+                dial_timeout 3s
+                versions 1.1
+            }
+        }
+    }
+}
 http://:20128 {
     bind 127.0.0.1
     handle_path /_next/static/* {
