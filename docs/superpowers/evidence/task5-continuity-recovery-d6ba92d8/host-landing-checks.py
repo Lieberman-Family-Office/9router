@@ -57,10 +57,18 @@ def command(*argv, timeout=180):
     try:
         return q.output([cli, *argv], source, env, timeout)
     except subprocess.CalledProcessError as error:
-        q.new_json(local / 'orchestration-failure.json', {
-            'operation': list(argv[:2]), 'exit_code': error.returncode,
-            'stderr': (error.stderr or '').replace(os.environ.get('SONAR_TOKEN', ''), '[REDACTED]') if os.environ.get('SONAR_TOKEN') else error.stderr,
-        })
+        q.new_json(
+            local / "orchestration-failure.json",
+            {
+                "operation": list(argv[:2]),
+                "exit_code": error.returncode,
+                "stderr": (error.stderr or "").replace(
+                    os.environ.get("SONAR_TOKEN", ""), "[REDACTED]"
+                )
+                if os.environ.get("SONAR_TOKEN")
+                else error.stderr,
+            },
+        )
         raise
 
 
@@ -246,12 +254,18 @@ try:
         fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            os.write(fd, json.dumps({
-                "owner": "Task5 scoped landing lane d6ba92d8",
-                "run_id": run_id, "pid": os.getpid(),
-                "scope": "guest scans only; no issuer restoration",
-                "authorization_quote": quote,
-            }).encode())
+            os.write(
+                fd,
+                json.dumps(
+                    {
+                        "owner": "Task5 scoped landing lane d6ba92d8",
+                        "run_id": run_id,
+                        "pid": os.getpid(),
+                        "scope": "guest scans only; no issuer restoration",
+                        "authorization_quote": quote,
+                    }
+                ).encode(),
+            )
             claims.append((fd, path))
         except BaseException:
             os.close(fd)

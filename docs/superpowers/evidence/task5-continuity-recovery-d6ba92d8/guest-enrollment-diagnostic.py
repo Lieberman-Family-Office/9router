@@ -77,8 +77,7 @@ except subprocess.CalledProcessError as error:
             "stderr": sanitize(stderr),
             "stdout": sanitize(stdout),
             "scope": (
-                "exact controller enrollment dispatch only; "
-                "no authentication verdict"
+                "exact controller enrollment dispatch only; no authentication verdict"
             ),
         },
     )

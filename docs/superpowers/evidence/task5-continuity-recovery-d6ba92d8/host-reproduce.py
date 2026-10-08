@@ -232,10 +232,18 @@ try:
         descriptor = os.open(target, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
         try:
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            os.write(descriptor, json.dumps({
-                "owner": owner, "run_id": run_id, "scope": "Task5 reproduction",
-                "pid": os.getpid(), "authorization_quote": quote,
-            }).encode())
+            os.write(
+                descriptor,
+                json.dumps(
+                    {
+                        "owner": owner,
+                        "run_id": run_id,
+                        "scope": "Task5 reproduction",
+                        "pid": os.getpid(),
+                        "authorization_quote": quote,
+                    }
+                ).encode(),
+            )
             claims.append((descriptor, target))
         except BaseException:
             os.close(descriptor)
