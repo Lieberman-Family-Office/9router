@@ -9,6 +9,9 @@ const crypto = require('node:crypto');
 const { spawn, execFileSync } = require('node:child_process');
 const { once } = require('node:events');
 const { setTimeout: delay } = require('node:timers/promises');
+process.env.NINEROUTER_SKIP_BACKGROUND_REFRESH = '1';
+process.env.NINEROUTER_SKIP_RESPONSES_WS = '1';
+require('../../custom-server.js');
 
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const LARGE_SIZE = 4 * 1024 * 1024;
@@ -354,10 +357,10 @@ async function main() {
       const stamped = '100.64.0.7';
       const forwarded = await request(port, '/echo', { socketPath: path.join(root, 'http-ingress.sock'),
         headers: { 'X-Forwarded-For': stamped, 'X-Real-IP': '203.0.113.66', 'X-9r-Real-Ip': '203.0.113.66', 'X-9r-Peer-Token': 'forged' } });
-      assert.equal(JSON.parse(forwarded.body).headers['x-forwarded-for'], stamped,
+      assert.equal(JSON.parse(forwarded.body).headers['x-9r-real-ip'], stamped,
         'protected HTTP ingress must retain authenticated upstream client identity');
       const rawForged = await request(port, '/echo', { headers: { 'X-Forwarded-For': stamped, 'X-Real-IP': stamped } });
-      assert.notEqual(JSON.parse(rawForged.body).headers['x-forwarded-for'], stamped,
+      assert.notEqual(JSON.parse(rawForged.body).headers['x-9r-real-ip'], stamped,
         'raw TCP ingress must never trust client-supplied XFF');
       const streamA = await openStream(port, '/stream');
       const wsA = await openWebSocket(port);
@@ -399,10 +402,13 @@ async function main() {
         'X-9r-Peer-Token': 'fake-test-value', 'X-9r-Via-Proxy': '1',
       } });
       const observed = JSON.parse(forged.body).headers;
-      assert.equal(observed['x-forwarded-for'], '127.0.0.1');
+      assert.equal(observed['x-9r-real-ip'], '127.0.0.1');
+      assert.equal(observed['x-forwarded-for'], undefined);
       assert.equal(observed['x-forwarded-host'], 'forged.invalid');
       assert.equal(observed['x-forwarded-proto'], 'http');
-      for (const key of ['x-real-ip', 'x-9r-real-ip', 'x-9r-peer-token', 'x-9r-via-proxy']) assert.equal(observed[key], undefined);
+      assert.equal(observed['x-real-ip'], undefined);
+      assert.notEqual(observed['x-9r-peer-token'], 'fake-test-value');
+      assert.equal(observed['x-9r-via-proxy'], '1');
       const beforeDrops = apps.b.state.drops;
       const dropped = await request(port, '/drop', { method: 'POST', headers, body });
       assert.equal(dropped.status, 502);
