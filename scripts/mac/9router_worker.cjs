@@ -110,7 +110,7 @@ async function main() {
     const remove = () => { incoming.destroy(); outgoing.destroy(); };
     const closed = () => { if (incoming.closed && outgoing.closed) pipes.delete(pair); };
     incoming.once('error', remove); outgoing.once('error', remove);
-    incoming.once('close', () => { remove(); closed(); }); outgoing.once('close', () => { remove(); closed(); });
+    incoming.once('close', () => { remove(); closed(); }); outgoing.once('close', () => { incoming.end(); closed(); });
     incoming.pipe(outgoing); outgoing.pipe(incoming);
   });
   const ipc = async (op) => {

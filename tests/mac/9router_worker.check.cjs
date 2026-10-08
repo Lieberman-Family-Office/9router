@@ -107,6 +107,11 @@ const server = http.createServer(async (req, res) => {
     try { await managed.awaitResponsesWsReady(); } catch { res.statusCode = 503; return res.end('unready'); }
     return res.end(JSON.stringify({currentVersion: process.env.NINEROUTER_SLOT}));
   }
+  if (req.url === '/eof') {
+    res.writeHead(200, { 'Content-Type': 'application/json', Connection: 'close' });
+    res.write(JSON.stringify({ padding: 'x'.repeat(15059) }));
+    return res.end();
+  }
   if (req.url === '/status-release') { fs.unlinkSync(statusHold); fs.unlinkSync(statusHold + '.waiting'); for (const finish of waiting.splice(0)) finish(); return res.end('ok'); }
   if (req.url === '/unknown') { managed.workState().unknown = true; return res.end('ok'); }
   if (req.url === '/known') { Object.defineProperty(managed.workState(), 'unknown', { value: false, writable: true, configurable: true, enumerable: true }); return res.end('ok'); }
@@ -172,6 +177,30 @@ async function main() {
   await wait(async () => { try { return (await command('a', 'status')).mode === 'ready'; } catch { assert.equal(wa.exitCode, null, wa.log()); } });
   select('a');
   assert.equal((await command('a', 'status')).mode, 'active');
+  // Exercise real bridge backpressure: upstream EOF must not discard queued client writes.
+  const expectedEof = JSON.stringify({ padding: 'x'.repeat(15059) });
+  for (let attempt = 0; attempt < 40; attempt++) await new Promise((resolve, reject) => {
+    const req = http.get({ socketPath: path.join(root, 'a.sock'), path: '/eof', agent: false }, res => {
+      const chunks = [];
+      res.pause();
+      const resume = setTimeout(() => res.resume(), 100);
+      res.on('data', chunk => chunks.push(chunk));
+      res.on('error', error => { clearTimeout(resume); reject(new assert.AssertionError({ message: 'normal upstream EOF must flush the complete chunked response', cause: error })); });
+      res.on('end', () => {
+        clearTimeout(resume);
+        try {
+          assert.equal(res.statusCode, 200);
+          assert.equal(res.headers['transfer-encoding'], 'chunked');
+          assert.equal(res.complete, true, 'normal upstream EOF must retain the terminal chunk');
+          assert.equal(Buffer.concat(chunks).toString(), expectedEof, 'normal upstream EOF must flush queued response bytes');
+          resolve();
+        } catch (error) { reject(error); }
+      });
+    });
+    req.setTimeout(5000, () => req.destroy(new Error('EOF regression deadline')));
+    req.on('error', reject);
+  });
+  await wait(async () => (await command('a', 'status')).connections === 0);
   const wb = await launch(b.file);
   await wait(async () => { try { return (await command('b', 'status')).mode === 'ready'; } catch { assert.equal(wb.exitCode, null, wb.log()); } });
   const before = await command('a', 'status');
