@@ -38,7 +38,9 @@ def wrap_long_literals(filename):
     for line in lines:
         offsets.append(offsets[-1] + len(line))
     replacements = []
-    for token in tokenize.generate_tokens(io.StringIO(original).readline):
+    tokens = list(tokenize.generate_tokens(io.StringIO(original).readline))
+    significant = [item for item in tokens if item.type not in {tokenize.NL, tokenize.COMMENT}]
+    for token_index, token in enumerate(significant):
         if token.type != tokenize.STRING or not any(
             len(line.rstrip('\n')) > 88
             for line in lines[token.start[0] - 1:token.end[0]]
@@ -52,20 +54,18 @@ def wrap_long_literals(filename):
             continue
         indent = ' ' * (len(token.line) - len(token.line.lstrip()))
         chunks = [repr(value[index:index + 40]) for index in range(0, len(value), 40)]
-        replacement = '(\n' + ''.join(indent + '    ' + chunk + '\n' for chunk in chunks) + indent + ')'
+        adjacent = any(
+            0 <= index < len(significant) and significant[index].type == tokenize.STRING
+            for index in (token_index - 1, token_index + 1)
+        )
+        replacement = ('\n' + indent + '    ').join(chunks) if adjacent else '(\n' + ''.join(indent + '    ' + chunk + '\n' for chunk in chunks) + indent + ')'
         start = offsets[token.start[0] - 1] + token.start[1]
         end = offsets[token.end[0] - 1] + token.end[1]
         replacements.append((start, end, replacement))
     updated = original
     for start, end, replacement in reversed(replacements):
         updated = updated[:start] + replacement + updated[end:]
-    updated = ''.join(
-        '\n'.join(textwrap.wrap(line.rstrip('\n'), width=88, initial_indent=line[:line.index('#') + 2], subsequent_indent=line[:line.index('#') + 2])) + '\n'
-        if len(line.rstrip('\n')) > 88 and line.lstrip().startswith('# ')
-        else line
-        for line in updated.splitlines(keepends=True)
-    )
-    q.require(ast.dump(ast.parse(original)) == ast.dump(ast.parse(updated)), 'Literal wrapping changed Python semantics')
+    q.require(ast.dump(ast.parse(original)) == ast.dump(ast.parse(updated)), 'Literal wrapping changed Python semantics: ' + filename)
     path.write_text(updated)
 
 
