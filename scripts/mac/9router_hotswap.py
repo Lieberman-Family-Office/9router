@@ -618,6 +618,8 @@ def stage_asset_directory(source, *, target=None):
         raise ValueError("asset target must be a concrete directory")
     target.mkdir(mode=0o700, exist_ok=True)
     private_directory(target)
+    if source == target or source in target.parents or target in source.parents:
+        raise ValueError("asset source and target must not overlap")
     for path in entries:
         if path.is_symlink():
             raise ValueError("symlink dashboard asset refused")
@@ -627,6 +629,8 @@ def stage_asset_directory(source, *, target=None):
             out.mkdir(mode=0o700, exist_ok=True)
             private_directory(out)
         elif path.is_file():
+            if path.suffix not in {".js", ".css", ".woff2"}:
+                raise ValueError("unsupported immutable dashboard asset")
             publish_asset(path, out)
         else:
             raise ValueError("non-regular dashboard asset refused")

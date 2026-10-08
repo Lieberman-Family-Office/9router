@@ -1067,6 +1067,10 @@ def test_asset_seed_is_confined_nonempty_and_conflict_checked(hs, tmp_path):
         hs.stage_asset_directory(source)
     assert target.read_bytes() == b"old dashboard chunk"
     (source / "old.js").unlink()
+    (source / "credential.sqlite").write_bytes(b"not an immutable asset")
+    with pytest.raises(ValueError, match="unsupported"):
+        hs.stage_asset_directory(source)
+    (source / "credential.sqlite").unlink()
     (source / "outside.js").symlink_to(tmp_path / "outside")
     with pytest.raises(ValueError, match="symlink"):
         hs.stage_asset_directory(source)
