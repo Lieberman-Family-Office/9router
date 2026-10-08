@@ -2003,22 +2003,39 @@ def wait_signin_port(port, timeout):
 
 
 def record_checkpoint_refusal(error, run_root, home):
-    text = error.stderr or ''
+    text = error.stderr or ""
     if isinstance(text, bytes):
-        text = text.decode(errors='replace')
-    values = credential_module().environment(home / '.9router/env.sh')
-    redactions = [value for key, value in values.items() if key.endswith('SECRET') or key == 'INITIAL_PASSWORD']
-    with sqlite3.connect((home / '.9router/db/data.sqlite').as_uri() + '?mode=ro', uri=True) as db:
-        redactions.extend(key for key, in db.execute('SELECT key FROM apiKeys'))
-        for raw, in db.execute('SELECT data FROM providerConnections'):
-            redactions.extend(value for key, value in json.loads(raw).items() if isinstance(value, str) and any(word in key.lower() for word in ('token', 'key', 'secret')))
+        text = text.decode(errors="replace")
+    values = credential_module().environment(home / ".9router/env.sh")
+    redactions = [
+        value
+        for key, value in values.items()
+        if key.endswith(("SECRET")) or key == ("INITIAL_PASSWORD")
+    ]
+    with sqlite3.connect(
+        (home / (".9router/db/data.sqlite")).as_uri() + ("?mode=ro"), uri=True
+    ) as db:
+        redactions.extend(key for (key,) in db.execute("SELECT key FROM apiKeys"))
+        for (raw,) in db.execute("SELECT data FROM providerConnections"):
+            redactions.extend(
+                value
+                for key, value in json.loads(raw).items()
+                if isinstance(value, str)
+                and any(
+                    word in key.lower() for word in (("token"), ("key"), ("secret"))
+                )
+            )
     for value in sorted(set(redactions), key=len, reverse=True):
         if value:
-            text = text.replace(value, '[REDACTED]')
-    new_json(run_root / 'evidence/checkpoint-enrollment-refusal.json', {
-        'exit_code': error.returncode, 'stderr': text,
-        'scope': 'controller enrollment refusal; authentication not passed',
-    })
+            text = text.replace(value, "[REDACTED]")
+    new_json(
+        run_root / "evidence/checkpoint-enrollment-refusal.json",
+        {
+            "exit_code": error.returncode,
+            "stderr": text,
+            "scope": "controller enrollment refusal; authentication not passed",
+        },
+    )
 
 
 def checkpoint_baseline(tgz, binding, run_root):
@@ -2039,9 +2056,12 @@ def checkpoint_baseline(tgz, binding, run_root):
     try:
         controller_call(
             scope_path,
-            'enroll', '--acknowledge-maintenance', '--release',
-            scope['packages'][binding['sha256']]['release'],
-            '--digest', binding['sha256'],
+            "enroll",
+            "--acknowledge-maintenance",
+            "--release",
+            scope["packages"][binding["sha256"]]["release"],
+            "--digest",
+            binding["sha256"],
         )
     except subprocess.CalledProcessError as error:
         record_checkpoint_refusal(error, run_root, home)

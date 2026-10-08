@@ -1507,33 +1507,56 @@ class CheckpointEnrollmentRefusalTest(unittest.TestCase):
 
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / 'evidence').mkdir()
+            (root / "evidence").mkdir()
             database = MagicMock()
-            database.execute.return_value = [('fictional-key',)]
+            database.execute.return_value = [("fictional-key",)]
             database.execute.side_effect = [
-                [('fictional-key',)],
+                [("fictional-key",)],
                 [('{"accessToken":"fictional-token"}',)],
             ]
             connection = MagicMock()
             connection.__enter__.return_value = database
             credentials = MagicMock()
-            credentials.environment.return_value = {'API_KEY_SECRET': 'fictional-secret'}
-            scope = {'home': str(root), 'packages': {'digest': {'release': 'fictional-release'}}}
+            credentials.environment.return_value = {
+                ("API_KEY_SECRET"): ("fictional-secret")
+            }
+            scope = {
+                ("home"): str(root),
+                ("packages"): {("digest"): {("release"): ("fictional-release")}},
+            }
             error = subprocess.CalledProcessError(
-                1, ['controller'], stderr='refused: fictional-key fictional-token fictional-secret',
+                1,
+                [("controller")],
+                stderr=("refused: fictional-key fictional-token fictional-secret"),
             )
             with (
-                patch.object(qualify, 'wait_signin_port'),
-                patch.object(qualify, 'prepare_scope', return_value=(root / 'scope.json', scope, {'persistenceFingerprint': 'fixture'})),
-                patch.object(qualify, 'credential_module', return_value=credentials),
-                patch.object(qualify, 'controller_call', side_effect=error),
-                patch.object(qualify.sqlite3, 'connect', return_value=connection),
+                patch.object(qualify, "wait_signin_port"),
+                patch.object(
+                    qualify,
+                    ("prepare_scope"),
+                    return_value=(
+                        root / ("scope.json"),
+                        scope,
+                        {("persistenceFingerprint"): ("fixture")},
+                    ),
+                ),
+                patch.object(qualify, "credential_module", return_value=credentials),
+                patch.object(qualify, "controller_call", side_effect=error),
+                patch.object(qualify.sqlite3, "connect", return_value=connection),
             ):
                 with self.assertRaises(subprocess.CalledProcessError):
-                    qualify.checkpoint_baseline(root / 'candidate.tgz', {'run_id': 'fixture', 'sha256': 'digest'}, root)
-            record = json.loads((root / 'evidence/checkpoint-enrollment-refusal.json').read_text())
-            self.assertEqual(record['exit_code'], 1)
-            self.assertEqual(record['stderr'], 'refused: [REDACTED] [REDACTED] [REDACTED]')
+                    qualify.checkpoint_baseline(
+                        root / ("candidate.tgz"),
+                        {("run_id"): ("fixture"), ("sha256"): ("digest")},
+                        root,
+                    )
+            record = json.loads(
+                (root / ("evidence/checkpoint-enrollment-refusal.json")).read_text()
+            )
+            self.assertEqual(record["exit_code"], 1)
+            self.assertEqual(
+                record[("stderr")], ("refused: [REDACTED] [REDACTED] [REDACTED]")
+            )
             credentials.restore.assert_called_once()
 
 
