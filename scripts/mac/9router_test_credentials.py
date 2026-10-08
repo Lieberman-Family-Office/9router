@@ -6,6 +6,7 @@ with separate approval. An uncertain issuer run refuses reuse, not lock takeover
 """
 
 import fcntl
+from datetime import datetime
 import hashlib
 import json
 import os
@@ -326,6 +327,116 @@ def begin(root, binding):
         },
     )
     sync(root)
+
+
+def abort_precredential_run(root, evidence_path, inspection_path, expected):
+    """Archive only a hash-bound, proven pre-restore uncertainty after durable receipt."""
+    root = private(Path(root), True)
+    descriptor = os.open(root / "owner.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        private(root / "owner.lock")
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        require(digest(evidence_path) == expected["evidence_sha256"]
+                and digest(inspection_path) == expected["inspection_sha256"],
+                "Pre-use evidence digest differs")
+        evidence = json.loads(private(evidence_path).read_text())
+        inspection = json.loads(private(inspection_path).read_text())
+        marker = root / "uncertain.json"
+        marker_bytes = private(marker).read_bytes()
+        marker_stat = marker.stat()
+        uncertainty = json.loads(marker_bytes)
+        binding = evidence["binding"]
+        run_id = expected["run_id"]
+        require(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", run_id)
+                and all(binding[key] == expected[key] for key in
+                        ("run_id", "namespace", "source_commit", "source_patch_sha256"))
+                and uncertainty["run_id"] == run_id
+                and uncertainty["namespace"] == binding["namespace"]
+                and uncertainty["phase"] == "issuer-run-open",
+                "Pre-use run identity differs")
+        require(inspection["inspection_completed"] is True
+                and inspection["uncertainty_unchanged"] is True
+                and inspection["evidence_sha256"] == expected["evidence_sha256"]
+                and hashlib.sha256(marker_bytes).hexdigest() == inspection["uncertainty_sha256_before"],
+                "Pre-use marker identity differs")
+        provenance = inspection["input"]
+        require(provenance["run_id"] == run_id
+                and provenance["source_commit"] == binding["source_commit"]
+                and provenance["original_namespace"] == binding["namespace"],
+                "Pre-use inspection identity differs")
+        failure = evidence["failure"]
+        order = evidence["activation_order"]
+        require(failure["type"] == "GuestCheckFailure"
+                and failure["frames"] == ["cmd_guest", "prerequisite_checks",
+                    "prerequisite_native_checks", "guest_command"]
+                and all(type(order[key]) is int for key in
+                        ("prerequisite_checks", "live_scope_for_run", "live_authentication"))
+                and order["prerequisite_checks"] < order["live_scope_for_run"] < order["live_authentication"],
+                "Credential-use boundary unproven")
+        sources = evidence["source_files"]
+        require(sources and all(value["matches_input_binding"] is True
+                and re.fullmatch(r"[a-f0-9]{64}", value["sha256"]) for value in sources.values()),
+                "Pre-use source binding absent")
+        artifacts = evidence["artifact_observations"]
+        require(all(artifacts[name]["exists"] is False
+                and artifacts[name]["observation"] == "os.lstat ENOENT"
+                for name in ("credential-scope.json", "live-home"))
+                and evidence["fixture_facts"]["provider_checkpoint_path_in_native_fixture"] is False,
+                "Credential restore or issuer scope may exist")
+        cleanup = inspection["cleanup"]
+        observations = cleanup["observations"]
+        require(cleanup["verified"] is True and cleanup["stop_succeeded"] is True
+                and len(observations) == 2 and all(item["state"] == "stopped"
+                and item["instanceId"] is None
+                and item["id"] == binding["namespace"]["devbox_id"] for item in observations)
+                and (datetime.fromisoformat(observations[1]["at"])
+                     - datetime.fromisoformat(observations[0]["at"])).total_seconds() >= 60,
+                "Pre-use shutdown unproven")
+        pointer_hash = digest(root / "latest.json")
+        require(pointer_hash == provenance["latest_pointer_sha256"], "Pre-use checkpoint pointer changed")
+        pointer = json.loads(private(root / "latest.json").read_text())
+        name = pointer["checkpoint"]
+        require(re.fullmatch(r"checkpoint-[a-f0-9]{32}", name), "Checkpoint locator refused")
+        seed = root / name
+        manifest, _ = validate(seed)
+        require(digest(seed / "manifest.json") == provenance["seed_manifest_sha256"]
+                == pointer["manifest_sha256"] and manifest["files"] == provenance["seed_files"]
+                and set(evidence["seed_files"]) == set(FILES), "Pre-use seed manifest changed")
+        for name, value in evidence["seed_files"].items():
+            require(value["equal"] is True and value["guest_sha256"]
+                    == value["host_retained_manifest_sha256"] == manifest["files"][name]
+                    == digest(seed / name), "Pre-use seed bytes changed")
+        receipt = root / ("preuse-recovery-" + run_id + ".json")
+        save(receipt, {"kind": "proven-precredential-abort", "run_id": run_id,
+            "binding": binding, "evidence_sha256": expected["evidence_sha256"],
+            "inspection_sha256": expected["inspection_sha256"],
+            "latest_pointer_sha256": pointer_hash,
+            "uncertainty_sha256": hashlib.sha256(marker_bytes).hexdigest(),
+            "uncertainty_bytes": marker_bytes.decode(), "seed_files": manifest["files"],
+            "shutdown": observations})
+        sync(root)
+        held, live = os.fstat(descriptor), (root / "owner.lock").lstat()
+        current_marker = private(marker).stat()
+        require((held.st_dev, held.st_ino) == (live.st_dev, live.st_ino)
+                and (marker_stat.st_dev, marker_stat.st_ino) == (current_marker.st_dev, current_marker.st_ino)
+                and marker.read_bytes() == marker_bytes and digest(root / "latest.json") == pointer_hash
+                and all(digest(seed / name) == value for name, value in manifest["files"].items()),
+                "Pre-use mutation boundary changed")
+        archived = root / ("preuse-aborted-" + run_id + ".json")
+        require(not os.path.lexists(archived), "Pre-use disposition already exists")
+        os.rename(marker, archived)
+        try:
+            sync(root)
+        except OSError:
+            os.rename(archived, marker)
+            sync(root)
+            raise
+        return {"run_id": run_id, "receipt": str(receipt), "archived_marker": str(archived),
+                "latest_pointer_unchanged": True, "seed_files_unchanged": len(FILES)}
+    except (KeyError, TypeError, json.JSONDecodeError) as error:
+        raise ValueError("Pre-use evidence incomplete") from error
+    finally:
+        os.close(descriptor)
 
 
 def publish(root, stage, expected_previous):
