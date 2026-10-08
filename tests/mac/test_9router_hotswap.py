@@ -1201,6 +1201,87 @@ def fixture_bootout(c, jobs, slot):
     return SimpleNamespace(returncode=0)
 
 
+@pytest.mark.parametrize("status", ["(pe)", "(jt)", "-", "0", "-9", "27", "opaque"])
+@pytest.mark.parametrize("pid, spacing", [("-", " "), ("0", "\t"), ("123", "  \t ")])
+def test_job_present_reads_complete_population(hs, monkeypatch, status, pid, spacing):
+    domain = f"gui/{os.getuid()}"
+    label = hs.job_label("a")
+    rows = (
+        f"\t\t{pid}{spacing}{status}{spacing}{label}\n"
+        f"\t\t-\t(pe)\t{label}.other\n"
+        "\t\t0  (jt)  unrelated.service\n"
+    )
+
+    def run(argv, **kwargs):
+        assert argv == ["launchctl", "print", domain]
+        return SimpleNamespace(
+            returncode=0, stdout=f"{domain} = {{\n\tservices = {{\n{rows}\t}}\n}}\n"
+        )
+
+    monkeypatch.setattr(hs.subprocess, "run", run)
+    assert hs.job_present("a") is True
+    assert hs.job_present("b") is False
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "wrong-domain",
+        "unreadable",
+        "duplicate-label",
+        "duplicate-block",
+        "missing-field",
+        "extra-field",
+        "bad-pid",
+        "bad-label",
+        "truncated-row",
+        "truncated-block",
+        "truncated-domain",
+        "bad-block-end",
+    ],
+)
+def test_job_present_refuses_unknown_population(hs, monkeypatch, fault):
+    domain = f"gui/{os.getuid()}"
+    row = f"\t\t0 (pe) {hs.job_label('a')}\n"
+    block = f"\tservices = {{\n{row}\t}}\n"
+    text = f"{domain} = {{\n{block}}}\n"
+    variants = {
+        "wrong-domain": text.replace(domain, "system", 1),
+        "unreadable": text,
+        "duplicate-label": text.replace(row, row + row),
+        "duplicate-block": text.replace(block, block + block),
+        "missing-field": text.replace(row, "\t\t0 label\n"),
+        "extra-field": text.replace(row, "\t\t0 (pe) label extra\n"),
+        "bad-pid": text.replace(row, "\t\t-1 (pe) label\n"),
+        "bad-label": text.replace(row, "\t\t0 (pe) {\n"),
+        "truncated-row": text.replace(row, "\t\t0 (pe)\n"),
+        "truncated-block": f"{domain} = {{\n\tservices = {{\n{row}",
+        "truncated-domain": text[:-2],
+        "bad-block-end": text.replace("\t}\n", "\t} junk\n"),
+    }
+
+    def run(argv, **kwargs):
+        assert argv == ["launchctl", "print", domain]
+        return SimpleNamespace(
+            returncode=int(fault == "unreadable"), stdout=variants[fault]
+        )
+
+    monkeypatch.setattr(hs.subprocess, "run", run)
+    for slot in ("a", "b"):
+        with pytest.raises(ValueError, match="launchd job population"):
+            hs.job_present(slot)
+
+
+def test_job_present_does_not_turn_failed_lookup_into_absence(hs, monkeypatch):
+    def run(argv, **kwargs):
+        assert argv == ["launchctl", "print", f"gui/{os.getuid()}"]
+        raise OSError("launchctl unavailable")
+
+    monkeypatch.setattr(hs.subprocess, "run", run)
+    with pytest.raises(OSError, match="launchctl unavailable"):
+        hs.job_present("b")
+
+
 def fixture_launchctl(c, jobs, bridge, argv):
     assert argv[0] == "launchctl", "Only the fake launchd boundary may execute"
     domain = f"gui/{os.getuid()}"
