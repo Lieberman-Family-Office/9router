@@ -601,13 +601,22 @@ def snapshot_db(dest):
 
 
 def stage_assets(dest):
-    source = dest / "app/.next-cli-build/static"
-    if not source.is_dir() or source.is_symlink():
-        raise ValueError("missing immutable dashboard assets")
+    stage_asset_directory(dest / "app/.next-cli-build/static")
+
+
+def stage_asset_directory(source):
+    source = Path(source)
+    if not source.is_absolute() or source.resolve() != source or not source.is_dir():
+        raise ValueError("asset source must be a concrete directory")
+    entries = list(source.rglob("*"))
+    if any(path.is_symlink() for path in entries):
+        raise ValueError("symlink dashboard asset refused")
+    if not any(path.is_file() for path in entries):
+        raise ValueError("empty immutable dashboard asset population")
     target = STATE_DIR / "assets"
     target.mkdir(mode=0o700, exist_ok=True)
     private_directory(target)
-    for path in source.rglob("*"):
+    for path in entries:
         if path.is_symlink():
             raise ValueError("symlink dashboard asset refused")
         relative = path.relative_to(source)

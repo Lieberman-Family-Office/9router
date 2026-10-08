@@ -674,6 +674,10 @@ def apply_actions(
                 state.last_remediation_mono[CLASS_PURGE] = now_mono
         elif action.startswith("kick:"):
             target = action.split(":", 1)[1]
+            # ponytail: managed recovery belongs to the path watchdog; memory pressure never retires accepted work.
+            if target == "9router" and os.path.lexists(home / ".9router/hotswap"):
+                results.append("kick_suppressed:managed_9router")
+                continue
             results.append(apply_kick(target, uid=uid, dry_run=dry_run, runner=runner))
             if not dry_run:
                 state.last_remediation_mono[CLASS_KICK] = now_mono
