@@ -1,0 +1,24 @@
+GREEN: unchanged byte-identical mirror passes the original fake-app check
+PASS: real pinned workers preserve SSE/WS/private self-fetch; late dials, cleanup, unknown work, quiet interval, resume, stop wrapper, crashes and invalid control/config
+PASS: incremental WebSocket parser handles split headers, masks and extended lengths
+PASS: 100 requests route to B over the original client keepalive socket; arbitrary Host and retained static asset accepted
+PASS: exact POST body/query/Host/request headers and non-200 response; forged IP headers sanitized; no POST replay
+PASS: 4 MiB streamed response matches direct app bytes/status/headers; sha256=68a22a700420d3aed08a8de4ddba6975fcfdd490695d520561b80b735f3f9912
+PASS: direct and proxied client cancellation close the upstream response
+PASS: switch back to A on same client socket and live Caddy PID; A/B SSE and WebSockets preserve their original release
+RED: removing only the mirror atomic replacement fails the B-routing assertion
+AssertionError [ERR_ASSERTION]: new HTTP requests must route to B after switching
+
+'a' !== 'b'
+
+    at /private/tmp/9r-counterfactual-dQlyWw/tests/mac/9router_hotswap.check.cjs:359:16
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async main (/private/tmp/9r-counterfactual-dQlyWw/tests/mac/9router_hotswap.check.cjs:211:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'a',
+  expected: 'b',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+PASS: routing counterfactual detected; original check and template remain unchanged

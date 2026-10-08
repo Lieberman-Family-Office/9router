@@ -1,0 +1,21 @@
+{
+  "scope": "Task5 mounted persistence and baseline locator diagnosis only; production untouched",
+  "default_storage": {"volumeSizeGb": 300, "metadataVersion": 13, "provenance": "Verified by parent through installed SDK1.4.0 generated DevBoxService.fetchDefaults; reported to this lane in actual 2026-10-07 17:17 EDT turn", "operator_quote": "raise default to 300gb from 150gb. do this now. then continue working", "operator_turn": "2026-10-07 17:14 EDT", "redundant_update_performed": false},
+  "existing_devbox": {"id": "2tc0b2eg4mveo", "name": "9router-qualify-recovery", "allocatedVolumeGB": 150, "resized_or_recreated": false},
+  "mounted_volume": {"path": "/Volumes/devbox", "filesystem": "APFS", "device": "disk9s1", "name": "devbox-2tc0b2eg4mveo", "uuid": "E2A3AB3C-FDF7-4CD1-A887-A1A0649F5C13", "total_bytes": 161061228544, "observed_capacity_used_percent": 63},
+  "workspace_locator": {"path": "/Users/runner/workspaces", "symlink": true, "resolved": "/Volumes/devbox/workspace"},
+  "retained_marker": {"path": "/Volumes/devbox/9router/diagnostics/storage-diagnostic-checkpoint.json", "sha256": "956f9fcbdd3958889166c77ad1095cabc74e91361df596b2c840a87456a03278", "same_across_diagnostic_stop_restart": true},
+  "missing_exact_bound_subjects": ["/Volumes/devbox/9router/baseline.json", "/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b", "/Volumes/devbox/9router/qualification/task5-signin-5a004deda56e459b/home/.9router/db/data.sqlite"],
+  "discovery": {"roots": ["/Volumes/devbox", "/Users/runner/workspaces"], "files_observed": 568825, "permission_errors": 3, "scope_limited_exclusions": ["node_modules", ".git", "Library", "Caches", ".next-cli-build", "app", "releases", "python-tools", "npm-cache"], "absence_claim": "Exact recorded baseline path and exact sign-in home/database path absent by explicit lstat. Not universal absence across all guest storage."},
+  "other_database": {"path": "/Volumes/devbox/9router/db/data.sqlite", "active_codex_oauth_count": 17, "active_claude_oauth_count": 10, "active_api_key_count": 2, "credential_values_read_to_output": false, "approved_independent_signin_provenance": "unestablished; do not substitute"},
+  "diagnosis": "Bound sign-in subtree is unavailable after stop. Generic persistent volume works for measured marker. Cause of subtree loss remains unproven; not attributed to capacity/default or user credentials.",
+  "smallest_next_proof": "Completed checkpoint-3f0ab4b0a5b2: new harmless nested SQLite and binding JSON were committed, file+directory fsynced, and /bin/sync completed in Namespace. Both vanished after exact stop/reactivation on the same mounted UUID. Vendor snapshot/stop persistence must be resolved before another sign-in; no credential copy or volume change.",
+  "durability_counterexample": {"evidence": "checkpoint-3f0ab4b0a5b2", "success": false, "create_instance": "c77ffjieqc6h2", "read_instance": "dia700cgv26vs", "same_volume_uuid": true, "created_sqlite_rows": 1, "read_checkpoint_exists": false, "file_and_directory_fsync": true, "volume_sync": true, "both_cleanup_verified": true},
+  "next_qualification_boundary": "Only after exact legitimate guest baseline database and marker are retained and re-read after stop. Do not rerun full qualifier merely to reproduce baseline absence.",
+  "evidence": ["storage-diagnostic-b428a5d404da/guest-0.json", "storage-diagnostic-b428a5d404da/guest-1.json", "storage-diagnostic-b428a5d404da/host-0.json", "storage-diagnostic-b428a5d404da/host-1.json", "storage-inspection-ee13b5ca/storage.json", "storage-inspection-ee13b5ca/host.json"],
+  "last_owned_cleanup": {"verified": true, "stopped_no_instance_epoch": [1791408561.560867, 1791408622.062079], "storage_retained": true, "lifecycle_claim_released": true},
+  "passing_authentication_receipt": false,
+  "push_scans": "Not run; prepared guest-only runner. Do not push before successful scans.",
+  "pr_opened": false,
+  "production_touched": false
+}

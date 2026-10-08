@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "revision": "3",
+  "policyPopulation": 1,
+  "policies": [
+    {
+      "$typeName": "namespace.cloud.iam.v1beta.TenantPolicy",
+      "id": "",
+      "policy": "namespace.cloud.compute.v1beta.UsagePolicy",
+      "value": "{}"
+    }
+  ],
+  "scope": "existing authenticated tenant policies; no write",
+  "authorization": {
+    "quote": "Yes—raise only the per-user limit to 2, preserve the old guest, and retry (Recommended)",
+    "turn": "2026-10-07 18:24 EDT namespace_per_user_limit answer"
+  },
+  "at": "2026-10-07T22:28:45.525Z"
+}

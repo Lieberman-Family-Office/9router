@@ -44,8 +44,8 @@ export function attachResponsesWebSocket(server, opts = {}) {
     return true;
   };
 
-  // Prepend without removing other listeners (h2c emit path + tests keep working).
-  server.on("upgrade", (req, socket, head) => {
+  // The custom server dispatches owned upgrades before Next's competing app-route listener.
+  if (opts.registerUpgradeListener !== false) server.on("upgrade", (req, socket, head) => {
     onUpgrade(req, socket, head);
   });
 

@@ -1,0 +1,21 @@
+{
+  "scope": "Exactly one approved fresh private persistent macOS ARM64 300 GiB guest; no guest was created or activated",
+  "authorization_quote": "Create one new isolated 300 GB macOS guest, preserve the old guest, and prove SQLite persistence before another independent sign-in (Recommended)",
+  "authorization_turn": "2026-10-07 18:11 EDT guest_persistence_path answer",
+  "attempted_name": "9router-task5-fresh300-d6ba92d8-20261007",
+  "creation_mode": {"activate": false, "accessMode": "USER_PRIVATE", "volumeSizeGb": 300, "ephemeral": false, "versionControl_repositories": [], "site": "iad", "shape": {"virtualCpu": 6, "memoryMegabytes": 14336, "architecture": "arm64", "os": "macos", "selectors": {"macos.version": "26.x", "macos.purpose": "githubrunner", "image.with": "xcode-latest"}}, "old_snapshot_or_database_copied": false, "integrations_requested": false},
+  "tool_reason_verbatim": "[resource_exhausted] failed to create devbox: per-user devbox limit reached (1) (rid=o0s0amujpj9onc1hmn9rr4f9fo)",
+  "effective_limits": {"maximumCount": 3, "maximumCountPerUser": 1, "method": "Installed SDK1.4.0 generated DevBoxService.GetUsage read-only RPC"},
+  "post_attempt_name_discovery": {"fresh_name_absent": true, "method": "DevBoxService.Fetch returns NOT_FOUND for exact unique name after attempts", "partial_allocation": false},
+  "old_guest": {"id": "2tc0b2eg4mveo", "name": "9router-qualify-recovery", "active_instance_id": null, "preserved": true, "resized_restored_deleted": false},
+  "fresh_id": null,
+  "new_compute_activated": false,
+  "persistence_proof": "NOT RUN; allocation refused",
+  "sign_in_url": null,
+  "quota_changed": false,
+  "decision_needed": "Raise effective per-user non-expired devbox limit from 1 to at least 2, preserving existing workspace limit and old guest, then retry the same unique stopped creation. Requires current explicit quota-policy approval or operator action.",
+  "falsifier": "A live GetUsage showing maximumCountPerUser>=2, or a vendor-supported per-user limit exception that permits this exact preserved-old-plus-one-new request.",
+  "vendor_doc": "https://namespace.so/docs/security/permissions (tenant/policies covers workspace quota configuration); Context7 public docs do not provide a precise per-user devbox-limit setting procedure.",
+  "production_touched": false,
+  "external_support_posted": false
+}

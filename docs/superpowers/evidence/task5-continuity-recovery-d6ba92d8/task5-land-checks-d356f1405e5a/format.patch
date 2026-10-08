@@ -1,0 +1,89 @@
+diff --git a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-push-checks.py b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-push-checks.py
+index e7eaab3e..f826e152 100644
+--- a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-push-checks.py
++++ b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-push-checks.py
+@@ -3,7 +3,6 @@
+ 
+ import hashlib
+ import importlib.util
+-import json
+ import os
+ import subprocess
+ import sys
+@@ -164,10 +163,10 @@ try:
+             SONARQUBE_CLI_ORG="lieberman-family-office",
+         )
+         for offset in range(0, len(changed), 10):
+-            population = changed[offset:offset + 10]
++            population = changed[offset : offset + 10]
+             check(
+-                'sonar-secrets-' + str(offset),
+-                [str(scanner), 'analyze', 'secrets', *population],
++                "sonar-secrets-" + str(offset),
++                [str(scanner), "analyze", "secrets", *population],
+                 env,
+                 len(population),
+                 600,
+diff --git a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-reproduce.py b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-reproduce.py
+index bc45ec1a..fbf1b3bb 100644
+--- a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-reproduce.py
++++ b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-reproduce.py
+@@ -1,7 +1,6 @@
+ #!/usr/bin/env python3
+ """Run the current packaged fixture inside the approved Namespace guest only."""
+ 
+-import hashlib
+ import importlib.util
+ import json
+ import os
+diff --git a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin.py b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin.py
+index cd122b62..00c0548e 100644
+--- a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin.py
++++ b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin.py
+@@ -4,7 +4,6 @@
+ import importlib.util
+ import json
+ import os
+-import subprocess
+ import sys
+ from pathlib import Path
+ 
+diff --git a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-landing-checks.py b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-landing-checks.py
+index b88bd7cd..9bf03e1a 100644
+--- a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-landing-checks.py
++++ b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-landing-checks.py
+@@ -243,7 +243,9 @@ try:
+     )
+     q.new_json(local / "host.json", record)
+     print(json.dumps({"evidence": str(local), "record": record}), flush=True)
+-    if record.get('guest_result') != 'pass' or not record.get('cleanup', {}).get('verified'):
++    if record.get("guest_result") != "pass" or not record.get("cleanup", {}).get(
++        "verified"
++    ):
+         raise SystemExit(1)
+ finally:
+     secret.unlink(missing_ok=True)
+diff --git a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-reproduce.py b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-reproduce.py
+index 30725265..4653a90e 100644
+--- a/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-reproduce.py
++++ b/docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-reproduce.py
+@@ -5,7 +5,6 @@ import fcntl
+ import importlib.util
+ import json
+ import os
+-import shutil
+ import subprocess
+ import tempfile
+ import time
+diff --git a/tests/mac/test_9router_vm_qualify.py b/tests/mac/test_9router_vm_qualify.py
+index e1cc1f05..7bec42db 100644
+--- a/tests/mac/test_9router_vm_qualify.py
++++ b/tests/mac/test_9router_vm_qualify.py
+@@ -1394,7 +1394,6 @@ class ContinuousSigninTest(unittest.TestCase):
+ class PrivateDownloadTest(unittest.TestCase):
+     def test_actual_download_dispatch_privatizes_0644_before_validation(self):
+         import hashlib
+-        import os
+ 
+         data = b'{"run_id":"current","namespace":{"instance_id":"current"}}'
+         with TemporaryDirectory() as directory:

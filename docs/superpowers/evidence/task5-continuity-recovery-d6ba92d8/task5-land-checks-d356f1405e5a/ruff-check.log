@@ -1,0 +1,661 @@
+E501 Line too long (90 > 88)
+ --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/create-fresh-guest.py:2:89
+  |
+1 | #!/usr/bin/env python3
+2 | """Create exactly one approved stopped guest. Preserve any returned storage on failure."""
+  |                                                                                         ^^
+3 |
+4 | import fcntl
+  |
+
+E501 Line too long (165 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/create-fresh-guest.py:54:89
+   |
+52 | …
+53 | …
+54 | …, preserve the old guest, and prove SQLite persistence before another independent sign-in (Recommended)",
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+55 | … answer",
+56 | …
+   |
+
+E501 Line too long (98 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/create-fresh-guest.py:101:89
+    |
+ 99 |     record.update(created=True, verified=box)
+100 | finally:
+101 |     # Creation was explicitly stopped. If the response is uncertain, inspect only the unique name.
+    |                                                                                         ^^^^^^^^^^
+102 |     if box is None:
+103 |         observed = subprocess.run(
+    |
+
+F401 [*] `json` imported but unused
+ --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-push-checks.py:6:8
+  |
+4 | import hashlib
+5 | import importlib.util
+6 | import json
+  |        ^^^^
+7 | import os
+8 | import subprocess
+  |
+help: Remove unused import: `json`
+
+E501 Line too long (154 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-push-checks.py:121:89
+    |
+119 | …
+120 | …
+121 | …v[1]); import sonar_pr_issues as s; raise SystemExit(s.self_check(sys.argv[3:], base=sys.argv[2]))"
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+122 | …athsep + env["PATH"]}
+123 | …
+    |
+
+F401 [*] `hashlib` imported but unused
+ --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-reproduce.py:4:8
+  |
+2 | """Run the current packaged fixture inside the approved Namespace guest only."""
+3 |
+4 | import hashlib
+  |        ^^^^^^^
+5 | import importlib.util
+6 | import json
+  |
+help: Remove unused import: `hashlib`
+
+E501 Line too long (90 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-reproduce.py:26:89
+   |
+24 | results = []
+25 | record = {
+26 |     "scope": "focused current-source packaged continuity reproduction, not qualification",
+   |                                                                                         ^^
+27 |     "source_commit": binding["source_commit"],
+28 |     "namespace": binding["namespace"],
+   |
+
+E501 Line too long (138 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-reproduce.py:106:89
+    |
+104 | …ot='
+105 | …
+106 | …ment:"node",globals:true},resolve:{alias:[{find:"@",replacement:path.join(root,"src")}]}};'
+    |                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+107 | …
+108 | …
+    |
+
+E501 Line too long (91 > 88)
+ --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin-complete.py:2:89
+  |
+1 | #!/usr/bin/env python3
+2 | """Complete the retained guest enrollment after actual independent sign-in confirmation."""
+  |                                                                                         ^^^
+3 |
+4 | import importlib.util
+  |
+
+E501 Line too long (154 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin-complete.py:37:89
+   |
+35 | …
+36 | …
+37 | …ections WHERE isActive=1 AND authType='oauth' AND provider IN ('codex','claude') GROUP BY provider"
+   |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+38 | …
+39 | …
+   |
+
+E501 Line too long (94 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin-complete.py:74:89
+   |
+72 |         "runtime_sha256": binding["runtime_sha256"],
+73 |         "enrollment": "complete",
+74 |         "readiness_probe": "mandatory controller private and public authenticated completion",
+   |                                                                                         ^^^^^^
+75 |         "production_touched": False,
+76 |     },
+   |
+
+E501 Line too long (90 > 88)
+ --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin.py:2:89
+  |
+1 | #!/usr/bin/env python3
+2 | """Guest-only baseline preparation. Do not perform provider probes before confirmation."""
+  |                                                                                         ^^
+3 |
+4 | import importlib.util
+  |
+
+F401 [*] `subprocess` imported but unused
+ --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/guest-signin.py:7:8
+  |
+5 | import json
+6 | import os
+7 | import subprocess
+  |        ^^^^^^^^^^
+8 | import sys
+9 | from pathlib import Path
+  |
+help: Remove unused import: `subprocess`
+
+E501 Line too long (882 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-landing-checks.py:120:89
+    |
+118 | …
+119 | …
+120 | …); b=json.loads((r/'input.json').read_text()); assert hashlib.sha256((r/'source.bundle').read_bytes()).hexdigest()==b['bundle_sha256']; assert hashlib.sha256((r/'source.patch').read_bytes()).hexdigest()==b['source_patch_sha256']; assert hashlib.sha256((r/'guest-push-checks.py').read_bytes()).hexdigest()==b['guest_program_sha256']; subprocess.run(['git','clone','--no-checkout',str(r/'source.bundle'),str(r/'source')],check=True); subprocess.run(['git','checkout','--detach',b['source_commit']],cwd=r/'source',check=True); subprocess.run(['git','apply',str(r/'source.patch')],cwd=r/'source',check=True) if (r/'source.patch').stat().st_size else None; assert all(hashlib.sha256((r/'source'/p).read_bytes()).hexdigest()==h for p,h in b['source_files'].items()); (r/'scanner-credential').chmod(0o600)"
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+121 | …
+122 | …
+    |
+
+E501 Line too long (93 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-landing-checks.py:246:89
+    |
+244 |     q.new_json(local / "host.json", record)
+245 |     print(json.dumps({"evidence": str(local), "record": record}), flush=True)
+246 |     if record.get('guest_result') != 'pass' or not record.get('cleanup', {}).get('verified'):
+    |                                                                                         ^^^^^
+247 |         raise SystemExit(1)
+248 | finally:
+    |
+
+E501 Line too long (235 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-persistence-proof.py:47:89
+   |
+45 | …
+46 | …
+47 | …nteger primary key, purpose text)');c.execute("insert into checkpoint values(1,'noncredential durability fixture')");c.commit();c.close();p.chmod(0o600)
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+48 | …
+49 | …l durability fixture'},f);f.flush();os.fsync(f.fileno())
+   |
+
+E501 Line too long (139 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-persistence-proof.py:49:89
+   |
+47 | …xecute('create table checkpoint(id integer primary key, purpose text)');c.execute("insert into checkpoint values(1,'noncredential dur…
+48 | …
+49 | …:sys.argv[1],'purpose':'noncredential durability fixture'},f);f.flush();os.fsync(f.fileno())
+   |                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+50 | …
+51 | …ent]:
+   |
+
+E501 Line too long (132 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-persistence-proof.py:55:89
+   |
+53 |  subprocess.run(['/bin/sync'],check=True)
+54 | paths=[root,root/'binding.json',root/'home/db/data.sqlite']
+55 | result={'phase':phase,'paths':[{'path':str(p),'exists':p.exists(),'device':p.stat().st_dev if p.exists() else None} for p in paths]}
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+56 | if all(p.exists() for p in paths):
+57 |  result['hashes']={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths[1:]}
+   |
+
+E501 Line too long (106 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-persistence-proof.py:57:89
+   |
+55 | result={'phase':phase,'paths':[{'path':str(p),'exists':p.exists(),'device':p.stat().st_dev if p.exists() else None} for p in paths]}
+56 | if all(p.exists() for p in paths):
+57 |  result['hashes']={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths[1:]}
+   |                                                                                         ^^^^^^^^^^^^^^^^^^
+58 |  c=sqlite3.connect('file:'+str(paths[2])+'?mode=ro',uri=True);result['rows']=c.execute('select count(*) from checkpoint').fetchone()[0…
+59 | v=plistlib.loads(subprocess.run(['/usr/sbin/diskutil','info','-plist','/Volumes/devbox'],capture_output=True,check=True).stdout);resul…
+   |
+
+E501 Line too long (145 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-persistence-proof.py:58:89
+   |
+56 | …
+57 | …b.sha256(p.read_bytes()).hexdigest() for p in paths[1:]}
+58 | …',uri=True);result['rows']=c.execute('select count(*) from checkpoint').fetchone()[0];c.close()
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+59 | …il','info','-plist','/Volumes/devbox'],capture_output=True,check=True).stdout);result['volume_uuid']=v.get('VolumeUUID')
+60 | …
+   |
+
+E501 Line too long (107 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-persistence-proof.py:125:89
+    |
+123 |             "success": success,
+124 |             "run_id": run_id,
+125 |             "scope": "noncredential nested SQLite and marker retained after exact guest stop/reactivation",
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^
+126 |             "production_touched": False,
+127 |         },
+    |
+
+E501 Line too long (92 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-persistence-proof.py:134:89
+    |
+132 |     if not success:
+133 |         raise SystemExit(
+134 |             "RED: synced nested guest checkpoint missing or changed after stop/reactivation"
+    |                                                                                         ^^^^
+135 |         )
+136 | finally:
+    |
+
+E501 Line too long (92 > 88)
+ --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-reproduce.py:2:89
+  |
+1 | #!/usr/bin/env python3
+2 | """Host orchestration only. All dependency, build and fixture processes run in Namespace."""
+  |                                                                                         ^^^^
+3 |
+4 | import fcntl
+  |
+
+F401 [*] `shutil` imported but unused
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-reproduce.py:8:8
+   |
+ 6 | import json
+ 7 | import os
+ 8 | import shutil
+   |        ^^^^^^
+ 9 | import subprocess
+10 | import tempfile
+   |
+help: Remove unused import: `shutil`
+
+E501 Line too long (561 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-reproduce.py:127:89
+    |
+125 | …
+126 | …
+127 | …); b=json.loads((r/'input.json').read_text()); assert hashlib.sha256((r/'source.bundle').read_bytes()).hexdigest()==b['bundle_sha256']; assert hashlib.sha256((r/'guest-reproduce.py').read_bytes()).hexdigest()==b['guest_program_sha256']; subprocess.run(['git','clone','--no-checkout',str(r/'source.bundle'),str(r/'source')],check=True); subprocess.run(['git','checkout','--detach',b['source_commit']],cwd=r/'source',check=True); (r/'source/qualification.patch').write_bytes(b'')"
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+128 | …
+129 | …
+    |
+
+E501 Line too long (144 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-root-workspace-proof.py:35:89
+   |
+33 | …
+34 | …parents=True,exist_ok=True)
+35 | …redential root/workspace durability check','id':sys.argv[1]},f);f.flush();os.fsync(f.fileno())
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+36 | …
+37 | …
+   |
+
+E501 Line too long (131 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-root-workspace-proof.py:41:89
+   |
+39 | …
+40 | …
+41 | …shes':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}});time.sleep(2)
+   |                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+42 | …/sbin/diskutil','info','-plist',str(root)],capture_output=True,check=True).stdout)
+43 | …kspace_resolved':str(workspace),'volume_uuid':volume.get('VolumeUUID'),'device':volume.get('DeviceIdentifier'),'paths':[{'path':str(p…
+   |
+
+E501 Line too long (471 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-root-workspace-proof.py:43:89
+   |
+41 | …s()).hexdigest() for p in paths}});time.sleep(2)
+42 | …)],capture_output=True,check=True).stdout)
+43 | …uuid':volume.get('VolumeUUID'),'device':volume.get('DeviceIdentifier'),'paths':[{'path':str(p),'exists':p.exists(),'sha256':hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None,'device':p.stat().st_dev if p.exists() else None} for p in paths],'within_process':observations,'hostname':subprocess.run(['/bin/hostname'],capture_output=True,text=True,check=True).stdout.strip()}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+44 | …
+45 | …
+   |
+
+E501 Line too long (106 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-root-workspace-proof.py:46:89
+   |
+44 | if phase=='create':
+45 |  services=[]
+46 |  for directory in ['/Library/LaunchDaemons','/Library/LaunchAgents','/Users/runner/Library/LaunchAgents']:
+   |                                                                                         ^^^^^^^^^^^^^^^^^^
+47 |   d=pathlib.Path(directory)
+48 |   if not d.exists():continue
+   |
+
+E501 Line too long (391 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-root-workspace-proof.py:51:89
+   |
+49 | …
+50 | …ue
+51 | …nd({'file':str(p),'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'label':v.get('Label'),'program':v.get('Program'),'argument_executable':args[0] if args else None,'arguments_count':len(args),'run_at_load':v.get('RunAtLoad'),'keep_alive':v.get('KeepAlive'),'working_directory':v.get('WorkingDirectory')})
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+52 | …
+53 | …
+   |
+
+E501 Line too long (96 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-root-workspace-proof.py:57:89
+   |
+55 |  for item in services:
+56 |   plist=pathlib.Path(item['file']);v=plistlib.loads(plist.read_bytes());args=v.get('ProgramArguments',[])
+57 |   if len(args)>1 and args[0] in ['/bin/bash','/bin/sh']:candidates.append(pathlib.Path(args[1]))
+   |                                                                                         ^^^^^^^^
+58 |  for p in candidates:
+59 |   if not p.is_file():continue
+   |
+
+E501 Line too long (398 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-root-workspace-proof.py:60:89
+   |
+58 | …
+59 | …
+60 | …e in enumerate(text.splitlines()) if any(word in line.lower() for word in ['rm ','delete','unlink','rmtree','rsync','restore','snapshot','mount','apfs','sync','9router','workspace','devbox']) and not any(word in line.lower() for word in ['token','password','secret','credential','authorization','cookie','bearer'])]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+61 | …,'line_count':len(text.splitlines()),'scoped_relevant_lines':safe})
+62 | …
+   |
+
+E501 Line too long (90 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-root-workspace-proof.py:132:89
+    |
+130 |     return {
+131 |         "guest_result": "unrun",
+132 |         "scope": "root/workspace checkpoint persistence and scoped startup metadata only",
+    |                                                                                         ^^
+133 |         "namespace": active,
+134 |     }
+    |
+
+E501 Line too long (116 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-signin.py:25:89
+   |
+23 | sdk = Path("/tmp").resolve() / "namespace-runtime-check-ef67fdaa"
+24 | cli = str(Path.home() / ".local/bin/devbox")
+25 | quote = "Yes—provision the guest baseline; I will complete independent provider sign-in when prompted (Recommended)"
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+26 | run_id = "task5-signin-" + uuid.uuid4().hex[:16]
+27 | remote = q.GUEST_ROOT / run_id
+   |
+
+E501 Line too long (112 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-signin.py:91:89
+   |
+89 |             "quote": quote,
+90 |             "turn": "2026-10-07 16:33 EDT chat_selection task5_guest_authentication",
+91 |             "activation_quote": "Namespace activation needs your explicit approval - EXPLICIT APPROVAL GRANTED",
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^
+92 |             "activation_turn": "2026-10-07 15:09 EDT",
+93 |         },
+   |
+
+E501 Line too long (673 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-signin.py:121:89
+    |
+119 | …
+120 | …
+121 | …); b=json.loads((r/'input.json').read_text()); assert hashlib.sha256((r/'source.bundle').read_bytes()).hexdigest()==b['bundle_sha256']; subprocess.run(['git','clone','--no-checkout',str(r/'source.bundle'),str(r/'source')],check=True); subprocess.run(['git','checkout','--detach',b['source_commit']],cwd=r/'source',check=True); p=r/'qualification.patch'; assert hashlib.sha256(p.read_bytes()).hexdigest()==b['source_patch_sha256']; p.stat().st_size and subprocess.run(['git','apply','--binary',str(p)],cwd=r/'source',check=True); (r/'source/qualification.patch').write_bytes(p.read_bytes())"
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+122 | …
+123 | …
+    |
+
+E501 Line too long (122 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-signin.py:255:89
+    |
+253 |         "completion_file": str(local / "signin-confirmed.json"),
+254 |         "sign_in_deadline_epoch": time.time() + 1200,
+255 |         "dashboard_password_delivery": "Run the secret-to-clipboard command locally; no password enters chat or evidence",
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+256 |     }
+257 |     q.new_json(local / "signin-ready.json", ready)
+    |
+
+E501 Line too long (97 > 88)
+   --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-signin.py:281:89
+    |
+279 |             return {
+280 |                 "guest_result": "unrun",
+281 |                 "checkpoint": "manual confirmation received; baseline completion still required",
+    |                                                                                         ^^^^^^^^^
+282 |                 "evidence": str(local),
+283 |             }
+    |
+
+E501 Line too long (387 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py:53:89
+   |
+51 | …
+52 | …56e459b/home';b=r/'baseline.json';db=h/'.9router/db/data.sqlite'
+53 | …xists':h.exists(),'database_exists':db.exists(),'qualification_directories':sorted(p.name for p in (r/'qualification').iterdir()) if (r/'qualification').exists() else [],'mounts':subprocess.run(['/sbin/mount'],capture_output=True,text=True,check=True).stdout,'root_listing':[p.name for p in r.iterdir()]}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+54 | …box'],capture_output=True,check=True).stdout);o['volume']={k:v.get(k) for k in ['DeviceIdentifier','VolumeUUID','APFSVolumeUUID','APFSContainerReference','TotalSize','VolumeFreeSpace','MountPoint','VolumeName']}
+55 | …str(p.resolve())} for p in [pathlib.Path('/Volumes/devbox'),pathlib.Path('/Users/runner/workspaces')]]
+   |
+
+E501 Line too long (294 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py:54:89
+   |
+52 | …56e459b/home';b=r/'baseline.json';db=h/'.9router/db/data.sqlite'
+53 | …xists':h.exists(),'database_exists':db.exists(),'qualification_directories':sorted(p.name for p in (r/'qualification').iterdir()) if (r/'qualification').exists() else [],'mounts':subprocess.run(['/sbin/mount'],captur…
+54 | …box'],capture_output=True,check=True).stdout);o['volume']={k:v.get(k) for k in ['DeviceIdentifier','VolumeUUID','APFSVolumeUUID','APFSContainerReference','TotalSize','VolumeFreeSpace','MountPoint','VolumeName']}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+55 | …str(p.resolve())} for p in [pathlib.Path('/Volumes/devbox'),pathlib.Path('/Users/runner/workspaces')]]
+56 | …
+   |
+
+E501 Line too long (185 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py:55:89
+   |
+53 | …signin_home_exists':h.exists(),'database_exists':db.exists(),'qualification_directories':sorted(p.name for p in (r/'qualification').i…
+54 | …'/Volumes/devbox'],capture_output=True,check=True).stdout);o['volume']={k:v.get(k) for k in ['DeviceIdentifier','VolumeUUID','APFSVol…
+55 | …),'resolved':str(p.resolve())} for p in [pathlib.Path('/Volumes/devbox'),pathlib.Path('/Users/runner/workspaces')]]
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+56 | …
+57 | …er/workspaces')]:
+   |
+
+E501 Line too long (110 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py:59:89
+   |
+57 | for base in [pathlib.Path('/Volumes/devbox'),pathlib.Path('/Users/runner/workspaces')]:
+58 |  if not base.exists():continue
+59 |  for directory,dirs,files in os.walk(base,followlinks=False,onerror=lambda e:errors.append(type(e).__name__)):
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^
+60 |   dirs[:]=[x for x in dirs if x not in ['node_modules','.git','Library','Caches','.next-cli-build','app','releases','python-tools','np…
+61 |   walked+=len(files)
+   |
+
+E501 Line too long (144 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py:60:89
+   |
+58 | …
+59 | …nks=False,onerror=lambda e:errors.append(type(e).__name__)):
+60 | …les','.git','Library','Caches','.next-cli-build','app','releases','python-tools','npm-cache']]
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+61 | …
+62 | …or 'baseline.json' in files:
+   |
+
+E501 Line too long (90 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py:66:89
+   |
+64 |   if 'data.sqlite' in files and '/9router/' in directory:
+65 |    p=pathlib.Path(directory)/'data.sqlite'
+66 |    c=sqlite3.connect('file:'+str(p)+'?mode=ro',uri=True);c.execute('pragma query_only=on')
+   |                                                                                         ^^
+67 |    try: subjects.append({'database':str(p),'active_provider_counts':[{'provider':x[0],'authType':x[1],'count':x[2]} for x in c.execute…
+68 |    except sqlite3.Error as e:subjects.append({'database':str(p),'error':type(e).__name__})
+   |
+
+E501 Line too long (374 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py:67:89
+   |
+65 | …
+66 | …ly=on')
+67 | …0],'authType':x[1],'count':x[2]} for x in c.execute("select provider,authType,count(*) from providerConnections where isActive=1 and provider in ('codex','claude') group by provider,authType")],'active_api_key_count':c.execute('select count(*) from apiKeys where isActive=1').fetchone()[0]})
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+68 | …ame__})
+69 | …
+   |
+
+E501 Line too long (90 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py:68:89
+   |
+66 |    c=sqlite3.connect('file:'+str(p)+'?mode=ro',uri=True);c.execute('pragma query_only=on')
+67 |    try: subjects.append({'database':str(p),'active_provider_counts':[{'provider':x[0],'authType':x[1],'count':x[2]} for x in c.execute…
+68 |    except sqlite3.Error as e:subjects.append({'database':str(p),'error':type(e).__name__})
+   |                                                                                         ^^
+69 |    finally:c.close()
+70 | o['scoped_discovery']={'files_observed':walked,'errors':errors,'subjects':subjects,'excluded':['node_modules','.git','Library','Caches…
+   |
+
+E501 Line too long (147 > 88)
+  --> docs/superpowers/evidence/task5-continuity-recovery-d6ba92d8/host-storage-inspect.py:71:89
+   |
+69 | …
+70 | …ors':errors,'subjects':subjects,'excluded':['node_modules','.git','Library','Caches','.next-cli-build','app','releases','python-tools…
+71 | …';o['retained_marker_sha256']=hashlib.sha256(m.read_bytes()).hexdigest() if m.exists() else None
+   |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+72 | …
+73 | …", "python3", "-c", program))
+   |
+
+E501 Line too long (120 > 88)
+   --> scripts/mac/9router_test_credentials.py:163:89
+    |
+161 |                 dict(zip(("type", "name", "tbl_name", "sql"), row))
+162 |                 for row in app.execute(
+163 |                     "SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name"
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+164 |                 )
+165 |             ]
+    |
+
+E501 Line too long (98 > 88)
+   --> scripts/mac/9router_test_credentials.py:172:89
+    |
+170 |             require(layout == schema["layout"], "Checkpoint SQLite layout differs")
+171 |         rows = app.execute(
+172 |             "SELECT id,provider,authType,isActive,data FROM providerConnections ORDER BY provider"
+    |                                                                                         ^^^^^^^^^^
+173 |         ).fetchall()
+174 |         require(
+    |
+
+E501 Line too long (109 > 88)
+   --> scripts/mac/9router_vm_qualify.py:667:89
+    |
+665 |         "review-counterfactual",
+666 |         ["node", "tests/unit/managed-review-counterfactual.check.mjs"],
+667 |         "RED: baseline mirror fails all eight named review mechanisms while pending/uncertain safety passes",
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^
+668 |         360,
+669 |     ),
+    |
+
+E501 Line too long (158 > 88)
+    --> scripts/mac/9router_vm_qualify.py:2106:89
+     |
+2104 | …
+2105 | …
+2106 | …nections WHERE isActive=1 AND authType='oauth' AND provider IN ('codex','claude') GROUP BY provider"
+     |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2107 | …
+2108 | …
+     |
+
+E501 Line too long (122 > 88)
+    --> scripts/mac/9router_vm_qualify.py:2144:89
+     |
+2142 |     require(
+2143 |         BASELINE.is_file() and not BASELINE.is_symlink(),
+2144 |         "BLOCKED: existing guest-owned persistent baseline is absent; manual provider login needs separate authorization",
+     |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2145 |     )
+2146 |     baseline = private_json(BASELINE)
+     |
+
+E501 Line too long (141 > 88)
+    --> scripts/mac/9router_vm_qualify.py:2910:89
+     |
+2908 | …
+2909 | …
+2910 | …k_usage('/Volumes/devbox'); print(json.dumps({'total_bytes':d.total,'free_bytes':d.free}))",
+     |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2911 | …
+2912 | …
+     |
+
+E501 Line too long (209 > 88)
+  --> tests/mac/9router_test_credentials.check.py:36:89
+   |
+34 | …
+35 | …
+36 | …tive INTEGER,data TEXT); CREATE TABLE apiKeys(id TEXT,key TEXT,isActive INTEGER); CREATE TABLE settings(id INTEGER,data TEXT);"
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+37 | …
+38 | …
+   |
+
+E501 Line too long (269 > 88)
+  --> tests/mac/9router_test_credentials.check.py:65:89
+   |
+63 | …
+64 | …
+65 | …h_meta VALUES(1,1); CREATE TABLE refresh_sequence(id INTEGER,value INTEGER); CREATE TABLE refresh_flights(key TEXT,owner TEXT,state TEXT,result TEXT,generation INTEGER,started_at TEXT);"
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+66 | …
+67 | …
+   |
+
+E501 Line too long (285 > 88)
+  --> tests/mac/9router_test_credentials.check.py:88:89
+   |
+86 | …
+87 | …
+88 | …wt"\nexport API_KEY_SECRET="fictional-api"\nexport MACHINE_ID_SALT="fictional-salt"\nexport INITIAL_PASSWORD="fictional-password"\nexport NODE_ENV="production"\nexport REQUEST_DETAILS_MODE="disabled"\n'
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+89 | …
+90 | …
+   |
+
+E501 Line too long (156 > 88)
+   --> tests/mac/9router_test_credentials.check.py:245:89
+    |
+243 | …
+244 | …
+245 | … second owner, schema/stale/uncertain state and failed export refuse; previous checkpoint preserved"
+    |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+246 | …
+    |
+
+F401 [*] `os` imported but unused
+    --> tests/mac/test_9router_vm_qualify.py:1397:16
+     |
+1395 |     def test_actual_download_dispatch_privatizes_0644_before_validation(self):
+1396 |         import hashlib
+1397 |         import os
+     |                ^^
+1398 |
+1399 |         data = b'{"run_id":"current","namespace":{"instance_id":"current"}}'
+     |
+help: Remove unused import: `os`
+
+E501 Line too long (92 > 88)
+    --> tests/mac/test_9router_vm_qualify.py:1471:89
+     |
+1470 | class NativeReviewIdentityTest(unittest.TestCase):
+1471 |     def test_existing_review_counterfactual_terminal_is_accepted_but_wrong_terminal_refuses(
+     |                                                                                         ^^^^
+1472 |         self,
+1473 |     ):
+     |
+
+E501 Line too long (151 > 88)
+    --> tests/mac/test_9router_vm_qualify.py:1477:89
+     |
+1475 | … == "review-counterfactual"
+1476 | …
+1477 | …D: baseline mirror fails all eight named review mechanisms while pending/uncertain safety passes"
+     |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+1478 | …PASS: unrelated check", False)):
+1479 | …
+     |
+
+Found 60 errors.
+[*] 5 fixable with the `--fix` option.

@@ -32,6 +32,7 @@ process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
 
 let backgroundRefreshStarted = false;
 let responsesWsStarted = false;
+let responsesWsUpgrade;
 let completeResponsesWsReady;
 if (managed) {
   managed.setResponsesWsReady(new Promise((resolve, reject) => { completeResponsesWsReady = { resolve, reject }; }));
@@ -103,7 +104,8 @@ function startResponsesWsFromCustomServer(server) {
         }
         const addr = server.address();
         const localPort = addr && typeof addr === "object" ? addr.port : Number(process.env.PORT) || 20128;
-        await attach(server, { localPort });
+        const attachment = await attach(server, { localPort, registerUpgradeListener: false });
+        responsesWsUpgrade = attachment?.onUpgrade;
         console.log(`[ResponsesWS] mid-turn steering enabled on /v1/responses (port ${localPort})`);
         return;
       } catch (e) {
@@ -207,6 +209,8 @@ http.createServer = (...args) => {
       const done = managed.beginWork("upgrades");
       socket.once("close", done);
     }
+    // Dispatch accepted Responses upgrades once. Next's app-route listener otherwise ends the same socket.
+    if (event === "upgrade" && responsesWsUpgrade?.(req, socket, head)) return true;
     if (event !== "upgrade" || String(req.headers.upgrade || "").toLowerCase() !== "h2c") {
       return origEmit.call(this, event, ...eventArgs);
     }

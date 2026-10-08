@@ -1284,5 +1284,281 @@ class ConcurrentApiTest(unittest.TestCase):
         self.exercise(running=False)
 
 
+class ContinuousSigninTest(unittest.TestCase):
+    def test_run_dispatch_accepts_signin_without_a_second_lifecycle_owner(self):
+        with patch.object(qualify, "cmd_run", return_value=0) as callback:
+            result = qualify.main(
+                [
+                    "run",
+                    "candidate.tgz",
+                    "--interactive-signin",
+                    "--signin-timeout",
+                    "1200",
+                    "--confirmation-file",
+                    "confirmation.json",
+                    "--evidence",
+                    "new-evidence",
+                ]
+            )
+        self.assertEqual(result, 0)
+        self.assertTrue(callback.call_args.args[0].interactive_signin)
+        self.assertEqual(callback.call_args.args[0].signin_timeout, 1200)
+
+    def test_guest_dispatch_selects_same_instance_live_scope_without_restore(self):
+        args = unittest.mock.Mock(
+            interactive_signin=True,
+            credential_checkpoint=False,
+            tgz="candidate.tgz",
+            signin_timeout=1200,
+        )
+        binding = {
+            "namespace": {"devbox_id": "fixture", "instance_id": "same-instance"}
+        }
+        scope = {"home": "fixture-home", "packages": {"digest": {"release": "release"}}}
+        with (
+            patch.object(
+                qualify,
+                "interactive_baseline",
+                return_value=(Path("scope.json"), scope),
+            ) as signin,
+            patch.object(qualify, "controller_call") as controller,
+        ):
+            result = qualify.live_scope_for_run(args, binding, Path("guest-run"))
+        self.assertEqual(result, (Path("scope.json"), scope))
+        signin.assert_called_once_with(
+            Path("candidate.tgz"), binding, Path("guest-run"), 1200
+        )
+        controller.assert_not_called()
+
+    def test_recently_closed_private_port_waits_but_loaded_listener_refuses(self):
+        import errno
+
+        with (
+            patch.object(qualify.socket, "socket") as socket,
+            patch.object(
+                qualify.subprocess,
+                "run",
+                return_value=unittest.mock.Mock(returncode=1, stdout="", stderr=""),
+            ),
+            patch.object(qualify.time, "sleep"),
+        ):
+            socket.return_value.__enter__.return_value.bind.side_effect = [
+                OSError(errno.EADDRINUSE, "recent connection"),
+                None,
+            ]
+            qualify.wait_signin_port(21128, 120)
+            self.assertEqual(
+                socket.return_value.__enter__.return_value.bind.call_count, 2
+            )
+        with (
+            patch.object(qualify.socket, "socket") as socket,
+            patch.object(
+                qualify.subprocess,
+                "run",
+                return_value=unittest.mock.Mock(
+                    returncode=0, stdout="listener", stderr=""
+                ),
+            ),
+            patch.object(qualify.time, "sleep") as sleep,
+        ):
+            socket.return_value.__enter__.return_value.bind.side_effect = OSError(
+                errno.EADDRINUSE, "occupied"
+            )
+            with self.assertRaisesRegex(ValueError, "occupied listener"):
+                qualify.wait_signin_port(21128, 120)
+            sleep.assert_not_called()
+
+    def test_confirmation_binds_run_and_instance_and_refuses_nonconfirmation(self):
+        binding = {
+            "run_id": "current",
+            "namespace": {"devbox_id": "box", "instance_id": "instance"},
+        }
+        good = {
+            "run_id": "current",
+            "namespace": binding["namespace"],
+            "operator_quote": "Signed in independently",
+            "operator_turn": "current actual turn",
+        }
+        qualify.validate_signin_confirmation(good, binding)
+        for patch_value in (
+            {"run_id": "other"},
+            {"namespace": {"devbox_id": "box", "instance_id": "old"}},
+            {"operator_quote": ""},
+            {"operator_turn": ""},
+            {"confirmed": False},
+        ):
+            with self.subTest(patch_value=patch_value), self.assertRaises(ValueError):
+                qualify.validate_signin_confirmation({**good, **patch_value}, binding)
+
+
+class PrivateDownloadTest(unittest.TestCase):
+    def test_actual_download_dispatch_privatizes_0644_before_validation(self):
+        import hashlib
+
+        data = b'{"run_id":"current","namespace":{"instance_id":"current"}}'
+        with TemporaryDirectory() as directory:
+            target = Path(directory) / "handoff.json"
+
+            def download(_argv, *, stdout, **_kwargs):
+                target.chmod(0o644)
+                stdout.write(data)
+                return unittest.mock.Mock(returncode=0)
+
+            with patch.object(qualify.subprocess, "run", side_effect=download):
+                qualify.download_private(
+                    "devbox",
+                    {},
+                    "box",
+                    Path("/guest/ready.json"),
+                    target,
+                    hashlib.sha256(data).hexdigest(),
+                )
+            self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(qualify.private_json(target)["run_id"], "current")
+
+    def test_download_replacement_links_wrong_digest_and_preexisting_paths_refuse(self):
+        import hashlib
+        import os
+
+        data = b"private"
+        for mutation in ("symlink", "hardlink", "replace", "wrong-digest"):
+            with self.subTest(mutation=mutation), TemporaryDirectory() as directory:
+                root = Path(directory)
+                target = root / "handoff.json"
+                foreign = root / "foreign"
+                foreign.write_bytes(b"unchanged")
+
+                def download(_argv, *, stdout, **_kwargs):
+                    stdout.write(data)
+                    stdout.flush()
+                    if mutation != "wrong-digest":
+                        target.unlink()
+                        if mutation == "symlink":
+                            target.symlink_to(foreign)
+                        elif mutation == "hardlink":
+                            os.link(foreign, target)
+                        else:
+                            target.write_bytes(data)
+                    return unittest.mock.Mock(returncode=0)
+
+                with (
+                    patch.object(qualify.subprocess, "run", side_effect=download),
+                    self.assertRaises(ValueError),
+                ):
+                    qualify.download_private(
+                        "devbox",
+                        {},
+                        "box",
+                        Path("/guest/ready.json"),
+                        target,
+                        "a" * 64
+                        if mutation == "wrong-digest"
+                        else hashlib.sha256(data).hexdigest(),
+                    )
+                self.assertEqual(foreign.read_bytes(), b"unchanged")
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "occupied.json"
+            path.write_text("preserve")
+            with self.assertRaises(FileExistsError):
+                qualify.download_private(
+                    "devbox", {}, "box", Path("/guest/ready.json"), path, "a" * 64
+                )
+            self.assertEqual(path.read_text(), "preserve")
+
+
+class NativeReviewIdentityTest(unittest.TestCase):
+    def test_review_counterfactual_accepts_exact_terminal_only(
+        self,
+    ):
+        entry = next(
+            item for item in qualify.NATIVE if item[0] == "review-counterfactual"
+        )
+        terminal = (
+            "GREEN: unchanged mirror passes; RED: bas"
+            "eline mirror fails all eight named revie"
+            "w mechanisms while pending/uncertain saf"
+            "ety passes"
+        )
+        for emitted, accepted in ((terminal, True), ("PASS: unrelated check", False)):
+            with (
+                self.subTest(accepted=accepted),
+                patch.object(qualify, "NATIVE", (entry,)),
+                patch.object(qualify, "source_binding"),
+                patch.object(qualify, "guest_command", return_value=emitted),
+                patch.object(qualify, "record_check") as record,
+            ):
+                if accepted:
+                    qualify.prerequisite_native_checks(
+                        {}, {}, Path("guest-evidence"), {}, {}
+                    )
+                    self.assertEqual(record.call_count, 1)
+                else:
+                    with self.assertRaisesRegex(ValueError, "identity absent"):
+                        qualify.prerequisite_native_checks(
+                            {}, {}, Path("guest-evidence"), {}, {}
+                        )
+                    record.assert_not_called()
+
+
+class CheckpointEnrollmentRefusalTest(unittest.TestCase):
+    def test_real_checkpoint_dispatch_preserves_refusal_without_credentials(self):
+        import subprocess
+        from unittest.mock import MagicMock
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "evidence").mkdir()
+            database = MagicMock()
+            database.execute.return_value = [("fictional-key",)]
+            database.execute.side_effect = [
+                [("fictional-key",)],
+                [('{"accessToken":"fictional-token"}',)],
+            ]
+            connection = MagicMock()
+            connection.__enter__.return_value = database
+            credentials = MagicMock()
+            credentials.environment.return_value = {
+                ("API_KEY_SECRET"): ("fictional-secret")
+            }
+            scope = {
+                ("home"): str(root),
+                ("packages"): {("digest"): {("release"): ("fictional-release")}},
+            }
+            error = subprocess.CalledProcessError(
+                1,
+                [("controller")],
+                stderr=("refused: fictional-key fictional-token fictional-secret"),
+            )
+            with (
+                patch.object(qualify, "wait_signin_port"),
+                patch.object(
+                    qualify,
+                    ("prepare_scope"),
+                    return_value=(
+                        root / ("scope.json"),
+                        scope,
+                        {("persistenceFingerprint"): ("fixture")},
+                    ),
+                ),
+                patch.object(qualify, "credential_module", return_value=credentials),
+                patch.object(qualify, "controller_call", side_effect=error),
+                patch.object(qualify.sqlite3, "connect", return_value=connection),
+            ):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    qualify.checkpoint_baseline(
+                        root / ("candidate.tgz"),
+                        {("run_id"): ("fixture"), ("sha256"): ("digest")},
+                        root,
+                    )
+            record = json.loads(
+                (root / ("evidence/checkpoint-enrollment-refusal.json")).read_text()
+            )
+            self.assertEqual(record["exit_code"], 1)
+            self.assertEqual(
+                record[("stderr")], ("refused: [REDACTED] [REDACTED] [REDACTED]")
+            )
+            credentials.restore.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()

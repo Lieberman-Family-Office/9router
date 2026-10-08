@@ -1,0 +1,335 @@
+📦 Building 9Router CLI package with Next.js...
+
+0️⃣  Syncing version to app/package.json...
+✅ Version already synced: 0.5.91-lfenergy.7
+
+1️⃣  Building Next.js app...
+
+> 9router-app@0.5.91-lfenergy.7 build
+> next build --webpack
+
+▲ Next.js 16.3.4 (webpack)
+✓ Running next.config.mjs took 11ms
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+- Experiments (use with caution):
+  · optimizePackageImports
+  · proxyClientMaxBodySize: "128mb"
+
+  Creating an optimized production build ...
+⚠ Compiled with warnings in 12.1s
+
+./src/lib/db/managed.cjs
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./src/lib/db/managed.cjs
+./src/lib/db/driver.js
+./src/lib/db/index.js
+./src/lib/localDb.js
+./src/dashboardGuard.js
+
+./src/lib/db/managed.cjs
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./src/lib/db/managed.cjs
+./src/lib/db/driver.js
+./src/lib/db/index.js
+./src/lib/localDb.js
+./src/dashboardGuard.js
+
+./src/lib/db/managed.cjs
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./src/lib/db/managed.cjs
+./src/shared/services/initializeApp.js
+./src/app/api/version/route.js
+
+./src/lib/db/managed.cjs
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./src/lib/db/managed.cjs
+./src/shared/services/initializeApp.js
+./src/app/api/version/route.js
+
+  Running TypeScript ...
+  Finished TypeScript in 13ms ...
+  Collecting page data using 5 workers ...
+[DB] Driver: node:sqlite | file: /Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/build-home/.9router/db/data.sqlite
+[DB][migrate] applied #1 initial
+[DB] Driver: node:sqlite | file: /Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/build-home/.9router/db/data.sqlite
+[DB] Driver: node:sqlite | file: /Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/build-home/.9router/db/data.sqlite
+[DB] Driver: node:sqlite | file: /Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/build-home/.9router/db/data.sqlite
+[DB] Driver: node:sqlite | file: /Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/build-home/.9router/db/data.sqlite
+  Generating static pages using 5 workers (0/149) ...
+  Generating static pages using 5 workers (37/149) 
+  Generating static pages using 5 workers (74/149) 
+  Generating static pages using 5 workers (111/149) 
+✓ Generating static pages using 5 workers (149/149) in 1142ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/oidc/callback
+├ ƒ /api/auth/oidc/start
+├ ƒ /api/auth/oidc/test
+├ ƒ /api/auth/reset-password
+├ ƒ /api/auth/saml/acs
+├ ƒ /api/auth/saml/metadata
+├ ƒ /api/auth/saml/start
+├ ƒ /api/auth/saml/test
+├ ƒ /api/auth/status
+├ ƒ /api/cli-tools/all-statuses
+├ ƒ /api/cli-tools/antigravity-mitm
+├ ƒ /api/cli-tools/antigravity-mitm/alias
+├ ƒ /api/cli-tools/claude-settings
+├ ƒ /api/cli-tools/cline-settings
+├ ƒ /api/cli-tools/codewhale-settings
+├ ƒ /api/cli-tools/codex-profiles
+├ ƒ /api/cli-tools/codex-settings
+├ ƒ /api/cli-tools/copilot-settings
+├ ƒ /api/cli-tools/cowork-mcp-registry
+├ ƒ /api/cli-tools/cowork-mcp-tools
+├ ƒ /api/cli-tools/cowork-settings
+├ ƒ /api/cli-tools/crush-settings
+├ ƒ /api/cli-tools/deepseek-tui-settings
+├ ƒ /api/cli-tools/devin-settings
+├ ƒ /api/cli-tools/droid-settings
+├ ƒ /api/cli-tools/forge-settings
+├ ƒ /api/cli-tools/grok-build-settings
+├ ƒ /api/cli-tools/hermes-settings
+├ ƒ /api/cli-tools/jcode-settings
+├ ƒ /api/cli-tools/kilo-settings
+├ ƒ /api/cli-tools/omp-settings
+├ ƒ /api/cli-tools/openclaw-settings
+├ ƒ /api/cli-tools/opencode-settings
+├ ƒ /api/cli-tools/pi-settings
+├ ƒ /api/cli-tools/smelt-settings
+├ ƒ /api/combos
+├ ƒ /api/combos/[id]
+├ ƒ /api/combos/presets
+├ ƒ /api/headroom/extras
+├ ƒ /api/headroom/proxy/[...path]
+├ ƒ /api/headroom/restart
+├ ƒ /api/headroom/start
+├ ƒ /api/headroom/status
+├ ƒ /api/headroom/stop
+├ ƒ /api/health
+├ ƒ /api/init
+├ ƒ /api/keys
+├ ƒ /api/keys/[id]
+├ ƒ /api/locale
+├ ƒ /api/mcp/[plugin]/message
+├ ƒ /api/mcp/[plugin]/sse
+├ ƒ /api/media-providers/tts/deepgram/voices
+├ ƒ /api/media-providers/tts/elevenlabs/voices
+├ ƒ /api/media-providers/tts/inworld/voices
+├ ƒ /api/media-providers/tts/minimax/voices
+├ ƒ /api/media-providers/tts/voices
+├ ƒ /api/models
+├ ƒ /api/models/alias
+├ ƒ /api/models/availability
+├ ƒ /api/models/catalog-sync
+├ ƒ /api/models/custom
+├ ƒ /api/models/disabled
+├ ƒ /api/models/test
+├ ƒ /api/oauth/[provider]/[action]
+├ ƒ /api/oauth/codex/bulk-import
+├ ƒ /api/oauth/codex/import-token
+├ ƒ /api/oauth/cursor/auto-import
+├ ƒ /api/oauth/cursor/import
+├ ƒ /api/oauth/gitlab/pat
+├ ƒ /api/oauth/grok-cli/bulk-import
+├ ƒ /api/oauth/iflow/cookie
+├ ƒ /api/oauth/kiro/api-key
+├ ƒ /api/oauth/kiro/auto-import
+├ ƒ /api/oauth/kiro/import
+├ ƒ /api/oauth/kiro/import-cli-proxy
+├ ƒ /api/oauth/kiro/social-authorize
+├ ƒ /api/oauth/kiro/social-exchange
+├ ƒ /api/oauth/xiaomi-mimo/api-key
+├ ƒ /api/oauth/xiaomi-mimo/auto-import
+├ ƒ /api/oauth/xiaomi-mimo/login/start
+├ ƒ /api/oauth/xiaomi-mimo/login/status
+├ ƒ /api/oauth/zed/auto-import
+├ ƒ /api/oauth/zed/import
+├ ƒ /api/pricing
+├ ƒ /api/provider-nodes
+├ ƒ /api/provider-nodes/[id]
+├ ƒ /api/provider-nodes/validate
+├ ƒ /api/providers
+├ ƒ /api/providers/[id]
+├ ƒ /api/providers/[id]/models
+├ ƒ /api/providers/[id]/test
+├ ƒ /api/providers/[id]/test-models
+├ ƒ /api/providers/client
+├ ƒ /api/providers/kilo/free-models
+├ ƒ /api/providers/suggested-models
+├ ƒ /api/providers/test-batch
+├ ƒ /api/providers/validate
+├ ƒ /api/proxy-pools
+├ ƒ /api/proxy-pools/[id]
+├ ƒ /api/proxy-pools/[id]/test
+├ ƒ /api/proxy-pools/cloudflare-deploy
+├ ƒ /api/proxy-pools/deno-deploy
+├ ƒ /api/proxy-pools/vercel-deploy
+├ ƒ /api/pxpipe/health
+├ ƒ /api/pxpipe/install
+├ ƒ /api/pxpipe/logs
+├ ƒ /api/pxpipe/restart
+├ ƒ /api/pxpipe/start
+├ ƒ /api/pxpipe/stats
+├ ƒ /api/pxpipe/status
+├ ƒ /api/pxpipe/stop
+├ ƒ /api/settings
+├ ƒ /api/settings/database
+├ ƒ /api/settings/proxy-test
+├ ƒ /api/settings/require-login
+├ ƒ /api/shutdown
+├ ƒ /api/tags
+├ ƒ /api/translator/console-logs
+├ ƒ /api/translator/console-logs/stream
+├ ƒ /api/translator/load
+├ ƒ /api/translator/save
+├ ƒ /api/translator/send
+├ ƒ /api/translator/translate
+├ ƒ /api/tunnel/disable
+├ ƒ /api/tunnel/enable
+├ ƒ /api/tunnel/status
+├ ƒ /api/tunnel/tailscale-check
+├ ƒ /api/tunnel/tailscale-disable
+├ ƒ /api/tunnel/tailscale-enable
+├ ƒ /api/tunnel/tailscale-install
+├ ƒ /api/usage/[connectionId]
+├ ƒ /api/usage/[connectionId]/claude-reset
+├ ƒ /api/usage/[connectionId]/codex-reset-credits
+├ ƒ /api/usage/chart
+├ ƒ /api/usage/history
+├ ƒ /api/usage/logs
+├ ƒ /api/usage/providers
+├ ƒ /api/usage/request-details
+├ ƒ /api/usage/request-logs
+├ ƒ /api/usage/stats
+├ ƒ /api/usage/stream
+├ ƒ /api/v1
+├ ƒ /api/v1/api/chat
+├ ƒ /api/v1/audio/speech
+├ ƒ /api/v1/audio/transcriptions
+├ ƒ /api/v1/audio/voices
+├ ƒ /api/v1/chat/completions
+├ ƒ /api/v1/embeddings
+├ ƒ /api/v1/images/generations
+├ ƒ /api/v1/messages
+├ ƒ /api/v1/messages/count_tokens
+├ ƒ /api/v1/models
+├ ƒ /api/v1/models/[...model]
+├ ƒ /api/v1/models/info
+├ ƒ /api/v1/responses
+├ ƒ /api/v1/responses/compact
+├ ƒ /api/v1/search
+├ ƒ /api/v1/systemone
+├ ƒ /api/v1/videos/[id]
+├ ƒ /api/v1/videos/edits
+├ ƒ /api/v1/videos/extensions
+├ ƒ /api/v1/videos/generations
+├ ƒ /api/v1/web/fetch
+├ ƒ /api/v1beta/models
+├ ƒ /api/v1beta/models/[...path]
+├ ƒ /api/version
+├ ƒ /api/version/shutdown
+├ ƒ /api/version/update
+├ ○ /callback
+├ ○ /dashboard
+├ ○ /dashboard/basic-chat
+├ ○ /dashboard/cli-tools
+├ ƒ /dashboard/cli-tools/[toolId]
+├ ○ /dashboard/combos
+├ ƒ /dashboard/console-log
+├ ○ /dashboard/endpoint
+├ ƒ /dashboard/media-providers/[kind]
+├ ƒ /dashboard/media-providers/[kind]/[id]
+├ ƒ /dashboard/media-providers/combo/[id]
+├ ○ /dashboard/media-providers/web
+├ ○ /dashboard/mitm
+├ ○ /dashboard/profile
+├ ○ /dashboard/providers
+├ ƒ /dashboard/providers/[id]
+├ ○ /dashboard/providers/new
+├ ○ /dashboard/proxy-pools
+├ ○ /dashboard/pxpipe
+├ ○ /dashboard/quota
+├ ○ /dashboard/settings/pricing
+├ ○ /dashboard/skills
+├ ○ /dashboard/token-saver
+├ ○ /dashboard/translator
+├ ○ /dashboard/usage
+├ ○ /landing
+├ ○ /login
+└ ○ /manifest.webmanifest
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> 9router-app@0.5.91-lfenergy.7 postbuild
+> node scripts/copy-standalone-assets.mjs
+
+[standalone-assets] Skipping workspace-traced CLI build; CLI packaging handles assets
+✅ Next.js build completed
+
+2️⃣  Cleaning old app/cli/app...
+✅ Cleaned
+
+3️⃣  Copying Next.js standalone build to app/cli/app...
+ℹ️  Detected nested standalone output: source/
+✅ Copied standalone build
+
+✅ Copied custom-server.js
+
+✅ Copied handlers/responsesWs
+
+3️⃣ b Configuring SQLite drivers...
+✅ sql.js already bundled
+✅ open already bundled
+✅ Stripped better-sqlite3 (lives in ~/.9router/runtime)
+
+4️⃣  Copying static files...
+✅ Copied static files
+
+5️⃣  Copying public folder...
+✅ Copied public folder
+
+6️⃣  Copying vendor-chunks...
+⏭️  No vendor-chunks found
+
+6️⃣ b Copying complete server artifacts...
+✅ Copied complete server artifacts
+
+7️⃣  Copying MITM server files...
+✅ Copied MITM files
+
+7️⃣ b Copying updater files...
+✅ Copied updater files
+
+8️⃣  Building MITM server...
+⚙️  Config: bundle, minify, cleanPlainFiles
+✅ bundled + minified → /Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/source/cli/app/src/mitm/server.js
+✅ Removed plain MITM files from CLI bundle
+✅ MITM server build completed
+
+(node:827) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/source/src/lib/db/schema.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/source/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✨ CLI package build completed!
+📁 Output: /Volumes/devbox/9router/qualification/task5-repro-aa6197854dc545c4/source/cli/app
+📊 Package size: 61M

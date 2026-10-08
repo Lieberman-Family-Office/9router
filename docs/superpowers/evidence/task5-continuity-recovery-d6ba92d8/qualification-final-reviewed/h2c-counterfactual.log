@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: serves split h2c POST requests as HTTP/1.1
+not ok 1 - serves split h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 2042.745458
+  type: 'test'
+  location: '/Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/h2c-counterfactual/tests/unit/custom-server-h2c.test.cjs:7:3'
+  failureType: 'testCodeFailure'
+  error: 'h2c fallback response timed out'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Socket.<anonymous> (/Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/h2c-counterfactual/tests/unit/custom-server-h2c.test.cjs:66:18)
+    Socket.wrapper (node:events:639:12)
+    Socket.emit (node:events:514:20)
+    Socket._onTimeout (node:net:886:8)
+    Timeout.onStreamTimeout (node:internal/stream_base_commons:242:10)
+    listOnTimeout (node:internal/timers:687:11)
+    process.processTimers (node:internal/timers:618:7)
+  ...
+# Subtest: serves coalesced h2c POST requests as HTTP/1.1
+not ok 2 - serves coalesced h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 2004.7735
+  type: 'test'
+  location: '/Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/h2c-counterfactual/tests/unit/custom-server-h2c.test.cjs:7:3'
+  failureType: 'testCodeFailure'
+  error: 'h2c fallback response timed out'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Socket.<anonymous> (/Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/h2c-counterfactual/tests/unit/custom-server-h2c.test.cjs:66:18)
+    Socket.wrapper (node:events:639:12)
+    Socket.emit (node:events:514:20)
+    Socket._onTimeout (node:net:886:8)
+    Timeout.onStreamTimeout (node:internal/stream_base_commons:242:10)
+    listOnTimeout (node:internal/timers:687:11)
+    process.processTimers (node:internal/timers:618:7)
+  ...
+# Failed to downgrade h2c request AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+# + actual - expected
+# + ''
+# - '{"model":"test","stream":true}'
+#     at /Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/h2c-counterfactual/tests/unit/custom-server-h2c.test.cjs:22:14
+#     at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+#   generatedMessage: true,
+#   code: 'ERR_ASSERTION',
+#   actual: '',
+#   expected: '{"model":"test","stream":true}',
+#   operator: 'strictEqual',
+#   diff: 'simple'
+# }
+# Subtest: serves chunked h2c POST requests as HTTP/1.1
+not ok 3 - serves chunked h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 2.609625
+  type: 'test'
+  location: '/Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/h2c-counterfactual/tests/unit/custom-server-h2c.test.cjs:7:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /^HTTP\/1\.1 200 OK\r\n/. Input:
+    
+    ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: ''
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (/Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/h2c-counterfactual/tests/unit/custom-server-h2c.test.cjs:73:14)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: serves empty h2c POST requests as HTTP/1.1
+ok 4 - serves empty h2c POST requests as HTTP/1.1
+  ---
+  duration_ms: 2.50875
+  type: 'test'
+  ...
+# Subtest: preserves non-h2c upgrade selection
+ok 5 - preserves non-h2c upgrade selection
+  ---
+  duration_ms: 1.446458
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 2
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4121.517166

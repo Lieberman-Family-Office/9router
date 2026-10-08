@@ -1,0 +1,5 @@
+(node:3308) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/source/src/lib/db/schema.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Volumes/devbox/9router/qualification/qualify-06d4f3ab64884a6f8f51fc29a7f892af/source/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+GREEN: actual repo OAuth/Copilot CAS both same-family and crossed orders, nested usage contention, pending refresh/reauth fencing, new-grant refresh, readiness refuses mutated DB

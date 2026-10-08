@@ -1,0 +1,26 @@
+(node:803) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Volumes/devbox/9router/qualification/task5-repro-eb43b1bbf03242c1/baseline-mirror/open-sse/handlers/responsesWs/index.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Volumes/devbox/9router/qualification/task5-repro-eb43b1bbf03242c1/baseline-mirror/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[ResponsesWS] mid-turn steering enabled on /v1/responses (port 49209)
+✖ Responses upgrade has one owner; unrelated upgrades retain their listener (117.2065ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 178.51275
+
+✖ failing tests:
+
+test at tests/unit/custom-server-ws-ownership.test.cjs:9:1
+✖ Responses upgrade has one owner; unrelated upgrades retain their listener (117.2065ms)
+  Error: socket hang up
+      at Socket.socketOnEnd (node:_http_client:800:25)
+      at Socket.emit (node:events:526:24)
+      at endReadableNT (node:internal/streams/readable:1980:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'ECONNRESET'
+  }

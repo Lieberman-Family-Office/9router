@@ -1,0 +1,40 @@
+{
+  "scope": "PR53 nine current GitHub code quality findings",
+  "reviewed_head": "3774cd990ed73fc4a7deec3fb2eb6476cd4d226a",
+  "inventory": {"total": 9, "descriptor_cleanup": 7, "unused_globals": 2, "graphql_has_next_page": false},
+  "source_repairs": "Claim acquisition closes the current descriptor on BaseException before tracking succeeds. Outer finally closes prior tracked claims. cmd_run closes directly in the opening scope. Unused diagnostic return bindings are removed without removing the call.",
+  "focused_regression": "tests/mac/task5_claim_cleanup.check.py: 24 actual per-file acquisition AST failure cases plus five actual cmd_run owner-scope cases; not executed because guest activation failed",
+  "activation": {
+    "instance_id_reported_by_operator_screenshot": "scnps4mqrp42",
+    "screenshot_reason": "Instance failed to start. Something went wrong creating this instance, our team has been notified.",
+    "host_result": "CalledProcessError before any guest check",
+    "nonactivating_describe_reason": "[not_found] rpc error: code = NotFound desc = scnps4mqrp42: does not exist",
+    "log_subjects": 0,
+    "log_enumeration_complete": true,
+    "cause": "unknown",
+    "retry_started": false
+  },
+  "cleanup": {
+    "verified": true,
+    "stop_succeeded": true,
+    "connections_closed": true,
+    "stopped_no_instance_observed_epoch": [1791433738.5773828,1791433798.886493],
+    "owned_claims_released": true
+  },
+  "publication": {"new_batch_pushed": false, "threads_resolved": 0, "namespace_focused_checks": "UNRUN", "old_pass_does_not_certify_new_bytes": true},
+  "separate_merge_blocker": {
+    "qualification_result": "fail",
+    "completed_checks": 21,
+    "missing_check": "authentication",
+    "exact_failure": "controller public readiness GET models -> json.load -> http.client.IncompleteRead(8186 bytes read)",
+    "credential_export_saved": true,
+    "api_keys_preserved": true,
+    "provider_counts": {"claude": 1,"codex": 1},
+    "active_api_key_count": 2,
+    "refresh_sequence": 2,
+    "root_cause": "response truncation cause unproven; not evidence of OAuth rejection",
+    "cleanup_verified": true
+  },
+  "cubic": {"tool_reason": "Access denied: Repository not found or not active in cubic. Ask an organization admin to check GitHub connection settings.", "exact_head_review_clean": "unknown"},
+  "next_step": "Run the already-prepared focused Namespace batch after guest availability is established. Do not fall back to laptop execution, waive checks, or blindly repeat activation. Push once immediately after focused checks pass."
+}

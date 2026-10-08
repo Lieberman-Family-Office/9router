@@ -144,6 +144,7 @@ export function createSSEStream(options = {}) {
 
         // Passthrough mode: normalize and forward
         if (mode === STREAM_MODE.PASSTHROUGH) {
+          if (trimmed.startsWith("data:") && trimmed.slice(5).trim() === "[DONE]") streamDoneSent = true;
           let output;
           let injectedUsage = false;
           let responsesTerminal = false;
@@ -401,6 +402,7 @@ export function createSSEStream(options = {}) {
         if (remaining) buffer += remaining;
 
         if (mode === STREAM_MODE.PASSTHROUGH) {
+          if (buffer.trim().startsWith("data:") && buffer.trim().slice(5).trim() === "[DONE]") streamDoneSent = true;
           if (buffer) {
             let output = buffer;
             if (buffer.startsWith("data:") && !buffer.startsWith("data: ")) {
