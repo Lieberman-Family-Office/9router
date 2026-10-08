@@ -350,6 +350,15 @@ async function main() {
       assert.equal(assetBefore.status, 200);
       assert.equal(assetBefore.headers['cache-control'], 'public, max-age=31536000, immutable');
       assert.equal(assetBefore.body.toString(), 'immutable old chunk');
+      // Only the protected HTTP-ingress Unix listener may trust stamped XFF.
+      const stamped = '100.64.0.7';
+      const forwarded = await request(port, '/echo', { socketPath: path.join(root, 'http-ingress.sock'),
+        headers: { 'X-Forwarded-For': stamped, 'X-Real-IP': '203.0.113.66', 'X-9r-Real-Ip': '203.0.113.66', 'X-9r-Peer-Token': 'forged' } });
+      assert.equal(JSON.parse(forwarded.body).headers['x-9r-real-ip'], stamped,
+        'protected HTTP ingress must retain authenticated upstream client identity');
+      const forged = await request(port, '/echo', { headers: { 'X-Forwarded-For': stamped, 'X-Real-IP': stamped } });
+      assert.notEqual(JSON.parse(forged.body).headers['x-9r-real-ip'], stamped,
+        'raw TCP ingress must never trust client-supplied XFF');
       const streamA = await openStream(port, '/stream');
       const wsA = await openWebSocket(port);
       await wsA.echo('a', 'before-switch');

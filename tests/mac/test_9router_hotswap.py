@@ -1053,6 +1053,31 @@ def test_asset_copy_failure_never_publishes_partial_bytes(hs, monkeypatch):
     assert (hs.STATE_DIR / "assets/chunk.js").read_bytes() == b"complete bytes"
 
 
+def test_asset_seed_is_confined_nonempty_and_conflict_checked(hs, tmp_path):
+    source = tmp_path / "legacy-assets"
+    source.mkdir(mode=0o700)
+    with pytest.raises(ValueError, match="empty"):
+        hs.stage_asset_directory(source)
+    (source / "old.js").write_bytes(b"old dashboard chunk")
+    hs.stage_asset_directory(source)
+    target = hs.STATE_DIR / "assets" / "old.js"
+    assert target.read_bytes() == b"old dashboard chunk"
+    (source / "old.js").write_bytes(b"conflicting immutable bytes")
+    with pytest.raises(ValueError, match="conflict"):
+        hs.stage_asset_directory(source)
+    assert target.read_bytes() == b"old dashboard chunk"
+    (source / "old.js").unlink()
+    (source / "outside.js").symlink_to(tmp_path / "outside")
+    with pytest.raises(ValueError, match="symlink"):
+        hs.stage_asset_directory(source)
+    link = tmp_path / "linked-assets"
+    link.symlink_to(source, target_is_directory=True)
+    with pytest.raises(ValueError, match="concrete"):
+        hs.stage_asset_directory(link)
+    with pytest.raises(ValueError, match="concrete"):
+        hs.stage_asset_directory(source / ".." / "legacy-assets")
+
+
 def test_enrollment_requires_explicit_maintenance_acknowledgement(hs):
     assert hs.main(["enroll"]) != 0
     assert not hs.STATE_FILE.exists()

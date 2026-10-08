@@ -29,6 +29,28 @@ def mp():
     return _load()
 
 
+def test_managed_memory_pressure_never_kills_active_or_draining_work(mp, tmp_path):
+    directory = tmp_path / ".9router" / "hotswap"
+    directory.mkdir(parents=True)
+    calls = []
+
+    def runner(argv, **kwargs):
+        calls.append(argv)
+        return __import__("subprocess").CompletedProcess(argv, 0, "", "")
+
+    result = mp.apply_actions(
+        ["kick:9router"],
+        home=tmp_path,
+        uid=501,
+        dry_run=False,
+        state=mp.PressureState(),
+        now_mono=100,
+        runner=runner,
+    )
+    assert calls == [], "managed enrollment suppresses memory-driven process kills"
+    assert result == ["kick_suppressed:managed_9router"]
+
+
 def test_classify_ok_warn_critical(mp):
     ok = mp.MemSample(
         page_size=16384,
