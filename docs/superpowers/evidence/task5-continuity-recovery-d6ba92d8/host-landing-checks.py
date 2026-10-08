@@ -54,7 +54,14 @@ def command(*argv, timeout=180):
             (held.st_dev, held.st_ino) == (live.st_dev, live.st_ino),
             "Lifecycle claim changed",
         )
-    return q.output([cli, *argv], source, env, timeout)
+    try:
+        return q.output([cli, *argv], source, env, timeout)
+    except subprocess.CalledProcessError as error:
+        q.new_json(local / 'orchestration-failure.json', {
+            'operation': list(argv[:2]), 'exit_code': error.returncode,
+            'stderr': (error.stderr or '').replace(os.environ.get('SONAR_TOKEN', ''), '[REDACTED]') if os.environ.get('SONAR_TOKEN') else error.stderr,
+        })
+        raise
 
 
 def work():
