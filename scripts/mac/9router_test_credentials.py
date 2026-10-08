@@ -484,15 +484,17 @@ def abort_precredential_run(root, evidence_path, inspection_path, expected):
             and set(evidence["seed_files"]) == set(FILES),
             "Pre-use seed manifest changed",
         )
-        for name, value in evidence["seed_files"].items():
-            require(
+        require(
+            all(
                 value["equal"] is True
                 and value["guest_sha256"]
                 == value["host_retained_manifest_sha256"]
                 == manifest["files"][name]
-                == digest(seed / name),
-                "Pre-use seed bytes changed",
-            )
+                == digest(seed / name)
+                for name, value in evidence["seed_files"].items()
+            ),
+            "Pre-use seed bytes changed",
+        )
         receipt = root / ("preuse-recovery-" + run_id + ".json")
         save(
             receipt,
