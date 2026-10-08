@@ -1297,7 +1297,7 @@ class ContinuousSigninTest(unittest.TestCase):
         self.assertEqual(callback.call_args.args[0].signin_timeout, 1200)
 
     def test_guest_dispatch_selects_same_instance_live_scope_without_restore(self):
-        args = unittest.mock.Mock(interactive_signin=True, tgz="candidate.tgz", signin_timeout=1200)
+        args = unittest.mock.Mock(interactive_signin=True, credential_checkpoint=False, tgz="candidate.tgz", signin_timeout=1200)
         binding = {"namespace": {"devbox_id": "fixture", "instance_id": "same-instance"}}
         scope = {"home": "fixture-home", "packages": {"digest": {"release": "release"}}}
         with (
@@ -1339,6 +1339,48 @@ class ContinuousSigninTest(unittest.TestCase):
         ):
             with self.subTest(patch_value=patch_value), self.assertRaises(ValueError):
                 qualify.validate_signin_confirmation({**good, **patch_value}, binding)
+
+
+class PrivateDownloadTest(unittest.TestCase):
+    def test_actual_download_dispatch_privatizes_0644_before_validation(self):
+        import hashlib
+        import os
+        data = b'{"run_id":"current","namespace":{"instance_id":"current"}}'
+        with TemporaryDirectory() as directory:
+            target = Path(directory) / "handoff.json"
+            def download(_argv, *, stdout, **_kwargs):
+                target.chmod(0o644)
+                stdout.write(data)
+                return unittest.mock.Mock(returncode=0)
+            with patch.object(qualify.subprocess, "run", side_effect=download):
+                qualify.download_private("devbox", {}, "box", Path("/guest/ready.json"), target, hashlib.sha256(data).hexdigest())
+            self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(qualify.private_json(target)["run_id"], "current")
+
+    def test_download_replacement_links_wrong_digest_and_preexisting_paths_refuse(self):
+        import hashlib
+        import os
+        data = b'private'
+        for mutation in ("symlink", "hardlink", "replace", "wrong-digest"):
+            with self.subTest(mutation=mutation), TemporaryDirectory() as directory:
+                root = Path(directory); target = root / "handoff.json"; foreign = root / "foreign"
+                foreign.write_bytes(b'unchanged')
+                def download(_argv, *, stdout, **_kwargs):
+                    stdout.write(data); stdout.flush()
+                    if mutation != "wrong-digest":
+                        target.unlink()
+                        if mutation == "symlink": target.symlink_to(foreign)
+                        elif mutation == "hardlink": os.link(foreign, target)
+                        else: target.write_bytes(data)
+                    return unittest.mock.Mock(returncode=0)
+                with patch.object(qualify.subprocess, "run", side_effect=download), self.assertRaises(ValueError):
+                    qualify.download_private("devbox", {}, "box", Path("/guest/ready.json"), target, "a" * 64 if mutation == "wrong-digest" else hashlib.sha256(data).hexdigest())
+                self.assertEqual(foreign.read_bytes(), b'unchanged')
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "occupied.json"; path.write_text("preserve")
+            with self.assertRaises(FileExistsError):
+                qualify.download_private("devbox", {}, "box", Path("/guest/ready.json"), path, "a" * 64)
+            self.assertEqual(path.read_text(), "preserve")
 
 
 class NativeReviewIdentityTest(unittest.TestCase):
