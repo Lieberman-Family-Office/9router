@@ -658,6 +658,11 @@ def memory_kick(target, home, uid, dry_run, runner):
     return apply_kick(target, uid=uid, dry_run=dry_run, runner=runner)
 
 
+def record_memory_kick(state, now_mono, dry_run, result):
+    if not dry_run and result != "kick_suppressed:managed_9router":
+        state.last_remediation_mono[CLASS_KICK] = now_mono
+
+
 def apply_actions(
     actions: Sequence[str],
     *,
@@ -678,8 +683,7 @@ def apply_actions(
             target = action.split(":", 1)[1]
             result = memory_kick(target, home, uid, dry_run, runner)
             results.append(result)
-            if not dry_run and result != "kick_suppressed:managed_9router":
-                state.last_remediation_mono[CLASS_KICK] = now_mono
+            record_memory_kick(state, now_mono, dry_run, result)
         elif action == "cache:homebrew":
             results.append(trim_homebrew_cache(home, dry_run=dry_run))
             if not dry_run:
