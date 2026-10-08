@@ -272,8 +272,8 @@ def sha256(path):
 
 
 def executable(name):
-    found = shutil.which(name)
-    if not found:
+    found = os.environ.get("NINEROUTER_" + name.upper() + "_BIN") or shutil.which(name)
+    if not found or not Path(found).is_file() or not os.access(found, os.X_OK):
         raise ValueError(f"missing runtime executable: {name}")
     return str(Path(found).resolve())
 
@@ -604,7 +604,7 @@ def stage_assets(dest):
     stage_asset_directory(dest / "app/.next-cli-build/static")
 
 
-def stage_asset_directory(source):
+def stage_asset_directory(source, *, target=None):
     source = Path(source)
     if not source.is_absolute() or source.resolve() != source or not source.is_dir():
         raise ValueError("asset source must be a concrete directory")
@@ -613,7 +613,9 @@ def stage_asset_directory(source):
         raise ValueError("symlink dashboard asset refused")
     if not any(path.is_file() for path in entries):
         raise ValueError("empty immutable dashboard asset population")
-    target = STATE_DIR / "assets"
+    target = Path(target) if target is not None else STATE_DIR / "assets"
+    if not target.is_absolute() or target.resolve() != target:
+        raise ValueError("asset target must be a concrete directory")
     target.mkdir(mode=0o700, exist_ok=True)
     private_directory(target)
     for path in entries:
@@ -2032,6 +2034,9 @@ def main(argv=None):
     installed.add_argument("release", type=Path)
     installed.add_argument("--digest", required=True)
     sub.add_parser("restore")
+    assets = sub.add_parser("stage-assets")
+    assets.add_argument("source", type=Path)
+    assets.add_argument("target", type=Path)
     sub.add_parser("status")
     sub.add_parser("reconcile")
     args = parser.parse_args(argv)
@@ -2040,6 +2045,12 @@ def main(argv=None):
             configure_qualification(args.qualification_scope)
         except EXPECTED_ERRORS as error:
             return refusal("qualification scope", error)
+    if args.command == "stage-assets":
+        try:
+            stage_asset_directory(args.source, target=args.target)
+            return 0
+        except EXPECTED_ERRORS as error:
+            return refusal("immutable asset staging", error)
     if args.command == "deploy-installed":
         if QUALIFICATION_SCOPE is None:
             return refusal(
