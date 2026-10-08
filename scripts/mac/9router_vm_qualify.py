@@ -959,25 +959,41 @@ def provision_guest_node(tools):
     with tempfile.TemporaryDirectory(prefix=".node-", dir=tools) as temporary:
         staged = Path(temporary)
         if not os.path.lexists(archive_path):
-            with urllib.request.urlopen(NODE_URL, timeout=120) as incoming, (staged / "archive").open("xb") as outgoing:
+            with (
+                urllib.request.urlopen(NODE_URL, timeout=120) as incoming,
+                (staged / "archive").open("xb") as outgoing,
+            ):
                 shutil.copyfileobj(incoming, outgoing)
             (staged / "archive").chmod(0o600)
-            require(sha256(staged / "archive") == NODE_ARCHIVE_SHA256, "guest Node archive digest differs")
+            require(
+                sha256(staged / "archive") == NODE_ARCHIVE_SHA256,
+                "guest Node archive digest differs",
+            )
             os.replace(staged / "archive", archive_path)
-        require(sha256(regular(archive_path)) == NODE_ARCHIVE_SHA256, "guest Node archive digest differs")
+        require(
+            sha256(regular(archive_path)) == NODE_ARCHIVE_SHA256,
+            "guest Node archive digest differs",
+        )
         with tarfile.open(archive_path, "r:gz") as archive:
             member = archive.getmember("node-v26.10.0-darwin-arm64/bin/node")
             require(member.isfile(), "guest Node archive entry differs")
-            with archive.extractfile(member) as incoming, (staged / "node").open("xb") as outgoing:
+            with (
+                archive.extractfile(member) as incoming,
+                (staged / "node").open("xb") as outgoing,
+            ):
                 shutil.copyfileobj(incoming, outgoing)
         expected = sha256(staged / "node")
         binary = tools / "node"
         if not os.path.lexists(binary):
             (staged / "node").chmod(0o700)
             os.replace(staged / "node", binary)
-        require(sha256(regular(binary)) == expected and binary.stat().st_uid == os.getuid()
-                and stat.S_IMODE(binary.stat().st_mode) == 0o700 and binary.stat().st_nlink == 1,
-                "persistent guest Node binary differs")
+        require(
+            sha256(regular(binary)) == expected
+            and binary.stat().st_uid == os.getuid()
+            and stat.S_IMODE(binary.stat().st_mode) == 0o700
+            and binary.stat().st_nlink == 1,
+            "persistent guest Node binary differs",
+        )
 
 
 def cmd_runtime(args):
@@ -996,7 +1012,10 @@ def cmd_runtime(args):
         os.environ["PATH"] = str(tools) + os.pathsep + os.environ.get("PATH", "")
     binaries = guest_binary_bindings()
     if getattr(args, "portable_node", False):
-        require(binaries["node"]["sha256"] == NODE_BINARY_SHA256, "portable Node binary pin differs")
+        require(
+            binaries["node"]["sha256"] == NODE_BINARY_SHA256,
+            "portable Node binary pin differs",
+        )
     print(json.dumps(binaries, sort_keys=True))
     return 0
 

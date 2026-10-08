@@ -93,10 +93,7 @@ def update_gate_latch(
         return new, ("clear" if was else None)
 
     purge_signal = any(
-        a == "purge"
-        or a == "purged"
-        or a.startswith("dry_run:purge")
-        for a in applied
+        a == "purge" or a == "purged" or a.startswith("dry_run:purge") for a in applied
     ) or ("purge:cooldown" in notes and band == "critical")
 
     if band == "critical" and purge_signal and new.purge_anchor_wall is None:
@@ -494,9 +491,7 @@ def _note_kick_candidate(
         notes.append(f"{label}:not_found")
         return
     over_rss = proc.rss_mb >= rss_limit_mb
-    over_uptime = (
-        uptime_limit_s is not None and proc.etime_s >= uptime_limit_s
-    )
+    over_uptime = uptime_limit_s is not None and proc.etime_s >= uptime_limit_s
     if over_rss or over_uptime:
         actions.append(kick_token)
         notes.append(f"{label}:rss_mb={proc.rss_mb:.0f}:etime_s={proc.etime_s:.0f}")
