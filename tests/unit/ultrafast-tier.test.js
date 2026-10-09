@@ -226,6 +226,22 @@ describe("dedicated Ultrafast route", () => {
     finally { reader.releaseLock(); }
   });
 
+  it.each([
+    { type: "response.completed", response: { status: "in_progress", service_tier: "ultrafast" } },
+    { response: { status: "completed", service_tier: "ultrafast" } },
+  ])("refuses inconsistent or status-only Ultrafast completion $type/$response.status", async terminal => {
+    const source = new ReadableStream({ start(controller) {
+      controller.enqueue(new TextEncoder().encode(`data: {"type":"response.output_text.delta","delta":"OK"}\n\ndata: ${JSON.stringify(terminal)}\n\n`));
+    } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source) });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    const reader = result.response.body.getReader();
+    try {
+      expect(new TextDecoder().decode((await reader.read()).value)).toContain("output_text.delta");
+      await expect(reader.read()).rejects.toThrow(/Ultrafast/);
+    } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+  });
+
   it("keeps unknown tiers unknown and drops arbitrary text", () => {
     const record = __test__.toMetadataRecord({ serviceTier: { requested: "secret prompt", returned: "secret credential" } });
     expect(record.serviceTier).toEqual({ requested: null, returned: null });

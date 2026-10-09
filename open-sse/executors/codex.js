@@ -363,7 +363,9 @@ export class CodexExecutor extends BaseExecutor {
             }
             if (confirmed) throw new Error("Ultrafast response has events after confirmed completion");
             if (["response.completed", "response.done"].includes(type) || event.response?.status === "completed") {
-              if (confirmed) throw new Error("Ultrafast response has duplicate terminal events");
+              if (!["response.completed", "response.done"].includes(type) || event.response?.status !== "completed") {
+                throw new Error("Ultrafast completion type and status are inconsistent");
+              }
               if (event.response?.service_tier !== "ultrafast") {
                 throw new Error("Ultrafast terminal tier was not confirmed; downgrade refused");
               }

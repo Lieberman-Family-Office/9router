@@ -94,6 +94,7 @@ export function getModelType(aliasOrId, modelId) {
 }
 
 export function getModelUpstreamId(aliasOrId, modelId) {
+  if (typeof modelId === "string") modelId = modelId.trim();
   // Split off thinking suffix "(level)" so lookup hits the base id; re-append it to
   // the result so downstream applyThinking still sees the suffix (body.model is stripped separately).
   const sufMatch = typeof modelId === "string" ? modelId.match(/\([^()]+\)\s*$/) : null;

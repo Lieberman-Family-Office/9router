@@ -76,6 +76,15 @@ it("accepts max effort without changing the dedicated route", async () => {
   expect(JSON.parse(options.body)).toMatchObject({ model: "gpt-6-astra", service_tier: "ultrafast", reasoning: { effort: "max" } });
 });
 
+it.each(["-max ", "-high\t"])("preserves requested Ultrafast effort with trailing whitespace (%s)", async suffix => {
+  const response = await post({ model: `cx/gpt-6-astra-ultrafast${suffix}`, input: "OK", stream: true });
+  expect(response.status).toBe(200);
+  await response.text();
+  const options = mocks.transport.mock.calls[0][1];
+  expect(options.headers.Authorization).toBe("Bearer eligible-test");
+  expect(JSON.parse(options.body)).toMatchObject({ model: "gpt-6-astra", service_tier: "ultrafast", reasoning: { effort: suffix.trim().slice(1) } });
+});
+
 it.each(["audioInput", "videoInput"])("refuses unsupported %s instead of using a capacity adapter", async capability => {
   mocks.settings.capacityAdapter = { [capability]: { enabled: true, models: ["openai/gpt-6-astra"] } };
   const block = capability === "audioInput" ? { type: "input_audio", input_audio: { data: "AA==", format: "wav" } } : { type: "input_video", video_url: "data:video/mp4;base64,AA==" };
