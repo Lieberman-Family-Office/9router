@@ -61,6 +61,63 @@ it.each(["gpt-6-astra", "gpt-6.1-sol"])("dispatches dedicated %s through real ch
   assertTransport(model);
 });
 
+it.each(["-high-high", "()", "(bogus)", " -high", " (bogus)", "\t-xhigh"])("refuses malformed dedicated suffix %s before upstream dispatch", async suffix => {
+  const response = await post({ model: `cx/gpt-6-astra-ultrafast${suffix}`, input: "OK", stream: true });
+  expect(response.status).toBe(400);
+  expect(mocks.transport).not.toHaveBeenCalled();
+});
+
+it("accepts max effort without changing the dedicated route", async () => {
+  const response = await post({ model: "cx/gpt-6-astra-ultrafast-max", input: "OK", stream: true });
+  expect(response.status).toBe(200);
+  await response.text();
+  const options = mocks.transport.mock.calls[0][1];
+  expect(options.headers.Authorization).toBe("Bearer eligible-test");
+  expect(JSON.parse(options.body)).toMatchObject({ model: "gpt-6-astra", service_tier: "ultrafast", reasoning: { effort: "max" } });
+});
+
+it.each(["audioInput", "videoInput"])("refuses unsupported %s instead of using a capacity adapter", async capability => {
+  mocks.settings.capacityAdapter = { [capability]: { enabled: true, models: ["openai/gpt-6-astra"] } };
+  const block = capability === "audioInput" ? { type: "input_audio", input_audio: { data: "AA==", format: "wav" } } : { type: "input_video", video_url: "data:video/mp4;base64,AA==" };
+  const response = await post({ model: "cx/gpt-6-astra-ultrafast", input: [{ role: "user", content: [block] }], stream: true });
+  expect(response.status).toBe(400);
+  expect(await response.text()).toContain(capability);
+  expect(mocks.transport).not.toHaveBeenCalled();
+});
+
+it.each(["audio/wav", "video/mp4"])("refuses unsupported native inline-file MIME %s", async mime => {
+  const response = await post({ model: "cx/gpt-6-astra-ultrafast", input: [{ role: "user", content: [{ type: "input_file", file_data: `data:${mime};base64,AA==` }] }], stream: true });
+  expect(response.status).toBe(400);
+  expect(mocks.transport).not.toHaveBeenCalled();
+});
+
+it("translates Chat Completions through the real pinned Ultrafast executor", async () => {
+  const response = await handleChat(new Request("http://localhost/v1/chat/completions", {
+    method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-client" },
+    body: JSON.stringify({ model: "cx/gpt-6-astra-ultrafast-high", messages: [{ role: "user", content: "OK" }], stream: true }),
+  }));
+  expect(response.status).toBe(200);
+  const text = await response.text();
+  expect(text).toContain("chat.completion.chunk");
+  expect(text).toContain("[DONE]");
+  assertTransport("gpt-6-astra");
+});
+
+it("preserves Ultrafast model, effort, and account on a real executor retry", async () => {
+  const { CodexExecutor } = await import("../../open-sse/executors/codex.js");
+  const executor = new CodexExecutor();
+  executor.config = { ...executor.config, retry: { 503: { attempts: 1, delayMs: 0 } } };
+  mocks.transport.mockResolvedValueOnce(new Response('event: error\ndata: {"error":{"message":"server_is_overloaded"}}\n\n', { headers: { "Content-Type": "text/event-stream" } }));
+  const result = await executor.execute({ model: "gpt-6-astra-ultrafast-high", body: { model: "gpt-6-astra-ultrafast-high", input: "OK" }, stream: true, credentials: { connectionId: "eligible", accessToken: "eligible-test", providerSpecificData: { chatgptAccountId: "test-workspace" } } });
+  expect(await result.response.text()).toContain("response.completed");
+  expect(mocks.transport).toHaveBeenCalledTimes(2);
+  for (const [, options] of mocks.transport.mock.calls) {
+    expect(options.headers.Authorization).toBe("Bearer eligible-test");
+    expect(options.headers["ChatGPT-Account-ID"]).toBe("test-workspace");
+    expect(JSON.parse(options.body)).toMatchObject({ model: "gpt-6-astra", service_tier: "ultrafast", reasoning: { effort: "high" } });
+  }
+});
+
 it("preserves the dedicated route through a Responses WebSocket turn", async () => {
   const socket = new EventEmitter();
   const events = [], reader = new WsFrameReader();

@@ -620,6 +620,7 @@ TASK3_MODULES = (
     "ultrafast-tier",
     "codex-ultrafast-models",
     "codex-ultrafast-dispatch",
+    "passthrough-done",
 )
 MAC_MODULES = (
     "test_9router_deploy.py",

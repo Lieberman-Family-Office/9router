@@ -35,6 +35,13 @@ it("advertises only the pinned account's allowed upstream model", async () => {
   expect(models.filter(model => model.id.endsWith("-ultrafast")).map(model => model.id)).toEqual(["cx/gpt-6-astra-ultrafast"]);
 });
 
+it.each(["only-pinned", "explicit-first"])("includes usable dedicated IDs with an upstream-only first allowlist (%s)", async state => {
+  const pinned = { id: "eligible", provider: "codex", authType: "oauth", isActive: true, providerSpecificData: { enabledModels: ["gpt-6-astra", "gpt-6.1-sol"] } };
+  mocks.connections = state === "only-pinned" ? [pinned] : [{ ...mocks.connections[0], providerSpecificData: { enabledModels: ["gpt-6-astra"] } }, pinned];
+  const models = await buildModelsList(["llm"], { skipDynamicFetch: true });
+  expect(models.filter(model => model.id.endsWith("-ultrafast")).map(model => model.id).sort()).toEqual(["cx/gpt-6-astra-ultrafast", "cx/gpt-6.1-sol-ultrafast"]);
+});
+
 it("does not advertise a disabled dedicated route", async () => {
   mocks.connections.push({ id: "eligible", provider: "codex", authType: "oauth", isActive: true });
   mocks.disabled = { cx: ["gpt-6-astra-ultrafast"] };

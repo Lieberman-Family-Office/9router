@@ -79,7 +79,9 @@ describe("dedicated Ultrafast route", () => {
     const reader = result.response.body.getReader();
     try {
       const first = new TextDecoder().decode((await reader.read()).value);
-      expect(first).toBe(prefix);
+      const dataLines = first.split("\n").filter(line => line.startsWith("data:"));
+      expect(dataLines).toHaveLength(1);
+      expect(JSON.parse(dataLines[0].slice(5))).toEqual({ type: "response.output_text.delta", delta: "OK" });
       await expect(reader.read()).rejects.toThrow(/Ultrafast/);
     } finally {
       await reader.cancel().catch(() => {});
@@ -108,6 +110,120 @@ describe("dedicated Ultrafast route", () => {
       await reader.cancel().catch(() => {});
       reader.releaseLock();
     }
+  });
+
+  it("refuses conflicting repeated SSE event names before forwarding them", async () => {
+    const frame = 'event: response.output_text.delta\nevent: response.completed\ndata: {"type":"response.output_text.delta","delta":"OK"}\n\n';
+    const source = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(frame)); } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source) });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    const reader = result.response.body.getReader();
+    try { await expect(reader.read()).rejects.toThrow(/Ultrafast/); }
+    finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+  });
+
+  it("canonicalizes multiline terminal JSON for downstream line parsers", async () => {
+    const frame = 'event: response.completed\ndata: {"type":"response.completed",\ndata: "response":{"id":"resp_test","status":"completed","service_tier":"ultrafast"}}\n\n';
+    const source = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(frame)); controller.close(); } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source) });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    const text = await result.response.text();
+    const dataLines = text.split("\n").filter(line => line.startsWith("data:"));
+    expect(dataLines).toHaveLength(1);
+    expect(JSON.parse(dataLines[0].slice(5)).response.service_tier).toBe("ultrafast");
+  });
+
+  it("does not forward duplicate successful terminal events", async () => {
+    const terminal = 'data: {"type":"response.completed","response":{"status":"completed","service_tier":"ultrafast"}}\n\n';
+    const source = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(terminal + terminal)); controller.close(); } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source) });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    const reader = result.response.body.getReader();
+    try {
+      expect(new TextDecoder().decode((await reader.read()).value)).toContain("response.completed");
+      await expect(reader.read()).rejects.toThrow(/Ultrafast/);
+    } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+  });
+
+  it("cancels upstream while a terminal frame is still buffered", async () => {
+    const cancel = vi.fn();
+    const parts = ['data: {"type":"response.output_text.delta","delta":"OK"}\n\n', 'data: {"type":"response.completed","response":'];
+    let index = 0;
+    const source = new ReadableStream({ pull(controller) { if (index < parts.length) controller.enqueue(new TextEncoder().encode(parts[index++])); }, cancel });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source) });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    const reader = result.response.body.getReader();
+    expect(new TextDecoder().decode((await reader.read()).value)).toContain("output_text.delta");
+    await reader.cancel("client closed"); reader.releaseLock();
+    await vi.waitFor(() => expect(cancel).toHaveBeenCalledOnce());
+  });
+
+  it.each([
+    { type: "response.failed", response: { status: "failed" } },
+    { type: "error", error: { message: "upstream failed" } },
+    { type: "other", response: { status: "failed" } },
+    { type: "response.completed", response: { status: "failed", service_tier: "ultrafast" } },
+    { type: "response.done", response: { status: "failed", service_tier: "ultrafast" } },
+  ])("refuses failed or contradictory Ultrafast terminal $type/$response.status before forwarding", async terminal => {
+    const source = new ReadableStream({ start(controller) {
+      controller.enqueue(new TextEncoder().encode(`data: {"type":"response.output_text.delta","delta":"OK"}\n\ndata: ${JSON.stringify(terminal)}\n\n`));
+    } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source) });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    const reader = result.response.body.getReader();
+    try {
+      expect(new TextDecoder().decode((await reader.read()).value)).toContain("output_text.delta");
+      await expect(reader.read()).rejects.toThrow(/Ultrafast/);
+    } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+  });
+
+  it.each(['data: {"type":"error","error":{"message":"late failure"}}\n\n', 'data: [DONE]\n\ndata: [DONE]\n\n'])("refuses extra Ultrafast terminals after confirmed completion (%s)", async tail => {
+    const completed = 'data: {"type":"response.completed","response":{"status":"completed","service_tier":"ultrafast"}}\n\n';
+    const source = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(completed + tail)); controller.close(); } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source) });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    await expect(result.response.text()).rejects.toThrow(/Ultrafast/);
+  });
+
+  it("preserves comment heartbeats on the verified Ultrafast stream", async () => {
+    const prefix = 'data: {"type":"response.output_text.delta","delta":"OK"}\n\n';
+    const source = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(prefix + ': keepalive\n\n')); } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source) });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    const reader = result.response.body.getReader();
+    try {
+      expect(new TextDecoder().decode((await reader.read()).value)).toContain("output_text.delta");
+      const next = reader.read();
+      const observed = await Promise.race([next, new Promise(resolve => setTimeout(() => resolve(null), 50))]);
+      expect(observed).not.toBeNull();
+      expect(new TextDecoder().decode(observed.value)).toBe(': keepalive\n\n');
+    } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+  });
+
+  it("waits for asynchronous cancellation of the Ultrafast peek replacement", async () => {
+    let release;
+    const cleanup = new Promise(resolve => { release = resolve; });
+    const cancel = vi.fn(() => cleanup);
+    const source = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode('data: {"type":"response.output_text.delta","delta":"OK"}\n\n')); }, cancel });
+    const peek = await new CodexExecutor()._peekSseTransientError(new Response(source));
+    const reader = peek.replacementBody.getReader();
+    await reader.read();
+    let settled = false;
+    const pending = reader.cancel("client closed").then(() => { settled = true; });
+    try {
+      await vi.waitFor(() => expect(cancel).toHaveBeenCalledOnce());
+      await Promise.resolve();
+      expect(settled).toBe(false);
+    } finally { release(); await pending; reader.releaseLock(); }
+  });
+
+  it("propagates rejected cancellation of the Ultrafast peek replacement", async () => {
+    const source = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode('data: {"type":"response.output_text.delta","delta":"OK"}\n\n')); }, cancel: () => Promise.reject(new Error("Ultrafast cleanup refused")) });
+    const peek = await new CodexExecutor()._peekSseTransientError(new Response(source));
+    const reader = peek.replacementBody.getReader();
+    await reader.read();
+    try { await expect(reader.cancel("client closed")).rejects.toThrow("Ultrafast cleanup refused"); }
+    finally { reader.releaseLock(); }
   });
 
   it("keeps unknown tiers unknown and drops arbitrary text", () => {
