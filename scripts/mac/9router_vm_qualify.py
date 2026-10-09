@@ -631,6 +631,12 @@ MAC_MODULES = (
     "test_9router_worker_templates.py",
 )
 NATIVE = (
+    (
+        "install-parity",
+        ["python3", "tests/mac/9router_install_parity.check.py"],
+        "PASS: real npm install preserves",
+        300,
+    ),
     ("proxy", ["node", "tests/mac/9router_hotswap.check.cjs"], "PASS", 240),
     (
         "proxy-counterfactual",
@@ -1683,6 +1689,7 @@ def prerequisite_checks(binding, run_root, evidence, identity, checks, python):
     env = isolated_environment(run_root / "checks-home", ROOT)
     # Native checks make private temporary directories; keep Darwin socket paths short.
     env["TMPDIR"] = "/tmp"
+    env["NINEROUTER_TEST_TARBALL"] = binding["tgz"]
     config = run_root / "vitest.config.mjs"
     config.write_text(
         'import path from "node:path"; '
