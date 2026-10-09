@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { getModelServiceTier } from "open-sse/config/providerModels.js";
+import { getModelServiceTier, getModelUpstreamId, splitCodexEffortSuffix } from "open-sse/config/providerModels.js";
 import { getProviderConnections, validateApiKey, updateProviderConnection, getSettings, getProxyPools } from "@/lib/localDb";
 import { resolveConnectionProxyConfig, pickProxyPoolId } from "@/lib/network/connectionProxy";
 import { formatRetryAfter, checkFallbackError, isModelLockActive, buildModelLockUpdate, getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
@@ -90,6 +90,9 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
     : (excludeConnectionIds ? new Set([excludeConnectionIds]) : new Set());
   const preferredConnectionId = options?.preferredConnectionId || null;
   const requestedModel = options?.requestedModel || model;
+  const allowlistModel = ultrafast
+    ? splitCodexEffortSuffix(getModelUpstreamId("cx", model).replace(/\([^()]+\)\s*$/, "")).model
+    : requestedModel;
   // Acquire mutex to prevent race conditions
   const currentMutex = selectionMutex;
   let resolveMutex;
@@ -145,7 +148,7 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
       if (excludeSet.has(c.id)) return false;
       if (isModelLockActive(c, model)) return false;
       const enabled = c.providerSpecificData?.enabledModels;
-      if (providerId === "codex" && Array.isArray(enabled) && enabled.length && requestedModel && !enabled.includes(requestedModel)) return false;
+      if (providerId === "codex" && Array.isArray(enabled) && enabled.length && allowlistModel && !enabled.includes(allowlistModel)) return false;
       // Antigravity: skip if live quota exhausted for this model
       if (isAntigravity && model && antigravityQuotaCache) {
         const quota = antigravityQuotaCache.get(c.id)?.[model];

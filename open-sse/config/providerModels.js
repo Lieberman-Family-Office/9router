@@ -35,6 +35,11 @@ function findModel(models, modelId, aliasOrId) {
     : modelId;
   const found = models.find(m => m.id === modelId || m.id === baseModelId);
   if (found) return found;
+  if (["cx", "codex"].includes(aliasOrId) && typeof baseModelId === "string") {
+    const effortModel = splitCodexEffortSuffix(baseModelId).model;
+    const effortMatch = models.find(m => m.id === effortModel);
+    if (effortMatch) return effortMatch;
+  }
   if (!DOT_VERSION_PROVIDERS.has(aliasOrId)) return undefined;
   const normalized = normalizeModelId(baseModelId);
   if (normalized === baseModelId) return undefined;
@@ -101,7 +106,8 @@ export function getModelUpstreamId(aliasOrId, modelId) {
     const presetMatch = resolvedId.match(/\([^()]+\)\s*$/);
     const presetSuffix = presetMatch?.[0] || "";
     const resolvedBase = presetSuffix ? resolvedId.slice(0, presetMatch.index).trim() : resolvedId;
-    return resolvedBase + (suffix || presetSuffix);
+    const hyphenEffort = ["cx", "codex"].includes(aliasOrId) && typeof baseId === "string" ? splitCodexEffortSuffix(baseId).effort : null;
+    return resolvedBase + (suffix || (hyphenEffort ? `-${hyphenEffort}` : presetSuffix));
   }
   if (aliasOrId === "cx" && typeof baseId === "string" && baseId.endsWith(CODEX_REVIEW_SUFFIX)) {
     return baseId.slice(0, -CODEX_REVIEW_SUFFIX.length) + suffix;

@@ -105,6 +105,17 @@ describe("dedicated subscription Ultrafast routing", () => {
     expect(mocks.handleChatCore).toHaveBeenCalledTimes(1);
   });
 
+  it("pins a hyphen-effort Ultrafast request before model remapping", async () => {
+    mocks.getProviderConnections.mockResolvedValue([ordinary, eligible]);
+    await expect(getProviderCredentials("codex", null, "gpt-6-astra-ultrafast-high")).resolves.toMatchObject({ connectionId: eligible.id });
+  });
+
+  it.each(["gpt-6-astra", "gpt-6.1-sol"])("uses the pinned account's upstream allowlist for %s-ultrafast", async model => {
+    const pinned = { ...eligible, providerSpecificData: { enabledModels: [model] } };
+    mocks.getProviderConnections.mockResolvedValue([ordinary, pinned]);
+    await expect(getProviderCredentials("codex", null, `${model}-ultrafast(high)`)).resolves.toMatchObject({ connectionId: eligible.id });
+  });
+
   it("does not select an ordinary account after an upstream capacity error", async () => {
     mocks.getProviderConnections.mockResolvedValue([ordinary, eligible]);
     mocks.getModelInfo.mockResolvedValue({ provider: "codex", model: "gpt-6-astra-ultrafast" });

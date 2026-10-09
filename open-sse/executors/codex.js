@@ -334,16 +334,26 @@ export class CodexExecutor extends BaseExecutor {
           });
         }
         if (getModelServiceTier("cx", args.model) === "ultrafast" && result.response.ok) {
-          const decoder = new TextDecoder();
+          const decoder = new TextDecoder(), encoder = new TextEncoder();
           let buffer = "", confirmed = false;
-          const verifyLine = line => {
-            // ponytail: one Codex SSE data line is capped at 1 MiB; raise only for larger upstream events.
-            if (line.length > 1048576) throw new Error("Ultrafast response event exceeds the verification limit");
-            if (!line.startsWith("data:")) return;
-            const data = line.slice(5).trim();
-            if (!data || data === "[DONE]") return;
+          const verifyFrame = frame => {
+            // ponytail: buffer one SSE event, capped at 1 MiB. Raise only for larger upstream events.
+            if (frame.length > 1048576) throw new Error("Ultrafast response event exceeds the verification limit");
+            const lines = frame.split(/\r?\n/);
+            const data = lines.filter(line => line.startsWith("data:")).map(line => line.slice(5).trimStart()).join("\n").trim();
+            if (!data) return;
+            if (data === "[DONE]") {
+              if (!confirmed) throw new Error("Ultrafast terminal tier was not confirmed");
+              return;
+            }
             const event = JSON.parse(data);
-            if (event.type === "response.completed") {
+            const eventName = lines.find(line => line.startsWith("event:"))?.slice(6).trim();
+            if (eventName && event.type && eventName !== event.type) throw new Error("Ultrafast response event identity differs");
+            const type = eventName || event.type;
+            if (type === "response.incomplete" || event.response?.status === "incomplete") {
+              throw new Error("Ultrafast response is incomplete");
+            }
+            if (["response.completed", "response.done"].includes(type) || event.response?.status === "completed") {
               if (event.response?.service_tier !== "ultrafast") {
                 throw new Error("Ultrafast terminal tier was not confirmed; downgrade refused");
               }
@@ -353,16 +363,19 @@ export class CodexExecutor extends BaseExecutor {
           const verifier = new TransformStream({
             transform(chunk, controller) {
               buffer += decoder.decode(chunk, { stream: true });
-              const lines = buffer.split("\n");
-              buffer = lines.pop();
-              for (const line of lines) verifyLine(line);
+              const frames = buffer.split(/\r?\n\r?\n/);
+              buffer = frames.pop();
+              for (const frame of frames) {
+                verifyFrame(frame);
+                controller.enqueue(encoder.encode(frame + "\n\n"));
+              }
               if (buffer.length > 1048576) throw new Error("Ultrafast response event exceeds the verification limit");
-              controller.enqueue(chunk);
             },
-            flush() {
+            flush(controller) {
               buffer += decoder.decode();
-              if (buffer) verifyLine(buffer);
+              if (buffer) verifyFrame(buffer);
               if (!confirmed) throw new Error("Ultrafast terminal tier was not confirmed");
+              if (buffer) controller.enqueue(encoder.encode(buffer));
             },
           });
           if (!result.response.body) throw new Error("Ultrafast response stream is unavailable");

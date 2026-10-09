@@ -619,6 +619,7 @@ TASK3_MODULES = (
     "quota-aware-auth-routing",
     "ultrafast-tier",
     "codex-ultrafast-models",
+    "codex-ultrafast-dispatch",
 )
 MAC_MODULES = (
     "test_9router_deploy.py",
@@ -2648,20 +2649,28 @@ def wait_guest_manifest(args, active, remote, metadata, require_claim, cli, cli_
             and observed.get("state") == "running",
             "qualification instance changed",
         )
+        observe = (
+            "import pathlib,sys; r=pathlib.Path(sys.argv[1]); "
+            "failure=r/'dispatch-failure.json'; manifest=r/'evidence/manifest.json'; "
+            "sys.exit(2 if failure.exists() else "
+            "(0 if manifest.is_file() and manifest.stat().st_size else 1))"
+        )
         result = subprocess.run(
             [
                 cli,
                 "exec",
                 args.devbox_name,
                 "--",
-                "/bin/test",
-                "-s",
-                str(remote / "evidence/manifest.json"),
+                "python3",
+                "-c",
+                observe,
+                str(remote),
             ],
             env=cli_env,
             capture_output=True,
             timeout=30,
         )
+        require(result.returncode != 2, "guest execution refused before completion")
         require(result.returncode in {0, 1}, "evidence observation failed")
         if result.returncode == 0:
             return
@@ -2883,7 +2892,29 @@ def launch_guest_qualification(args, remote, stage, binding, devbox, credentials
         ("upload"),
         args.devbox_name,
         str(stage / ("execution.json")),
-        str(remote / ("execution.json")),
+        str(remote / ("execution.upload.json")),
+    )
+    publish = (
+        "import hashlib,json,os,pathlib,sys; r=pathlib.Path(sys.argv[1]); "
+        "p=r/'execution.upload.json'; data=p.read_bytes(); "
+        "assert hashlib.sha256(data).hexdigest()==sys.argv[2]; "
+        "value=json.loads(data); assert value['run_id']==sys.argv[3]; "
+        "assert value['execution_id']==sys.argv[4]; os.chmod(p,0o600); "
+        "f=os.open(p,os.O_RDONLY); os.fsync(f); os.close(f); "
+        "os.replace(p,r/'execution.json'); "
+        "f=os.open(r,os.O_RDONLY); os.fsync(f); os.close(f)"
+    )
+    devbox(
+        "exec",
+        args.devbox_name,
+        "--",
+        "python3",
+        "-c",
+        publish,
+        str(remote),
+        sha256(stage / "execution.json"),
+        binding["run_id"],
+        match[0],
     )
     return match[0]
 
@@ -3535,6 +3566,20 @@ def main(argv=None):
         tarfile.TarError,
         subprocess.SubprocessError,
     ) as error:
+        if args.command == "guest":
+            signal_path = Path(args.input).parent / "dispatch-failure.json"
+            try:
+                binding = private_json(Path(args.input))
+                new_json(
+                    signal_path,
+                    {
+                        "run_id": binding["run_id"],
+                        "failure": guest_failure_record(error),
+                    },
+                )
+            except (OSError, ValueError, KeyError, TypeError):
+                # The process still fails; an unreadable diagnostic cannot grant a pass.
+                pass
         print(
             "refused: qualification input: "
             + (str(error) if isinstance(error, ValueError) else type(error).__name__),
