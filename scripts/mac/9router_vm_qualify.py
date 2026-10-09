@@ -619,6 +619,7 @@ TASK3_MODULES = (
     "quota-aware-auth-routing",
     "ultrafast-tier",
     "codex-ultrafast-models",
+    "codex-ultrafast-dispatch",
 )
 MAC_MODULES = (
     "test_9router_deploy.py",

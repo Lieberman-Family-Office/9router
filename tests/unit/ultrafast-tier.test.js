@@ -67,6 +67,49 @@ describe("dedicated Ultrafast route", () => {
     else await expect(result.response.text()).rejects.toThrow(/Ultrafast/);
   });
 
+  it.each(["response.done", "response.incomplete", "[DONE]"])("refuses unverified Ultrafast terminal %s before a client can accept it", async terminal => {
+    const prefix = 'data: {"type":"response.output_text.delta","delta":"OK"}\n\n';
+    const terminalText = terminal === "[DONE]" ? "data: [DONE]\n\n" : `data: ${JSON.stringify({ type: terminal, response: { id: "resp_test", status: terminal === "response.incomplete" ? "incomplete" : "completed", service_tier: "priority" } })}\n\n`;
+    let sent = false;
+    const source = new ReadableStream({ pull(controller) {
+      if (!sent) { sent = true; controller.enqueue(new TextEncoder().encode(prefix + terminalText)); }
+    } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source), transformedBody: { service_tier: "ultrafast" } });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    const reader = result.response.body.getReader();
+    try {
+      const first = new TextDecoder().decode((await reader.read()).value);
+      expect(first).toBe(prefix);
+      await expect(reader.read()).rejects.toThrow(/Ultrafast/);
+    } finally {
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
+    }
+  });
+
+  it("buffers an incomplete terminal line until its Ultrafast tier is known", async () => {
+    const chunks = [
+      'data: {"type":"response.output_text.delta","delta":"OK"}\n\n',
+      'data: {"type":"response.completed","response":{"service_tier":"pri',
+      'ority","status":"completed"}}\n\n',
+    ];
+    let index = 0;
+    const source = new ReadableStream({ pull(controller) {
+      if (index < chunks.length) controller.enqueue(new TextEncoder().encode(chunks[index++]));
+      else controller.close();
+    } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source), transformedBody: { service_tier: "ultrafast" } });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    const reader = result.response.body.getReader();
+    try {
+      expect(new TextDecoder().decode((await reader.read()).value)).toContain("response.output_text.delta");
+      await expect(reader.read()).rejects.toThrow(/Ultrafast/);
+    } finally {
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
+    }
+  });
+
   it("keeps unknown tiers unknown and drops arbitrary text", () => {
     const record = __test__.toMetadataRecord({ serviceTier: { requested: "secret prompt", returned: "secret credential" } });
     expect(record.serviceTier).toEqual({ requested: null, returned: null });

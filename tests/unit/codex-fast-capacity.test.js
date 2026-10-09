@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { CodexExecutor } from "../../open-sse/executors/codex.js";
-import { getProviderModels } from "../../open-sse/config/providerModels.js";
+import { getProviderModels, getModelServiceTier, getModelUpstreamId } from "../../open-sse/config/providerModels.js";
+import { getCapabilitiesForModel } from "../../open-sse/providers/capabilities.js";
+import { augmentModelsWithCapacityAdapter } from "../../open-sse/services/capacityAdapter.js";
 import { resolveCodexChatGptModel } from "../../open-sse/providers/codexChatGptModels.js";
 
 function streamFromText(text) {
@@ -50,6 +52,26 @@ describe("Codex fast tier and capacity handling", () => {
       model, input: "hi", service_tier: "ultrafast",
     }, true, {});
     expect(normal.service_tier).toBe("priority");
+  });
+
+  it.each(["gpt-6-astra", "gpt-6.1-sol"])("canonicalizes hyphen reasoning without losing the dedicated %s route", model => {
+    const dedicated = `${model}-ultrafast-xhigh`;
+    expect(getModelServiceTier("cx", dedicated)).toBe("ultrafast");
+    expect(getModelUpstreamId("cx", dedicated)).toBe(`${model}-xhigh`);
+    expect(resolveCodexChatGptModel(dedicated)).toEqual({ model: dedicated, remappedFrom: null });
+    const body = new CodexExecutor().transformRequest(dedicated, { model: dedicated, input: "OK" }, true, {});
+    expect(body.model).toBe(model);
+    expect(body.reasoning.effort).toBe("xhigh");
+    expect(body.service_tier).toBe("ultrafast");
+  });
+
+  it.each(["gpt-6-astra", "gpt-6.1-sol"])("retains %s PDF capabilities and context on the Ultrafast route", model => {
+    const dedicated = `cx/${model}-ultrafast(high)`;
+    const caps = getCapabilitiesForModel("cx", `${model}-ultrafast(high)`);
+    expect(caps.pdf).toBe(true);
+    expect(caps.vision).toBe(true);
+    expect(caps.contextWindow).toBe(372000);
+    expect(augmentModelsWithCapacityAdapter([dedicated], new Set(["pdf"]), { capacityAdapter: { pdf: { enabled: true, models: ["codex/gpt-6-astra"] } } })).toEqual([dedicated]);
   });
 
   it("uses ChatGPT workspace header fallback", () => {

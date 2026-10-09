@@ -34,6 +34,7 @@
 
 import { matchPattern } from "./pricing.js";
 import { looksLikeVisionModel } from "./visionPatterns.js";
+import { getModelServiceTier, getModelUpstreamId, splitCodexEffortSuffix } from "../config/providerModels.js";
 
 /**
  * Safe floor — every resolved result is merged over this so consumers
@@ -584,6 +585,9 @@ function isCommandCodeTextOnly(model) {
 }
 export function getCapabilitiesForModel(provider, model) {
   if (!model) return { ...DEFAULT_CAPABILITIES };
+  if (["cx", "codex"].includes(provider) && getModelServiceTier("cx", model) === "ultrafast") {
+    model = splitCodexEffortSuffix(getModelUpstreamId("cx", model).replace(/\([^()]+\)\s*$/, "")).model;
+  }
 
   // Canonical exact lookup strips vendor prefix: "anthropic/claude-opus-4.7" -> "claude-opus-4.7".
   const baseModel = model.includes("/") ? model.split("/").pop() : model;
