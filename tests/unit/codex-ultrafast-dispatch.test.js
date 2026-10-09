@@ -127,6 +127,35 @@ it("preserves Ultrafast model, effort, and account on a real executor retry", as
   }
 });
 
+it("completes WebSocket steering state after a verified response.done", async () => {
+  const encodeEvent = event => new TextEncoder().encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+  let upstream;
+  mocks.transport.mockImplementationOnce(async () => new Response(new ReadableStream({ start(controller) {
+    upstream = controller;
+    controller.enqueue(encodeEvent({ type: "response.created", response: { id: "resp_done", status: "in_progress" } }));
+    controller.enqueue(encodeEvent({ type: "response.output_text.delta", delta: "OK" }));
+  } }), { headers: { "Content-Type": "text/event-stream" } }));
+  const socket = new EventEmitter(), events = [], reader = new WsFrameReader();
+  socket.destroyed = false; socket.end = vi.fn();
+  socket.write = bytes => { for (const frame of reader.push(bytes)) if (frame.opcode === 1) events.push(JSON.parse(frame.payload.toString())); };
+  const session = createResponsesWsSession({ socket, req: { headers: { authorization: "Bearer test-client" } }, fetchLocalResponses: (_path, _headers, body) => post(body) });
+  try {
+    socket.emit("data", encodeTextFrame(JSON.stringify({ type: "response.create", model: "cx/gpt-6-astra-ultrafast-high", input: "OK", stream_id: "done-turn" }), { mask: true }));
+    await vi.waitFor(() => expect(events.some(event => event.type === "response.created")).toBe(true));
+    socket.emit("data", encodeTextFrame(JSON.stringify({ type: "response.steer", previous_response_id: "resp_done", input: "Use the tool result" }), { mask: true }));
+    await vi.waitFor(() => expect(events.some(event => event.type === "response.steer.accepted")).toBe(true));
+    upstream.enqueue(encodeEvent({ type: "response.output_item.done", item: { type: "function_call", id: "fc_done", call_id: "call_done", name: "lookup", arguments: "{}" } }));
+    upstream.enqueue(encodeEvent({ type: "response.done", response: { id: "resp_done", model: "gpt-6-astra", status: "completed", service_tier: "ultrafast", output: [], usage: { input_tokens: 1, output_tokens: 1 } } }));
+    upstream.close();
+    await vi.waitFor(() => expect(events.some(event => event.type === "response.steer.pending")).toBe(true));
+    expect(events.some(event => event.type === "response.completed" && event.stream_id === "done-turn")).toBe(true);
+    expect(session.state.responses.get("resp_done").status).toBe("completed");
+    expect(session.state.pending[0].status).toBe("pending_input");
+    expect(events.find(event => event.type === "response.steer.pending").required_input).toEqual([{ type: "function_call_output", call_id: "call_done", name: "lookup" }]);
+    assertTransport("gpt-6-astra");
+  } finally { socket.emit("close"); }
+});
+
 it("preserves the dedicated route through a Responses WebSocket turn", async () => {
   const socket = new EventEmitter();
   const events = [], reader = new WsFrameReader();

@@ -356,7 +356,7 @@ export class CodexExecutor extends BaseExecutor {
             const event = JSON.parse(data);
             const eventName = eventNames[0];
             if (eventName && event.type && eventName !== event.type) throw new Error("Ultrafast response event identity differs");
-            const type = eventName || event.type;
+            const type = (eventName || event.type) === "response.done" ? "response.completed" : (eventName || event.type);
             if (["response.incomplete", "response.failed", "error"].includes(type)
                 || ["incomplete", "failed"].includes(event.response?.status) || event.error || event.response?.error) {
               throw new Error("Ultrafast response failed or is incomplete");
@@ -371,7 +371,7 @@ export class CodexExecutor extends BaseExecutor {
               }
               confirmed = true;
             }
-            if (type && !event.type) event.type = type;
+            if (type) event.type = type;
             return `${type ? `event: ${type}\n` : ""}data: ${JSON.stringify(event)}\n\n`;
           };
           const verifier = new TransformStream({
