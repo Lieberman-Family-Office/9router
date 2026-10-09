@@ -28,6 +28,8 @@ import { updateProviderCredentials, checkAndRefreshToken } from "../services/tok
 import { getProjectIdForConnection } from "open-sse/services/projectId.js";
 import { runRequestScope } from "@/lib/requestScope.js";
 import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
+import { getModelServiceTier } from "open-sse/config/providerModels.js";
+import { getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
 
 /**
  * Handle chat completion request
@@ -93,6 +95,19 @@ async function handleChatInScope(request, clientRawRequest) {
     return errorResponse(HTTP_STATUS.BAD_REQUEST, "Missing model");
   }
 
+  let dedicatedUltrafast = false;
+  try {
+    const info = await getModelInfo(modelStr);
+    dedicatedUltrafast = info.provider === "codex" && getModelServiceTier("cx", info.model) === "ultrafast";
+    if (dedicatedUltrafast) {
+      const caps = getCapabilitiesForModel("codex", info.model);
+      const unsupported = [...detectRequiredCapabilities(body)].filter(capability => caps[capability] !== true);
+      if (unsupported.length) return errorResponse(HTTP_STATUS.BAD_REQUEST, `Ultrafast route does not support ${unsupported.join(", ")}; model substitution refused`);
+    }
+  } catch (error) {
+    return errorResponse(HTTP_STATUS.BAD_REQUEST, error.message);
+  }
+
   // Bypass naming/warmup requests before combo rotation to avoid wasting rotation slots
   const userAgent = request?.headers?.get("user-agent") || "";
   const bypassResponse = handleBypassRequest(body, modelStr, userAgent, !!settings.ccFilterNaming);
@@ -148,7 +163,7 @@ async function handleChatInScope(request, clientRawRequest) {
 
   // Single model request — may still switch to a capacity-adapter model if the
   // target lacks a capability the request needs (e.g. no vision, request has an image).
-  const soloAugmented = augmentModelsWithCapacityAdapter([modelStr], requiredCapabilities, settings);
+  const soloAugmented = dedicatedUltrafast ? [modelStr] : augmentModelsWithCapacityAdapter([modelStr], requiredCapabilities, settings);
   if (soloAugmented.length > 1) {
     const adapterAdded = soloAugmented.filter((m) => m !== modelStr);
     log.info("CHAT", `Capacity adapter for [${[...requiredCapabilities].join(",")}] on "${modelStr}" → trying ${soloAugmented.join(", ")}`);

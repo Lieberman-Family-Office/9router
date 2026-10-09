@@ -124,7 +124,7 @@ export function detectRequiredCapabilities(body) {
       // Infer modality from embedded mime when available; fall back to pdf for generic files.
       let fmime = null;
       if (b.input_audio?.format) fmime = `audio/${b.input_audio.format}`;
-      else if (b.file?.file_data) fmime = String(b.file.file_data).match(/^data:([^;,]+)/)?.[1];
+      else if (b.file_data || b.file?.file_data) fmime = String(b.file_data || b.file.file_data).match(/^data:([^;,]+)/)?.[1];
       else if (b.source?.media_type) fmime = b.source.media_type;
       else if (b.source?.data) fmime = String(b.source.data).match(/^data:([^;,]+)/)?.[1];
       if (fmime) addByMime(fmime);

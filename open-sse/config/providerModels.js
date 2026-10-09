@@ -94,6 +94,7 @@ export function getModelType(aliasOrId, modelId) {
 }
 
 export function getModelUpstreamId(aliasOrId, modelId) {
+  if (typeof modelId === "string") modelId = modelId.trim();
   // Split off thinking suffix "(level)" so lookup hits the base id; re-append it to
   // the result so downstream applyThinking still sees the suffix (body.model is stripped separately).
   const sufMatch = typeof modelId === "string" ? modelId.match(/\([^()]+\)\s*$/) : null;
@@ -116,11 +117,23 @@ export function getModelUpstreamId(aliasOrId, modelId) {
 }
 
 export function getModelServiceTier(aliasOrId, modelId) {
+  if (["cx", "codex"].includes(aliasOrId) && typeof modelId === "string") {
+    const id = modelId.trim();
+    // Dedicated model prefixes are reserved; malformed extensions must never enter ordinary routing.
+    const dedicated = PROVIDER_MODELS.cx.find(entry => entry.serviceTier === "ultrafast" && id.startsWith(entry.id));
+    if (dedicated) {
+      const suffix = id.slice(dedicated.id.length);
+      if (!/^(?:-(?:low|medium|high|xhigh|max)|\((?:low|medium|high|xhigh|max)\))?$/.test(suffix)) {
+        throw new Error("Invalid Ultrafast model reasoning suffix");
+      }
+      return dedicated.serviceTier;
+    }
+  }
   return findModel(PROVIDER_MODELS[aliasOrId], modelId, aliasOrId)?.serviceTier || null;
 }
 
 export function splitCodexEffortSuffix(modelId) {
-  const match = /-(none|minimal|low|medium|high|xhigh)$/.exec(modelId);
+  const match = /-(none|minimal|low|medium|high|xhigh|max)$/.exec(modelId);
   return { model: match ? modelId.slice(0, match.index) : modelId, effort: match?.[1] || null };
 }
 

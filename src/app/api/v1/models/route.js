@@ -495,7 +495,10 @@ export async function buildModelsList(kindFilter, options = {}) {
         })
         .filter((modelId) => typeof modelId === "string" && modelId.trim() !== "");
 
-      const mergedModelIds = Array.from(new Set([...modelIds, ...customModelIds, ...aliasModelIds]));
+      const dedicatedModelIds = providerId === "codex" && ultrafastConnection
+        ? providerModels.filter(model => model.serviceTier === "ultrafast").map(model => model.id)
+        : [];
+      const mergedModelIds = Array.from(new Set([...modelIds, ...customModelIds, ...aliasModelIds, ...dedicatedModelIds]));
 
       for (const modelId of mergedModelIds) {
         // Resolve kind: prefer custom/live metadata, then static, then ID heuristics.
