@@ -882,7 +882,9 @@ class BootstrapTest(unittest.TestCase):
                 qualify, "prerequisite_native_checks", side_effect=native
             ):
                 with self.assertRaisesRegex(RuntimeError, "fixture native boundary"):
-                    qualify.prerequisite_checks({}, run, run, {}, {}, "python")
+                    qualify.prerequisite_checks(
+                        {"tgz": str(run / "candidate.tgz")}, run, run, {}, {}, "python"
+                    )
             self.assertEqual(observed, ["/tmp"])
 
     def test_host_run_creates_persistent_parent_before_new_run_directory(self):
