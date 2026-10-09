@@ -6,6 +6,8 @@
  * Allowlist verified live against ChatGPT OAuth (2026-09-26). Registry entries
  * that still 400 (e.g. gpt-5.4) are intentionally omitted.
  */
+import { getModelServiceTier } from "../config/providerModels.js";
+
 export const CODEX_CHATGPT_DEFAULT_MODEL = "gpt-5.5";
 
 const CODEX_CHATGPT_ALLOWED = new Set([
@@ -34,7 +36,7 @@ export function resolveCodexChatGptModel(model) {
   if (!normalized) {
     return { model: CODEX_CHATGPT_DEFAULT_MODEL, remappedFrom: model || null };
   }
-  if (CODEX_CHATGPT_ALLOWED.has(normalized)) {
+  if (CODEX_CHATGPT_ALLOWED.has(normalized) || getModelServiceTier("cx", model) === "ultrafast") {
     return { model, remappedFrom: null };
   }
   return { model: CODEX_CHATGPT_DEFAULT_MODEL, remappedFrom: model };

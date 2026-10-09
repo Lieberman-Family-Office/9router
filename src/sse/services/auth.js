@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { getModelServiceTier } from "open-sse/config/providerModels.js";
 import { getProviderConnections, validateApiKey, updateProviderConnection, getSettings, getProxyPools } from "@/lib/localDb";
 import { resolveConnectionProxyConfig, pickProxyPoolId } from "@/lib/network/connectionProxy";
 import { formatRetryAfter, checkFallbackError, isModelLockActive, buildModelLockUpdate, getEarliestModelLockUntil } from "open-sse/services/accountFallback.js";
@@ -44,6 +45,10 @@ function githubMonthlyResetMs(status, errorText, provider) {
 export async function getProviderCredentials(provider, excludeConnectionIds = null, model = null, options = {}) {
   const providerId = resolveProviderId(provider);
   const settingsBeforePoll = await getSettings();
+  const ultrafast = providerId === "codex" && getModelServiceTier("cx", model) === "ultrafast";
+  const ultrafastConnectionId = settingsBeforePoll.codexUltrafastConnectionId;
+  if (ultrafast && (typeof ultrafastConnectionId !== "string" || !ultrafastConnectionId.trim())) return null;
+  const accountEligible = connection => !ultrafast || (connection.id === ultrafastConnectionId && connection.authType === "oauth");
   const snapshots = new Map();
   const quotaEnabled = settingsBeforePoll.quotaAwareSelection !== false
     && (Array.isArray(settingsBeforePoll.quotaAwareProviders) ? settingsBeforePoll.quotaAwareProviders : ["claude", "codex"]).includes(providerId)
@@ -51,7 +56,7 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
   if (quotaEnabled) {
     const ttlMs = Number(settingsBeforePoll.quotaCacheTtlMs) > 0
       ? Number(settingsBeforePoll.quotaCacheTtlMs) : DEFAULT_QUOTA_CACHE_TTL_MS;
-    const candidates = await getProviderConnections({ provider: providerId, isActive: true });
+    const candidates = (await getProviderConnections({ provider: providerId, isActive: true })).filter(accountEligible);
     await Promise.all(candidates.map(async (conn) => {
       const fingerprint = createHash("sha256").update(conn.accessToken || "").digest("hex");
       const usage = await quotaUsageCache.getOrFetch(JSON.stringify([providerId, conn.id]), async () => {
@@ -123,7 +128,7 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
       };
     }
 
-    const connections = await getProviderConnections({ provider: providerId, isActive: true });
+    const connections = (await getProviderConnections({ provider: providerId, isActive: true })).filter(accountEligible);
     log.debug("AUTH", `${provider} | total connections: ${connections.length}, excludeIds: ${excludeSet.size > 0 ? [...excludeSet].join(",") : "none"}, model: ${model || "any"}`);
 
     if (connections.length === 0) {

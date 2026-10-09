@@ -615,6 +615,10 @@ TASK3_MODULES = (
     "db-migration-chain",
     "token-refresh-generic",
     "codex-refresh-token",
+    "codex-fast-capacity",
+    "quota-aware-auth-routing",
+    "ultrafast-tier",
+    "codex-ultrafast-models",
 )
 MAC_MODULES = (
     "test_9router_deploy.py",

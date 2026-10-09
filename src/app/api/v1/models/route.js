@@ -5,7 +5,8 @@ import {
   isAnthropicCompatibleProvider,
   isOpenAICompatibleProvider,
 } from "@/shared/constants/providers";
-import { getProviderConnections, getCombos, getCustomModels, getModelAliases } from "@/lib/localDb";
+import { getProviderConnections, getCombos, getCustomModels, getModelAliases, getSettings } from "@/lib/localDb";
+import { getModelServiceTier } from "open-sse/config/providerModels.js";
 import { getDisabledModels } from "@/lib/disabledModelsDb";
 import { resolveKiroModels } from "open-sse/services/kiroModels.js";
 import { resolveKimchiModels } from "open-sse/services/kimchiModels.js";
@@ -309,6 +310,14 @@ export async function buildModelsList(kindFilter, options = {}) {
   }
 
   const models = [];
+  let ultrafastConnectionId = null;
+  try {
+    ultrafastConnectionId = (await getSettings()).codexUltrafastConnectionId;
+  } catch {
+    // Unknown settings cannot advertise an account-bound speed route.
+  }
+  const ultrafastConfigured = typeof ultrafastConnectionId === "string"
+    && connections.some(conn => conn.id === ultrafastConnectionId && conn.provider === "codex" && conn.authType === "oauth" && conn.isActive !== false);
 
   // Lookup map so aggregateComboCapabilities can recursively resolve nested combos
   const comboByName = Object.fromEntries(combos.map((c) => [c.name, c.models]));
@@ -558,6 +567,9 @@ export async function buildModelsList(kindFilter, options = {}) {
   const dedupedModels = [];
   const seenModelIds = new Set();
   for (const model of models) {
+    const slash = model?.id?.indexOf("/");
+    const alias = slash >= 0 ? model.id.slice(0, slash) : null;
+    if (["cx", "codex"].includes(alias) && getModelServiceTier("cx", model.id.slice(slash + 1)) === "ultrafast" && !ultrafastConfigured) continue;
     if (!model?.id || seenModelIds.has(model.id)) continue;
     seenModelIds.add(model.id);
     dedupedModels.push(model);

@@ -7,7 +7,7 @@ import {
 } from "../services/oauthCredentialManager.js";
 import { normalizeResponsesInput } from "../translator/formats/responsesApi.js";
 import { fetchImageAsBase64 } from "../translator/concerns/image.js";
-import { getModelUpstreamId, getProviderModels, splitCodexEffortSuffix } from "../config/providerModels.js";
+import { getModelUpstreamId, getModelServiceTier, getProviderModels, splitCodexEffortSuffix } from "../config/providerModels.js";
 import { getThinkingLevels } from "../providers/thinkingLevels.js";
 import {
   normalizeMultiAgent,
@@ -333,6 +333,45 @@ export class CodexExecutor extends BaseExecutor {
             headers: result.response.headers,
           });
         }
+        if (getModelServiceTier("cx", args.model) === "ultrafast" && result.response.ok) {
+          const decoder = new TextDecoder();
+          let buffer = "", confirmed = false;
+          const verifyLine = line => {
+            // ponytail: one Codex SSE data line is capped at 1 MiB; raise only for larger upstream events.
+            if (line.length > 1048576) throw new Error("Ultrafast response event exceeds the verification limit");
+            if (!line.startsWith("data:")) return;
+            const data = line.slice(5).trim();
+            if (!data || data === "[DONE]") return;
+            const event = JSON.parse(data);
+            if (event.type === "response.completed") {
+              if (event.response?.service_tier !== "ultrafast") {
+                throw new Error("Ultrafast terminal tier was not confirmed; downgrade refused");
+              }
+              confirmed = true;
+            }
+          };
+          const verifier = new TransformStream({
+            transform(chunk, controller) {
+              buffer += decoder.decode(chunk, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop();
+              for (const line of lines) verifyLine(line);
+              if (buffer.length > 1048576) throw new Error("Ultrafast response event exceeds the verification limit");
+              controller.enqueue(chunk);
+            },
+            flush() {
+              buffer += decoder.decode();
+              if (buffer) verifyLine(buffer);
+              if (!confirmed) throw new Error("Ultrafast terminal tier was not confirmed");
+            },
+          });
+          if (!result.response.body) throw new Error("Ultrafast response stream is unavailable");
+          result.response = new Response(result.response.body.pipeThrough(verifier), {
+            status: result.response.status,
+            statusText: result.response.statusText,
+            headers: result.response.headers,
+          });
+        }
         return result;
       }
       if (peek.accountFallback) {
@@ -576,9 +615,8 @@ export class CodexExecutor extends BaseExecutor {
     delete body.safety_identifier; // Droid CLI sends this but Codex doesn't support it
     delete body.previous_response_id; // store=false → backend can't resolve previous resp; avoid 404
 
-    // ponytail: Fast mode forced on for every Codex account (Jason, 2026-09-29, option A-global).
-    // Costs ~2x quota. Add a per-account providerSpecificData.fastMode flag (upstream PR #4066) if that ever needs to vary.
-    body.service_tier = "priority";
+    // Dedicated registry routes select Ultrafast. Client tier overrides cannot change normal Fast routing.
+    body.service_tier = getModelServiceTier("cx", model) || "priority";
 
     applyMultiAgentIncompatibilities(body);
 

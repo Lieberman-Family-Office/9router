@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   resolveConnectionProxyConfig: vi.fn(),
   getClaudeUsage: vi.fn(),
   getCodexUsage: vi.fn(),
+  getModelInfo: vi.fn(),
+  handleChatCore: vi.fn(),
 }));
 
 vi.mock("@/lib/localDb", () => ({
@@ -21,6 +23,7 @@ vi.mock("@/lib/network/connectionProxy", () => ({
   pickProxyPoolId: vi.fn(),
 }));
 vi.mock("@/shared/constants/providers.js", () => ({
+  AI_PROVIDERS: {},
   FREE_PROVIDERS: {},
   resolveProviderId: (provider) => provider,
 }));
@@ -37,9 +40,9 @@ vi.mock("@/sse/utils/logger.js", () => ({
 }));
 
 vi.mock("open-sse/index.js", () => ({}));
-vi.mock("@/sse/services/model.js", () => ({ getModelInfo: async () => ({ provider: "claude", model: "claude-sonnet-4-6" }), getComboModels: async () => null }));
-vi.mock("open-sse/handlers/chatCore.js", () => ({ handleChatCore: vi.fn(() => { throw new Error("Inference forbidden"); }) }));
-vi.mock("@/sse/services/tokenRefresh.js", () => ({ updateProviderCredentials: vi.fn(), checkAndRefreshToken: vi.fn() }));
+vi.mock("@/sse/services/model.js", () => ({ getModelInfo: mocks.getModelInfo, getComboModels: async () => null }));
+vi.mock("open-sse/handlers/chatCore.js", () => ({ handleChatCore: mocks.handleChatCore }));
+vi.mock("@/sse/services/tokenRefresh.js", () => ({ updateProviderCredentials: vi.fn(), checkAndRefreshToken: vi.fn(async (_provider, credentials) => credentials) }));
 vi.mock("@/lib/headroom/detect", () => ({ DEFAULT_HEADROOM_URL: "" }));
 vi.mock("@/lib/pxpipe/loader.js", () => ({ getTransform: vi.fn() }));
 vi.mock("@/lib/pxpipe/events.js", () => ({ appendPxpipeEvent: vi.fn() }));
@@ -52,11 +55,84 @@ const { getProviderCredentials } = await import("@/sse/services/auth.js");
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.resolveConnectionProxyConfig.mockResolvedValue({});
+  mocks.getModelInfo.mockResolvedValue({ provider: "claude", model: "claude-sonnet-4-6" });
+  mocks.handleChatCore.mockImplementation(() => { throw new Error("Inference forbidden"); });
   mocks.getSettings.mockResolvedValue({
     quotaAwareSelection: true,
     quotaCacheTtlMs: 45000,
     quotaAwareProviders: ["claude", "codex"],
     fallbackStrategy: "fill-first",
+  });
+});
+
+describe("dedicated subscription Ultrafast routing", () => {
+  const eligible = { id: "eligible-ultrafast-account", authType: "oauth", accessToken: "eligible", priority: 2 };
+  const ordinary = { id: "normal-fast-account", accessToken: "ordinary", priority: 1 };
+
+  beforeEach(() => {
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false, fallbackStrategy: "fill-first", codexUltrafastConnectionId: eligible.id });
+  });
+
+  it("refuses dedicated routing without an explicitly configured account", async () => {
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false });
+    mocks.getProviderConnections.mockResolvedValue([ordinary, eligible]);
+    await expect(getProviderCredentials("codex", null, "gpt-6-astra-ultrafast")).resolves.toBeNull();
+  });
+
+  it.each(["gpt-6-astra", "gpt-6.1-sol"])("pins %s-ultrafast without changing normal routing", async model => {
+    mocks.getProviderConnections.mockResolvedValue([ordinary, eligible]);
+    await expect(getProviderCredentials("codex", null, `${model}-ultrafast(high)`)).resolves.toMatchObject({ connectionId: eligible.id });
+    await expect(getProviderCredentials("codex", null, model)).resolves.toMatchObject({ connectionId: ordinary.id });
+  });
+
+  it.each(["gpt-6-astra", "gpt-6.1-sol"])("dispatches %s-ultrafast through chat without remapping or account fallback", async model => {
+    const dedicated = `${model}-ultrafast(high)`;
+    mocks.getProviderConnections.mockResolvedValue([ordinary, eligible]);
+    mocks.getModelInfo.mockResolvedValue({ provider: "codex", model: dedicated });
+    mocks.handleChatCore.mockImplementation(async ({ credentials, modelInfo }) => {
+      const body = new (await import("../../open-sse/executors/codex.js")).CodexExecutor().transformRequest(modelInfo.model, { model, input: "OK", reasoning: { effort: "high" } }, true, credentials);
+      expect(credentials.connectionId).toBe(eligible.id);
+      expect(body.model).toBe(model);
+      expect(body.service_tier).toBe("ultrafast");
+      return { success: true, response: new Response("OK") };
+    });
+    const response = await handleChat(new Request("http://localhost/v1/responses", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: `cx/${dedicated}`, input: "OK" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("OK");
+    expect(mocks.handleChatCore).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not select an ordinary account after an upstream capacity error", async () => {
+    mocks.getProviderConnections.mockResolvedValue([ordinary, eligible]);
+    mocks.getModelInfo.mockResolvedValue({ provider: "codex", model: "gpt-6-astra-ultrafast" });
+    mocks.handleChatCore.mockResolvedValue({ success: false, status: 503, error: "model_at_capacity", response: new Response("capacity", { status: 503 }) });
+    const response = await handleChat(new Request("http://localhost/v1/responses", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "cx/gpt-6-astra-ultrafast", input: "OK" }),
+    }));
+    expect(response.status).toBe(503);
+    expect(mocks.handleChatCore).toHaveBeenCalledTimes(1);
+    expect(mocks.handleChatCore.mock.calls[0][0].credentials.connectionId).toBe(eligible.id);
+  });
+
+  it("refuses other accounts when the pinned account has exhausted its blocking quota", async () => {
+    const pinned = { ...eligible, id: "ultrafast-quota-exhausted", accessToken: "exhausted" };
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: true, codexUltrafastConnectionId: pinned.id });
+    mocks.getProviderConnections.mockResolvedValue([ordinary, pinned]);
+    mocks.getCodexUsage.mockResolvedValue({ quotas: { weekly: { remaining: 0, resetAt: "2099-10-01T03:00:00.000Z" } } });
+    await expect(getProviderCredentials("codex", null, "gpt-6-astra-ultrafast")).resolves.toMatchObject({ allRateLimited: true });
+  });
+
+  it.each(["missing", "excluded", "model-locked"])("refuses ordinary-account fallback when the eligible account is %s", async state => {
+    const account = state === "model-locked" ? { ...eligible, "modelLock_gpt-6-astra-ultrafast": "2099-10-01T03:00:00.000Z" } : eligible;
+    mocks.getProviderConnections.mockResolvedValue(state === "missing" ? [ordinary] : [ordinary, account]);
+    const excluded = state === "excluded" ? new Set([eligible.id]) : null;
+    const result = await getProviderCredentials("codex", excluded, "gpt-6-astra-ultrafast");
+    expect(result?.connectionId).not.toBe(ordinary.id);
+    expect(!result || result.allRateLimited === true).toBe(true);
   });
 });
 
@@ -83,11 +159,11 @@ describe("polling isolation", () => {
     } finally { spy.mockRestore(); }
   });
 
-  it.each([false, true])("returns chat 429 with unknown resets (mixed known=%s)", async mixed => {
+  it.each([false, true])("returns chat 503 with unknown resets (mixed known=%s)", async mixed => {
     mocks.getProviderConnections.mockResolvedValue([{ id: `http-unknown-${mixed}`, accessToken: "unknown" }, { id: `http-other-${mixed}`, accessToken: "other" }]);
     mocks.getClaudeUsage.mockImplementation(async token => ({ quotas: { "weekly (7d)": { remaining: 0, resetAt: mixed && token === "other" ? "2099-10-01T03:00:00Z" : null } } }));
     const response = await handleChat(new Request("http://localhost/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "claude/claude-sonnet-4-6", messages: [] }) }));
-    expect(response.status).toBe(429);
+    expect(response.status).toBe(503);
     expect(response.headers.has("Retry-After")).toBe(mixed);
     const body = await response.json();
     expect(body.error.message).toContain("blocking quota exhausted");
