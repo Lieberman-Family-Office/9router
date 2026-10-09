@@ -156,6 +156,114 @@ def rebind_measurement(root, record, expected, name, mutation):
     expected["evidence_manifest_sha256"] = qualify.sha256(root / "manifest.json")
 
 
+class DispatchTest(unittest.TestCase):
+    def test_execution_identity_is_published_after_upload_completes(self):
+        from types import SimpleNamespace
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            stage = root / "stage"
+            remote = root / "remote"
+            stage.mkdir()
+            remote.mkdir()
+            observed = []
+
+            def devbox(*args, **kwargs):
+                if args[:2] == ("exec", "--detach"):
+                    return "exec_fixture"
+                if args[0] == "upload":
+                    target = Path(args[3])
+                    target.write_bytes(b"")
+                    observed.append((remote / "execution.json").exists())
+                    target.write_bytes(Path(args[2]).read_bytes())
+                    target.chmod(0o600)
+                    return ""
+                if args[0] == "exec":
+                    import subprocess
+
+                    return subprocess.check_output(list(args[3:]), text=True)
+                self.fail("Unexpected dispatch command")
+
+            args = SimpleNamespace(
+                devbox_name="fixture-box", models=[], interactive_signin=False
+            )
+            self.assertEqual(
+                qualify.launch_guest_qualification(
+                    args, remote, stage, {"run_id": "fixture-run"}, devbox, None
+                ),
+                "exec_fixture",
+            )
+            self.assertEqual(observed, [False])
+            self.assertEqual(
+                json.loads((remote / "execution.json").read_text()),
+                {"run_id": "fixture-run", "execution_id": "exec_fixture"},
+            )
+
+    def test_early_guest_refusal_writes_a_failure_signal(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            input_path = root / "input.json"
+            write_json(input_path, {"run_id": "fixture-run"})
+            with patch.object(
+                qualify,
+                "guest_guard",
+                side_effect=ValueError("fixture precheck refused"),
+            ):
+                self.assertEqual(
+                    qualify.main(
+                        [
+                            "guest",
+                            str(root / "candidate.tgz"),
+                            "--input",
+                            str(input_path),
+                        ]
+                    ),
+                    1,
+                )
+            failure = json.loads((root / "dispatch-failure.json").read_text())
+            self.assertEqual(failure["run_id"], "fixture-run")
+            self.assertEqual(failure["failure"]["type"], "ValueError")
+
+    def test_host_wait_refuses_an_early_failure_without_waiting_for_timeout(self):
+        import subprocess
+        from types import SimpleNamespace
+
+        args = SimpleNamespace(
+            timeout=7200, devbox_id="fixture-box", devbox_name="fixture"
+        )
+        active = {"instance_id": "fixture-instance"}
+
+        def metadata(_):
+            return {
+                "id": "fixture-box",
+                "name": "fixture",
+                "state": "running",
+                **active,
+            }
+
+        with (
+            patch.object(
+                qualify.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess([], 2),
+            ),
+            patch.object(qualify.time, "sleep") as wait,
+        ):
+            with self.assertRaisesRegex(
+                ValueError, "guest execution refused before completion"
+            ):
+                qualify.wait_guest_manifest(
+                    args,
+                    active,
+                    Path("/fixture/run"),
+                    metadata,
+                    lambda: None,
+                    "fixture-cli",
+                    {},
+                )
+            wait.assert_not_called()
+
+
 class ReceiptTest(unittest.TestCase):
     def test_exported_bytes_and_complete_populations_are_accepted(self):
         with TemporaryDirectory() as directory:
