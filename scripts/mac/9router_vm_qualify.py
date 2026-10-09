@@ -685,6 +685,17 @@ NATIVE = (
         240,
     ),
     (
+        "usage-contention",
+        [
+            "node",
+            "--loader",
+            "./tests/unit/managed-imports.loader.mjs",
+            "tests/unit/managed-usage-contention.check.mjs",
+        ],
+        "GREEN: actual managed usage contention",
+        60,
+    ),
+    (
         "review-counterfactual",
         ["node", "tests/unit/managed-review-counterfactual.check.mjs"],
         (

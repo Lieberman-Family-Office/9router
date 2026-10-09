@@ -242,8 +242,9 @@ export async function getActiveRequests() {
 
 export async function saveRequestUsage(entry) {
   const done = managed.beginWork('persistence');
+  let db, ownsTransaction = false;
   try {
-    const db = await getAdapter();
+    db = await getAdapter();
 
     if (!entry.timestamp) entry.timestamp = new Date().toISOString();
     entry.cost = await calculateCost(entry.provider, entry.model, entry.tokens);
@@ -254,8 +255,12 @@ export async function saveRequestUsage(entry) {
 
     let inserted = false;
 
-    // All 3 writes (history insert, daily upsert, lifetime counter) in ONE transaction.
-    // better-sqlite3 is sync → no JS yield mid-transaction → no race in same process.
+    // Acquire write intent before the dedup read so another worker cannot block its upgrade.
+    if (process.env.NINEROUTER_MANAGED_WORKER === '1') {
+      db.exec('BEGIN IMMEDIATE');
+      ownsTransaction = true;
+    }
+    // History, daily summary, and lifetime count commit together.
     db.transaction(() => {
       const existing = db.get(
         `SELECT id, endpoint FROM usageHistory
@@ -306,12 +311,19 @@ export async function saveRequestUsage(entry) {
       db.run(`INSERT INTO _meta(key, value) VALUES('totalRequestsLifetime', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, [String(next)]);
       inserted = true;
     });
+    if (ownsTransaction) {
+      db.exec('COMMIT');
+      ownsTransaction = false;
+    }
 
     if (inserted) {
       pushToRing(entry);
       scheduleStatsEvent("update", 250);
     }
   } catch (e) {
+    if (ownsTransaction) {
+      try { db.exec('ROLLBACK'); } catch { /* The original failure remains unknown. */ }
+    }
     if (process.env.NINEROUTER_MANAGED_WORKER === '1') managed.workState().unknown = true;
     console.error("Failed to save usage stats:", e);
   } finally { done(); }
