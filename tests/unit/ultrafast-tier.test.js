@@ -1,4 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import { BaseExecutor } from "../../open-sse/executors/base.js";
+import { CodexExecutor } from "../../open-sse/executors/codex.js";
 import { DefaultExecutor } from "../../open-sse/executors/default.js";
 import { createSSEStream } from "../../open-sse/utils/stream.js";
 import { buildRequestDetail } from "../../open-sse/handlers/chatCore/requestDetail.js";
@@ -8,6 +10,7 @@ import { initTranslators } from "../../open-sse/translator/index.js";
 
 const credentials = { providerSpecificData: { prefix: "openai-ultrafast", apiType: "responses", baseUrl: "https://api.openai.com/v1" } };
 const executor = new DefaultExecutor("openai-compatible-responses-test");
+afterEach(() => vi.restoreAllMocks());
 
 describe("dedicated Ultrafast route", () => {
   it("forces the tier only on the dedicated model and official Responses endpoint", () => {
@@ -45,6 +48,23 @@ describe("dedicated Ultrafast route", () => {
     await new Response(source.pipeThrough(transform)).text();
     expect(done).toHaveBeenCalledTimes(1);
     expect(done.mock.calls[0][0].service_tier).toBeNull();
+  });
+
+  it.each(["ultrafast", "priority", null, "incomplete"])("requires the terminal subscription tier %s at the Codex transport boundary", async tier => {
+    const events = [
+      { type: "response.created", response: { id: "resp_test", service_tier: "ultrafast" } },
+      { type: "response.output_text.delta", delta: "OK" },
+      { type: "response.completed", response: { id: "resp_test", model: "gpt-6-astra", status: "completed", ...(tier ? { service_tier: tier } : {}), output: [], usage: { input_tokens: 1, output_tokens: 1 } } },
+    ];
+    const selectedEvents = tier === "incomplete" ? events.slice(0, -1) : events;
+    const bytes = new TextEncoder().encode(selectedEvents.map(event => `data: ${JSON.stringify(event)}\n\n`).join(""));
+    const source = new ReadableStream({ start(controller) {
+      controller.enqueue(bytes.slice(0, 17)); controller.enqueue(bytes.slice(17)); controller.close();
+    } });
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({ response: new Response(source, { headers: { "Content-Type": "text/event-stream" } }), transformedBody: { service_tier: "ultrafast" } });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: {} });
+    if (tier === "ultrafast") expect(await result.response.text()).toContain('"type":"response.completed"');
+    else await expect(result.response.text()).rejects.toThrow(/Ultrafast/);
   });
 
   it("keeps unknown tiers unknown and drops arbitrary text", () => {

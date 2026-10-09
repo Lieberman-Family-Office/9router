@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CodexExecutor } from "../../open-sse/executors/codex.js";
+import { getProviderModels } from "../../open-sse/config/providerModels.js";
+import { resolveCodexChatGptModel } from "../../open-sse/providers/codexChatGptModels.js";
 
 function streamFromText(text) {
   const encoder = new TextEncoder();
@@ -33,6 +35,21 @@ describe("Codex fast tier and capacity handling", () => {
     }, true, {});
 
     expect(body.service_tier).toBe("priority");
+  });
+
+  it.each(["gpt-6-astra", "gpt-6.1-sol"])("requests subscription Ultrafast for the dedicated %s route only", (model) => {
+    const executor = new CodexExecutor();
+    expect(getProviderModels("cx").find(entry => entry.id === `${model}-ultrafast`)).toMatchObject({ upstreamModelId: model, serviceTier: "ultrafast" });
+    expect(resolveCodexChatGptModel(`${model}-ultrafast(high)`)).toEqual({ model: `${model}-ultrafast(high)`, remappedFrom: null });
+    const dedicated = executor.transformRequest(`${model}-ultrafast(high)`, {
+      model, input: "hi", service_tier: "priority",
+    }, true, {});
+    expect(dedicated.model).toBe(model);
+    expect(dedicated.service_tier).toBe("ultrafast");
+    const normal = executor.transformRequest(model, {
+      model, input: "hi", service_tier: "ultrafast",
+    }, true, {});
+    expect(normal.service_tier).toBe("priority");
   });
 
   it("uses ChatGPT workspace header fallback", () => {

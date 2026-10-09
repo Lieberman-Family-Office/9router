@@ -109,6 +109,10 @@ export function getModelUpstreamId(aliasOrId, modelId) {
   return baseId + suffix;
 }
 
+export function getModelServiceTier(aliasOrId, modelId) {
+  return findModel(PROVIDER_MODELS[aliasOrId], modelId, aliasOrId)?.serviceTier || null;
+}
+
 export function splitCodexEffortSuffix(modelId) {
   const match = /-(none|minimal|low|medium|high|xhigh)$/.exec(modelId);
   return { model: match ? modelId.slice(0, match.index) : modelId, effort: match?.[1] || null };

@@ -5,8 +5,8 @@ Mac-local watchdog for the EC2→Mac 9router path. launchd KeepAlive only
 restarts crashed processes; this catches live-but-wedged daemons.
 
 Probes (each cycle):
-  1. local_9router  — GET http://127.0.0.1:20128/v1/models
-  2. hairpin_ts     — GET http://<tailscale-ip>:20128/v1/models (TCP serve)
+  1. local_9router  — GET http://127.0.0.1:20128/api/version
+  2. hairpin_ts     — GET http://<tailscale-ip>:20128/api/version (TCP serve)
   3. helper         — GET http://127.0.0.1:20129/combo/subs-coding
   4. ts_backend     — `tailscale status --json` BackendState == Running
 
@@ -49,7 +49,7 @@ DEFAULT_TS_BIN = "/opt/homebrew/bin/tailscale"
 LAUNCHCTL = "/bin/launchctl"
 # Plain HTTP is intentional: probes hit local/Tailscale TCP serve,
 # not the public TLS edge.
-LOCAL_9ROUTER = "http://127.0.0.1:20128/v1/models"  # NOSONAR python:S5332
+LOCAL_9ROUTER = "http://127.0.0.1:20128/api/version"  # NOSONAR python:S5332
 LOCAL_HELPER = "http://127.0.0.1:20129/combo/subs-coding"  # NOSONAR python:S5332
 
 TARGET_TAILSCALE = "tailscale"
@@ -195,7 +195,7 @@ def run_probes(
         )
     else:
         # Plain HTTP: Tailscale TCP serve forwards to local 9router (no TLS on :20128).
-        hairpin_url = f"http://{ts_ip}:20128/v1/models"  # NOSONAR python:S5332
+        hairpin_url = f"http://{ts_ip}:20128/api/version"  # NOSONAR python:S5332
         ok, detail = do_http(hairpin_url)
         results.append(
             ProbeResult("hairpin_ts", ok, detail, PROBE_TARGETS["hairpin_ts"])

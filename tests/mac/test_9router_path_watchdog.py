@@ -7,6 +7,9 @@ import importlib.util
 import json
 import os
 import subprocess
+import threading
+import urllib.parse
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
@@ -283,6 +286,80 @@ def test_cycle_uses_managed_decisions(wd, monkeypatch, tmp_path):
     )
     assert calls == []
     assert json.loads(log.read_text())["probes"]["managed_control"]["ok"] is True
+
+
+def test_authenticated_models_do_not_restart_a_healthy_proxy(wd, monkeypatch, tmp_path):
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            code = 401 if self.path.endswith("/v1/models") else 200
+            self.send_response(code)
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    probe = wd.http_probe
+
+    def http(url, *, timeout_s):
+        path = urllib.parse.urlsplit(url).path
+        return probe(
+            f"http://127.0.0.1:{server.server_port}{path}", timeout_s=timeout_s
+        )
+
+    def runner(command, **kwargs):
+        output = (
+            "127.0.0.1\n"
+            if command[-2:] == ["ip", "-4"]
+            else '{"BackendState":"Running"}'
+        )
+        return subprocess.CompletedProcess(command, 0, output, "")
+
+    run_probes = wd.run_probes
+    monkeypatch.setattr(
+        wd,
+        "run_probes",
+        lambda **kwargs: run_probes(
+            timeout_s=1,
+            ts_socket="unused",
+            ts_bin="unused",
+            runner=runner,
+            http=lambda url: http(url, timeout_s=1),
+        ),
+    )
+    monkeypatch.setattr(wd, "http_probe", http)
+    monkeypatch.setattr(wd, "managed_status", lambda **kwargs: _managed_status())
+    calls = []
+    monkeypatch.setattr(
+        wd, "apply_kicks", lambda targets, **kwargs: calls.extend(targets) or []
+    )
+    state = wd.WatchState()
+    try:
+        assert http("http://127.0.0.1/v1/models", timeout_s=1) == (False, "http_401")
+        for _ in range(2):
+            assert (
+                wd.cycle(
+                    home=tmp_path,
+                    uid=os.getuid(),
+                    timeout_s=1,
+                    fail_threshold=2,
+                    cooldown_s=180,
+                    ts_socket="unused",
+                    ts_bin="unused",
+                    state=state,
+                    dry_run=True,
+                    log_path=tmp_path / "watchdog.log",
+                )
+                == 0
+            )
+        assert calls == []
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
 
 
 def test_failure_streak_is_reset_when_active_slot_changes(wd, monkeypatch, tmp_path):
