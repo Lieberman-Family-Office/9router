@@ -662,6 +662,10 @@ export function openaiResponsesToOpenAIResponse(chunk, state) {
         finishReason
       );
 
+      if (data.response?.service_tier_confirmation === "unverified") {
+        finalChunk.service_tier = data.response.service_tier;
+        finalChunk.service_tier_confirmation = "unverified";
+      }
       // Include usage in final chunk if available
       if (state.usage && typeof state.usage === "object") {
         finalChunk.usage = state.usage;

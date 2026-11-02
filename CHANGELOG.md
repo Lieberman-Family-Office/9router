@@ -2,6 +2,7 @@
 
 ## Fixes
 - **Mac watchdog**: use `/api/health` for local and Tailscale liveness probes, avoiding provider catalog and npm version lookups. Keep private managed-worker readiness checks unchanged.
+- **Codex Ultrafast**: preserve the live multi-account OAuth pool, bounded default-tier echo handling, and unverified tier metadata across streaming and non-streaming responses. Keep redirect and malformed-event refusals.
 
 # v0.5.91 (2026-09-26)
 

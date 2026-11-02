@@ -222,7 +222,8 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
         ...ctx,
         latency: { ttft: totalLatency, total: totalLatency },
         tokens: { prompt_tokens: inTokensForLog, completion_tokens: usage.output_tokens || 0 },
-        response: { content: textContent, thinking: null, finish_reason: jsonResponse.status || "unknown" },
+        response: { content: textContent, thinking: null, finish_reason: jsonResponse.status || "unknown",
+          service_tier: jsonResponse.service_tier },
         status: "success"
       }, { endpoint: clientRawRequest?.endpoint || null })).catch(() => {});
 
@@ -277,6 +278,10 @@ export async function handleForcedSSEToJson({ providerResponse, sourceFormat, ta
         finalResp = {
           id: jsonResponse.id || `chatcmpl-${Date.now()}`,
           object: "chat.completion",
+          ...(jsonResponse.service_tier_confirmation === "unverified" ? {
+            service_tier: jsonResponse.service_tier,
+            service_tier_confirmation: "unverified"
+          } : {}),
           created: jsonResponse.created_at || Math.floor(Date.now() / 1000),
           model: jsonResponse.model || model,
           choices: [{ index: 0, message, finish_reason: finishReason }],

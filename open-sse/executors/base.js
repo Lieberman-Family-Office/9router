@@ -145,6 +145,7 @@ export class BaseExecutor {
           method: "POST",
           headers,
           body: bodyStr,
+          ...(this.provider === "codex" && transformedBody?.service_tier === "ultrafast" ? { redirect: "error" } : {}),
           signal: mergedSignal
         }, proxyOptions);
         clearTimeout(connectTimer);

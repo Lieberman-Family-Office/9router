@@ -80,6 +80,19 @@ describe("requestDetails metadata-only mode", () => {
     expect(raw).not.toContain(PROMPT);
   });
 
+  it("persists unverified Codex tier confirmation without relabeling the upstream echo", async () => {
+    await save({ id: "meta-codex-echo", provider: "codex", model: "gpt-6.1-sol-ultrafast", status: "success",
+      serviceTier: { requested: "ultrafast", returned: "default", confirmation: "unverified" },
+      request: { model: "gpt-6.1-sol-ultrafast", stream: true, messages: [{ role: "user", content: PROMPT }] },
+      response: { content: PROMPT, headers: { authorization: SECRET } },
+    });
+    const got = await db.getRequestDetailById("meta-codex-echo");
+    expect(got.serviceTier).toEqual({ requested: "ultrafast", returned: "default", confirmation: "unverified" });
+    const raw = adapter.get(`SELECT data FROM requestDetails WHERE id = ?`, ["meta-codex-echo"]).data;
+    expect(raw).not.toContain(PROMPT);
+    expect(raw).not.toContain(SECRET);
+  });
+
   it("keeps only type/code from a JSON upstream error, never its message (the S18 shape)", async () => {
     // Echo is partial and re-cased, which no text filter over the message would catch.
     const echo = `invalid key Bearer ${SECRET} for request '${PROMPT.slice(3).toLowerCase()}'`;

@@ -63,7 +63,9 @@ function toMetadataRecord(record) {
     ...(record.attempts ? { attempts: record.attempts, attemptStatuses: record.attemptStatuses } : {}),
     serviceTier: {
       requested: serviceTier(record.serviceTier?.requested),
-      returned: serviceTier(record.serviceTier?.returned)
+      returned: serviceTier(record.serviceTier?.returned),
+      ...(record.provider === "codex" && serviceTier(record.serviceTier?.requested) === "ultrafast"
+        && record.serviceTier?.confirmation === "unverified" ? { confirmation: "unverified" } : {})
     },
     metadataOnly: true,
   };
@@ -195,7 +197,9 @@ async function flushToDatabase() {
             pxpipe: item.pxpipe || undefined,
             serviceTier: {
               requested: serviceTier(item.serviceTier?.requested),
-              returned: serviceTier(item.serviceTier?.returned)
+              returned: serviceTier(item.serviceTier?.returned),
+              ...(item.provider === "codex" && serviceTier(item.serviceTier?.requested) === "ultrafast"
+                && item.serviceTier?.confirmation === "unverified" ? { confirmation: "unverified" } : {})
             },
           };
           const record = isMetadataOnly()

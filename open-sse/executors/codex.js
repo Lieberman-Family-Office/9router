@@ -334,6 +334,10 @@ export class CodexExecutor extends BaseExecutor {
           });
         }
         if (getModelServiceTier("cx", args.model) === "ultrafast" && result.response.ok) {
+          // ponytail: accept only the known private OAuth default echo; other unconfirmed tiers still refuse.
+          const codexOAuth = args.credentials?.authType === "oauth" && args.credentials.accessToken
+            && result.headers?.Authorization === `Bearer ${args.credentials.accessToken}`
+            && result.url === PROVIDERS.codex.baseUrl && result.transformedBody?.service_tier === "ultrafast";
           const decoder = new TextDecoder(), encoder = new TextEncoder();
           let buffer = "", confirmed = false, doneSent = false;
           const verifyFrame = frame => {
@@ -354,6 +358,10 @@ export class CodexExecutor extends BaseExecutor {
               return "data: [DONE]\n\n";
             }
             const event = JSON.parse(data);
+            if (!event || typeof event !== "object" || Array.isArray(event)
+                || (Object.hasOwn(event, "type") && (typeof event.type !== "string" || !event.type))) {
+              throw new Error("Ultrafast response has invalid event type");
+            }
             const eventName = eventNames[0];
             if (eventName && event.type && eventName !== event.type) throw new Error("Ultrafast response event identity differs");
             const type = (eventName || event.type) === "response.done" ? "response.completed" : (eventName || event.type);
@@ -366,9 +374,11 @@ export class CodexExecutor extends BaseExecutor {
               if (!["response.completed", "response.done"].includes(type) || event.response?.status !== "completed") {
                 throw new Error("Ultrafast completion type and status are inconsistent");
               }
-              if (event.response?.service_tier !== "ultrafast") {
+              if (event.response?.service_tier !== "ultrafast"
+                  && !(codexOAuth && event.response?.service_tier === "default")) {
                 throw new Error("Ultrafast terminal tier was not confirmed; downgrade refused");
               }
+              if (codexOAuth) event.response.service_tier_confirmation = "unverified";
               confirmed = true;
             }
             if (type) event.type = type;

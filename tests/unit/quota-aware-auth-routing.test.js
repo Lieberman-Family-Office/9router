@@ -73,6 +73,60 @@ describe("dedicated subscription Ultrafast routing", () => {
     mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false, fallbackStrategy: "fill-first", codexUltrafastConnectionId: eligible.id });
   });
 
+  it("selects each of four configured Ultrafast accounts without admitting ordinary accounts", async () => {
+    const accounts = Array.from({ length: 4 }, (_, index) => ({ ...eligible,
+      id: `ultrafast-pool-${index}`, priority: index + 2 }));
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false, fallbackStrategy: "fill-first",
+      codexUltrafastConnectionIds: accounts.map(account => account.id) });
+    mocks.getProviderConnections.mockResolvedValue([ordinary, ...accounts]);
+    const excluded = new Set();
+    for (const account of accounts) {
+      const result = await getProviderCredentials("codex", excluded, "gpt-6-astra-ultrafast(high)");
+      expect(result?.connectionId).toBe(account.id);
+      excluded.add(account.id);
+    }
+    await expect(getProviderCredentials("codex", excluded, "gpt-6-astra-ultrafast(high)")).resolves.toBeNull();
+    await expect(getProviderCredentials("codex", null, "gpt-6-astra")).resolves.toMatchObject({ connectionId: ordinary.id });
+  });
+
+  it("treats an explicit account list as authoritative over the legacy single account", async () => {
+    const second = { ...eligible, id: "authoritative-ultrafast" };
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false,
+      codexUltrafastConnectionId: eligible.id, codexUltrafastConnectionIds: [null, 3, " ", second.id] });
+    mocks.getProviderConnections.mockResolvedValue([ordinary, eligible, second]);
+    await expect(getProviderCredentials("codex", null, "gpt-6-astra-ultrafast"))
+      .resolves.toMatchObject({ connectionId: second.id });
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false,
+      codexUltrafastConnectionId: eligible.id, codexUltrafastConnectionIds: [] });
+    await expect(getProviderCredentials("codex", null, "gpt-6-astra-ultrafast")).resolves.toBeNull();
+  });
+
+  it("skips exhausted pool accounts and polls no ordinary account for Ultrafast", async () => {
+    const accounts = [{ ...eligible, id: "pool-exhausted", accessToken: "pool-exhausted" },
+      { ...eligible, id: "pool-available", accessToken: "pool-available" }];
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: true,
+      codexUltrafastConnectionIds: accounts.map(account => account.id) });
+    mocks.getProviderConnections.mockResolvedValue([ordinary, ...accounts]);
+    mocks.getCodexUsage.mockImplementation(async token => ({ quotas: { weekly: {
+      remaining: token === "pool-exhausted" ? 0 : 50, resetAt: "2099-10-01T03:00:00.000Z" } } }));
+    await expect(getProviderCredentials("codex", null, "gpt-6-astra-ultrafast"))
+      .resolves.toMatchObject({ connectionId: "pool-available" });
+    expect(mocks.getCodexUsage).toHaveBeenCalledTimes(2);
+    expect(mocks.getCodexUsage.mock.calls.some(([token]) => token === ordinary.accessToken)).toBe(false);
+  });
+
+  it("uses only configured OAuth accounts from a multi-account Ultrafast list", async () => {
+    const second = { ...eligible, id: "second-ultrafast", priority: 3 };
+    const apiKey = { ...ordinary, id: "not-subscription", authType: "apikey" };
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false,
+      codexUltrafastConnectionIds: [eligible.id, second.id, apiKey.id] });
+    mocks.getProviderConnections.mockResolvedValue([ordinary, apiKey, eligible, second]);
+    await expect(getProviderCredentials("codex", new Set([eligible.id]), "gpt-6.1-sol-ultrafast(xhigh)"))
+      .resolves.toMatchObject({ connectionId: second.id });
+    await expect(getProviderCredentials("codex", new Set([eligible.id, second.id]), "gpt-6.1-sol-ultrafast(xhigh)"))
+      .resolves.toBeNull();
+  });
+
   it("refuses dedicated routing without an explicitly configured account", async () => {
     mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false });
     mocks.getProviderConnections.mockResolvedValue([ordinary, eligible]);
