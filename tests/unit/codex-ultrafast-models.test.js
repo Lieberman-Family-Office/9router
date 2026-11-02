@@ -29,6 +29,22 @@ it.each(["unconfigured", "missing", "inactive", "apikey", "eligible"])("advertis
   expect(models.some(model => model.id === "cx/gpt-6-astra")).toBe(true);
 });
 
+it("advertises the union of allowed models across configured active OAuth accounts", async () => {
+  mocks.settings = { codexUltrafastConnectionIds: ["first", "second", "inactive", "apikey"] };
+  mocks.connections.push(
+    { id: "first", provider: "codex", authType: "oauth", isActive: true, providerSpecificData: { enabledModels: ["gpt-6-astra"] } },
+    { id: "second", provider: "codex", authType: "oauth", isActive: true, providerSpecificData: { enabledModels: ["gpt-6.1-sol"] } },
+    { id: "inactive", provider: "codex", authType: "oauth", isActive: false },
+    { id: "apikey", provider: "codex", authType: "apikey", isActive: true },
+  );
+  const models = await buildModelsList(["llm"], { skipDynamicFetch: true });
+  expect(models.filter(model => model.id.endsWith("-ultrafast")).map(model => model.id).sort())
+    .toEqual(["cx/gpt-6-astra-ultrafast", "cx/gpt-6.1-sol-ultrafast"]);
+  mocks.connections = mocks.connections.filter(connection => !["first", "second"].includes(connection.id));
+  const unavailable = await buildModelsList(["llm"], { skipDynamicFetch: true });
+  expect(unavailable.some(model => model.id.endsWith("-ultrafast"))).toBe(false);
+});
+
 it("advertises only the pinned account's allowed upstream model", async () => {
   mocks.connections.push({ id: "eligible", provider: "codex", authType: "oauth", isActive: true, providerSpecificData: { enabledModels: ["gpt-6-astra"] } });
   const models = await buildModelsList(["llm"], { skipDynamicFetch: true });

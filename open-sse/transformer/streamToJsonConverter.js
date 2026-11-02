@@ -29,6 +29,10 @@ function processSSEMessage(msg, state) {
     state.items.set(parsed.output_index ?? 0, parsed.item);
   } else if (eventType === "response.completed" || eventType === "response.done") {
     state.status = "completed";
+    if (parsed.response?.service_tier_confirmation === "unverified") {
+      state.serviceTier = parsed.response.service_tier;
+      state.serviceTierConfirmation = "unverified";
+    }
     if (parsed.response?.usage) {
       state.usage.input_tokens = parsed.response.usage.input_tokens || 0;
       state.usage.output_tokens = parsed.response.usage.output_tokens || 0;
@@ -98,6 +102,10 @@ export async function convertResponsesStreamToJson(stream) {
     created_at: state.created,
     status: state.status || "completed",
     output,
-    usage: state.usage
+    usage: state.usage,
+    ...(state.serviceTierConfirmation ? {
+      service_tier: state.serviceTier,
+      service_tier_confirmation: state.serviceTierConfirmation
+    } : {})
   };
 }

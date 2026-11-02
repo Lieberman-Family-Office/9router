@@ -50,6 +50,88 @@ describe("dedicated Ultrafast route", () => {
     expect(done.mock.calls[0][0].service_tier).toBeNull();
   });
 
+  it.each([
+    { authType: "oauth", url: "https://chatgpt.com/backend-api/codex/responses", requested: "ultrafast", accepts: true },
+    { authType: "apikey", url: "https://chatgpt.com/backend-api/codex/responses", requested: "ultrafast", accepts: false },
+    { authType: "oauth", url: "https://api.openai.com/v1/responses", requested: "ultrafast", accepts: false },
+    { authType: "oauth", url: "https://example.com/responses", requested: "ultrafast", accepts: false },
+    { authType: "oauth", url: "https://chatgpt.com/backend-api/codex/responses", requested: "priority", accepts: false },
+  ])("scopes default-echo acceptance to private Codex OAuth ($authType/$url/$requested)", async ({ authType, url, requested, accepts }) => {
+    const frame = 'event: response.completed\ndata: {"type":"response.completed","response":{"id":"resp_echo","status":"completed","service_tier":"default"}}\n\n';
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({
+      url, headers: { Authorization: "Bearer oauth-test" }, response: new Response(frame), transformedBody: { service_tier: requested },
+    });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: { authType, accessToken: "oauth-test" } });
+    if (accepts) {
+      const text = await result.response.text();
+      expect(text).toContain('"service_tier":"default"');
+      expect(text).toContain('"service_tier_confirmation":"unverified"');
+    } else await expect(result.response.text()).rejects.toThrow(/Ultrafast/);
+  });
+
+  it.each(["priority", null, "unexpected"])("keeps private OAuth unknown tier %s refused", async tier => {
+    const response = { id: "resp_unknown", status: "completed", ...(tier ? { service_tier: tier } : {}) };
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({
+      url: "https://chatgpt.com/backend-api/codex/responses",
+      response: new Response(`event: response.completed\ndata: ${JSON.stringify({ type: "response.completed", response })}\n\n`),
+      transformedBody: { service_tier: "ultrafast" },
+    });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" }, credentials: { authType: "oauth" } });
+    await expect(result.response.text()).rejects.toThrow(/Ultrafast/);
+  });
+
+  it.each([false, 0, null, "", [], {}].map(type => [type]))("review: refuses malformed JSON event type %j within private OAuth scope", async type => {
+    const event = { type, response: { id: "resp_echo", status: "completed", service_tier: "default" } };
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({
+      url: "https://chatgpt.com/backend-api/codex/responses", headers: { Authorization: "Bearer oauth-test" },
+      response: new Response(`event: response.completed\ndata: ${JSON.stringify(event)}\n\n`),
+      transformedBody: { service_tier: "ultrafast" },
+    });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" },
+      credentials: { authType: "oauth", accessToken: "oauth-test" } });
+    await expect(result.response.text()).rejects.toThrow("Ultrafast response has invalid event type");
+  });
+
+  it("review: refuses API-key fallback under an OAuth label", async () => {
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({
+      url: "https://chatgpt.com/backend-api/codex/responses", headers: { Authorization: "Bearer api-key-test" },
+      response: new Response('event: response.completed\ndata: {"type":"response.completed","response":{"id":"resp_echo","status":"completed","service_tier":"default"}}\n\n'),
+      transformedBody: { service_tier: "ultrafast" },
+    });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" },
+      credentials: { authType: "oauth", apiKey: "api-key-test" } });
+    await expect(result.response.text()).rejects.toThrow("Ultrafast terminal tier was not confirmed; downgrade refused");
+  });
+
+  it.each([
+    { frames: [{ type: "response.failed", response: { status: "failed", service_tier: "default" } }], reason: "Ultrafast response failed or is incomplete" },
+    { frames: [{ type: "response.incomplete", response: { status: "incomplete", service_tier: "default" } }], reason: "Ultrafast response failed or is incomplete" },
+    { frames: [{ type: "response.completed", response: { status: "in_progress", service_tier: "default" } }], reason: "Ultrafast completion type and status are inconsistent" },
+    { frames: [{ type: "response.completed", response: { status: "completed", service_tier: "default" } }, { type: "response.completed", response: { status: "completed", service_tier: "default" } }], reason: "Ultrafast response has events after confirmed completion" },
+    { frames: [{ type: "response.completed", response: { status: "completed", service_tier: "default" } }, { type: "error", error: { message: "late failure" } }], reason: "Ultrafast response failed or is incomplete" },
+    { frames: [], reason: "Ultrafast terminal tier was not confirmed" },
+  ])("review: preserves private OAuth refusal ($reason)", async ({ frames, reason }) => {
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({
+      url: "https://chatgpt.com/backend-api/codex/responses", headers: { Authorization: "Bearer oauth-test" },
+      response: new Response(frames.map(event => `data: ${JSON.stringify(event)}\n\n`).join("")),
+      transformedBody: { service_tier: "ultrafast" },
+    });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" },
+      credentials: { authType: "oauth", accessToken: "oauth-test" } });
+    await expect(result.response.text()).rejects.toThrow(reason);
+  });
+
+  it("review: preserves valid event-name-only private OAuth completion", async () => {
+    vi.spyOn(BaseExecutor.prototype, "execute").mockResolvedValue({
+      url: "https://chatgpt.com/backend-api/codex/responses", headers: { Authorization: "Bearer oauth-test" },
+      response: new Response('event: response.completed\ndata: {"response":{"id":"resp_echo","status":"completed","service_tier":"default"}}\n\n'),
+      transformedBody: { service_tier: "ultrafast" },
+    });
+    const result = await new CodexExecutor().execute({ model: "gpt-6-astra-ultrafast", body: { input: "OK" },
+      credentials: { authType: "oauth", accessToken: "oauth-test" } });
+    expect(await result.response.text()).toContain('"service_tier_confirmation":"unverified"');
+  });
+
   it.each(["ultrafast", "priority", null, "incomplete"])("requires the terminal subscription tier %s at the Codex transport boundary", async tier => {
     const events = [
       { type: "response.created", response: { id: "resp_test", service_tier: "ultrafast" } },
@@ -240,6 +322,34 @@ describe("dedicated Ultrafast route", () => {
       expect(new TextDecoder().decode((await reader.read()).value)).toContain("output_text.delta");
       await expect(reader.read()).rejects.toThrow(/Ultrafast/);
     } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
+  });
+
+  it("retains the raw private Codex tier through terminal stream accounting", async () => {
+    await initTranslators();
+    const done = vi.fn();
+    const transform = createSSEStream({ targetFormat: FORMATS.OPENAI_RESPONSES, sourceFormat: FORMATS.OPENAI_RESPONSES, onStreamComplete: done });
+    const event = { type: "response.completed", response: { id: "resp_echo", status: "completed", service_tier: "default", service_tier_confirmation: "unverified", output: [], usage: { input_tokens: 1, output_tokens: 1 } } };
+    const source = new ReadableStream({ start(controller) {
+      controller.enqueue(new TextEncoder().encode(`event: response.completed\ndata: ${JSON.stringify(event)}\n\n`));
+      controller.close();
+    } });
+    const text = await new Response(source.pipeThrough(transform)).text();
+    expect(text).toContain('"service_tier":"default"');
+    expect(done).toHaveBeenCalledOnce();
+    expect(done.mock.calls[0][0]).toMatchObject({ service_tier: "default" });
+  });
+
+  it("retains only the safe unverified Codex confirmation label", () => {
+    const detail = buildRequestDetail({ provider: "codex", providerRequest: { service_tier: "ultrafast" },
+      response: { service_tier: "default", service_tier_confirmation: "unverified" } });
+    expect(__test__.toMetadataRecord(detail).serviceTier).toEqual({ requested: "ultrafast", returned: "default", confirmation: "unverified" });
+    for (const confirmation of ["confirmed", "secret credential", true, null]) {
+      const record = __test__.toMetadataRecord({ provider: "codex", serviceTier: { requested: "ultrafast", returned: "default", confirmation } });
+      expect(record.serviceTier).toEqual({ requested: "ultrafast", returned: "default" });
+    }
+    const publicDetail = buildRequestDetail({ provider: "openai", providerRequest: { service_tier: "ultrafast" },
+      response: { service_tier: "default", service_tier_confirmation: "unverified" } });
+    expect(publicDetail.serviceTier).toEqual({ requested: "ultrafast", returned: "default" });
   });
 
   it("keeps unknown tiers unknown and drops arbitrary text", () => {

@@ -82,7 +82,9 @@ export function buildRequestDetail(base, overrides = {}) {
     status: base.status || "success",
     serviceTier: {
       requested: serviceTier(base.providerRequest?.service_tier),
-      returned: serviceTier(base.providerResponse?.service_tier ?? base.response?.service_tier)
+      returned: serviceTier(base.providerResponse?.service_tier ?? base.response?.service_tier),
+      ...(base.provider === "codex" && serviceTier(base.providerRequest?.service_tier) === "ultrafast"
+        ? { confirmation: "unverified" } : {})
     },
     ...overrides
   };

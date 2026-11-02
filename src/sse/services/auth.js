@@ -46,9 +46,11 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
   const providerId = resolveProviderId(provider);
   const settingsBeforePoll = await getSettings();
   const ultrafast = providerId === "codex" && getModelServiceTier("cx", model) === "ultrafast";
-  const ultrafastConnectionId = settingsBeforePoll.codexUltrafastConnectionId;
-  if (ultrafast && (typeof ultrafastConnectionId !== "string" || !ultrafastConnectionId.trim())) return null;
-  const accountEligible = connection => !ultrafast || (connection.id === ultrafastConnectionId && connection.authType === "oauth");
+  const ultrafastConnectionIds = new Set((Array.isArray(settingsBeforePoll.codexUltrafastConnectionIds)
+    ? settingsBeforePoll.codexUltrafastConnectionIds : [settingsBeforePoll.codexUltrafastConnectionId])
+    .filter(id => typeof id === "string" && id.trim()));
+  if (ultrafast && ultrafastConnectionIds.size === 0) return null;
+  const accountEligible = connection => !ultrafast || (ultrafastConnectionIds.has(connection.id) && connection.authType === "oauth");
   const snapshots = new Map();
   const quotaEnabled = settingsBeforePoll.quotaAwareSelection !== false
     && (Array.isArray(settingsBeforePoll.quotaAwareProviders) ? settingsBeforePoll.quotaAwareProviders : ["claude", "codex"]).includes(providerId)

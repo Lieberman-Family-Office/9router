@@ -310,15 +310,17 @@ export async function buildModelsList(kindFilter, options = {}) {
   }
 
   const models = [];
-  let ultrafastConnectionId = null;
+  let ultrafastConnectionIds = [];
   try {
-    ultrafastConnectionId = (await getSettings()).codexUltrafastConnectionId;
+    const settings = await getSettings();
+    ultrafastConnectionIds = (Array.isArray(settings.codexUltrafastConnectionIds)
+      ? settings.codexUltrafastConnectionIds : [settings.codexUltrafastConnectionId])
+      .filter(id => typeof id === "string" && id.trim());
   } catch {
     // Unknown settings cannot advertise an account-bound speed route.
   }
-  const ultrafastConnection = typeof ultrafastConnectionId === "string"
-    ? connections.find(conn => conn.id === ultrafastConnectionId && conn.provider === "codex" && conn.authType === "oauth" && conn.isActive !== false)
-    : null;
+  const ultrafastConnections = connections.filter(conn => ultrafastConnectionIds.includes(conn.id)
+    && conn.provider === "codex" && conn.authType === "oauth" && conn.isActive !== false);
 
   // Lookup map so aggregateComboCapabilities can recursively resolve nested combos
   const comboByName = Object.fromEntries(combos.map((c) => [c.name, c.models]));
@@ -495,7 +497,7 @@ export async function buildModelsList(kindFilter, options = {}) {
         })
         .filter((modelId) => typeof modelId === "string" && modelId.trim() !== "");
 
-      const dedicatedModelIds = providerId === "codex" && ultrafastConnection
+      const dedicatedModelIds = providerId === "codex" && ultrafastConnections.length > 0
         ? providerModels.filter(model => model.serviceTier === "ultrafast").map(model => model.id)
         : [];
       const mergedModelIds = Array.from(new Set([...modelIds, ...customModelIds, ...aliasModelIds, ...dedicatedModelIds]));
@@ -574,9 +576,11 @@ export async function buildModelsList(kindFilter, options = {}) {
     const slash = model?.id?.indexOf("/");
     const alias = slash >= 0 ? model.id.slice(0, slash) : null;
     if (["cx", "codex"].includes(alias) && getModelServiceTier("cx", model.id.slice(slash + 1)) === "ultrafast") {
-      if (!ultrafastConnection) continue;
-      const enabled = ultrafastConnection.providerSpecificData?.enabledModels;
-      if (Array.isArray(enabled) && enabled.length && !enabled.includes(getModelUpstreamId("cx", model.id.slice(slash + 1)))) continue;
+      const upstreamModel = getModelUpstreamId("cx", model.id.slice(slash + 1));
+      if (!ultrafastConnections.some(connection => {
+        const enabled = connection.providerSpecificData?.enabledModels;
+        return !Array.isArray(enabled) || !enabled.length || enabled.includes(upstreamModel);
+      })) continue;
     }
     if (!model?.id || seenModelIds.has(model.id)) continue;
     seenModelIds.add(model.id);

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 
-const mocks = vi.hoisted(() => ({ transport: vi.fn(), accounts: [], settings: {} }));
+const mocks = vi.hoisted(() => ({ transport: vi.fn(), details: vi.fn(), accounts: [], settings: {} }));
 vi.mock("@/lib/localDb", () => ({
   getProviderConnections: async ({ isActive } = {}) => mocks.accounts.filter(account => isActive === undefined || account.isActive === isActive),
   getSettings: async () => mocks.settings,
@@ -10,7 +10,7 @@ vi.mock("@/lib/localDb", () => ({
   validateApiKey: async () => true, updateProviderConnection: async () => {},
 }));
 vi.mock("@/lib/usageDb.js", () => ({
-  saveRequestUsage: async () => {}, saveRequestDetail: async () => {},
+  saveRequestUsage: async () => {}, saveRequestDetail: mocks.details,
   appendRequestLog: async () => {}, trackPendingRequest: () => {},
 }));
 vi.mock("@/lib/network/connectionProxy", () => ({ resolveConnectionProxyConfig: async () => ({}), pickProxyPoolId: () => null }));
@@ -24,6 +24,7 @@ const { encodeTextFrame, WsFrameReader } = await import("../../open-sse/handlers
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  mocks.details.mockResolvedValue(undefined);
   vi.stubEnv("ENABLE_REQUEST_LOGS", "false");
   mocks.settings = { quotaAwareSelection: false, codexUltrafastConnectionId: "eligible", fallbackStrategy: "fill-first" };
   mocks.accounts = [
@@ -59,6 +60,69 @@ it.each(["gpt-6-astra", "gpt-6.1-sol"])("dispatches dedicated %s through real ch
   expect(response.status).toBe(200);
   expect(await response.text()).toContain('"type":"response.completed"');
   assertTransport(model);
+});
+
+it("dispatches a configured second account through the real Ultrafast executor", async () => {
+  mocks.settings = { quotaAwareSelection: false, codexUltrafastConnectionIds: ["missing-first", "eligible"] };
+  const response = await post({ model: "cx/gpt-6-astra-ultrafast(high)", input: "OK", stream: true });
+  expect(response.status).toBe(200);
+  expect(await response.text()).toContain('"type":"response.completed"');
+  assertTransport("gpt-6-astra");
+});
+
+it.each([true, false])("completes a pinned Codex default-tier echo without claiming Ultrafast confirmation (stream=%s)", async stream => {
+  mocks.transport.mockImplementationOnce(async (_url, options) => {
+    const body = JSON.parse(options.body);
+    const response = { id: "resp_echo", model: body.model, status: "completed", service_tier: "default", output: [], usage: { input_tokens: 1, output_tokens: 1 } };
+    const events = [
+      { type: "response.created", response: { ...response, status: "in_progress", service_tier: "auto" } },
+      { type: "response.output_text.delta", delta: "OK" },
+      { type: "response.completed", response },
+    ];
+    return new Response(events.map(event => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(""), { headers: { "Content-Type": "text/event-stream" } });
+  });
+  const response = await post({ model: "cx/gpt-6.1-sol-ultrafast(high)", input: "OK", stream });
+  expect(response.status).toBe(200);
+  const text = await response.text();
+  expect(text).toContain(stream ? '"type":"response.completed"' : '"status":"completed"');
+  expect(text).toContain('"service_tier":"default"');
+  expect(text).toContain('"service_tier_confirmation":"unverified"');
+  expect(text).not.toContain("response.failed");
+  assertTransport("gpt-6.1-sol");
+  await vi.waitFor(() => expect(mocks.details).toHaveBeenCalledWith(expect.objectContaining({
+    connectionId: "eligible",
+    serviceTier: { requested: "ultrafast", returned: "default", confirmation: "unverified" },
+  })));
+});
+
+it.each([true, false])("review: preserves default echo and uncertainty for Chat Completions (stream=%s)", async stream => {
+  mocks.transport.mockImplementationOnce(async (_url, options) => {
+    const body = JSON.parse(options.body);
+    const response = { id: "resp_chat_echo", model: body.model, status: "completed", service_tier: "default", output: [], usage: { input_tokens: 1, output_tokens: 1 } };
+    return new Response(`event: response.completed\ndata: ${JSON.stringify({ type: "response.completed", response })}\n\n`, { headers: { "Content-Type": "text/event-stream" } });
+  });
+  const response = await handleChat(new Request("http://localhost/v1/chat/completions", {
+    method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer test-client" },
+    body: JSON.stringify({ model: "cx/gpt-6.1-sol-ultrafast(high)", messages: [{ role: "user", content: "OK" }], stream }),
+  }));
+  expect(response.status).toBe(200);
+  const text = await response.text();
+  expect(text).toContain('"service_tier":"default"');
+  expect(text).toContain('"service_tier_confirmation":"unverified"');
+  expect(text).not.toContain("response.failed");
+  assertTransport("gpt-6.1-sol");
+});
+
+it("review: refuses redirects on the dedicated Codex request only", async () => {
+  const { BaseExecutor } = await import("../../open-sse/executors/base.js");
+  const executor = new BaseExecutor("codex", { baseUrl: "https://chatgpt.com/backend-api/codex/responses" });
+  for (const tier of ["ultrafast", "priority"]) {
+    const result = await executor.execute({ model: "gpt-6.1-sol", body: { model: "gpt-6.1-sol", service_tier: tier }, stream: true,
+      credentials: { authType: "oauth", accessToken: "oauth-test" } });
+    await result.response.text();
+  }
+  expect(mocks.transport.mock.calls[0][1].redirect).toBe("error");
+  expect(mocks.transport.mock.calls[1][1].redirect).toBeUndefined();
 });
 
 it.each(["-high-high", "()", "(bogus)", " -high", " (bogus)", "\t-xhigh"])("refuses malformed dedicated suffix %s before upstream dispatch", async suffix => {
@@ -127,7 +191,7 @@ it("preserves Ultrafast model, effort, and account on a real executor retry", as
   }
 });
 
-it("completes WebSocket steering state after a verified response.done", async () => {
+it.each(["ultrafast", "default"])("completes WebSocket steering state after accepted response.done (%s)", async tier => {
   const encodeEvent = event => new TextEncoder().encode(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
   let upstream;
   mocks.transport.mockImplementationOnce(async () => new Response(new ReadableStream({ start(controller) {
@@ -145,10 +209,12 @@ it("completes WebSocket steering state after a verified response.done", async ()
     socket.emit("data", encodeTextFrame(JSON.stringify({ type: "response.steer", previous_response_id: "resp_done", input: "Use the tool result" }), { mask: true }));
     await vi.waitFor(() => expect(events.some(event => event.type === "response.steer.accepted")).toBe(true));
     upstream.enqueue(encodeEvent({ type: "response.output_item.done", item: { type: "function_call", id: "fc_done", call_id: "call_done", name: "lookup", arguments: "{}" } }));
-    upstream.enqueue(encodeEvent({ type: "response.done", response: { id: "resp_done", model: "gpt-6-astra", status: "completed", service_tier: "ultrafast", output: [], usage: { input_tokens: 1, output_tokens: 1 } } }));
+    upstream.enqueue(encodeEvent({ type: "response.done", response: { id: "resp_done", model: "gpt-6-astra", status: "completed", service_tier: tier, output: [], usage: { input_tokens: 1, output_tokens: 1 } } }));
     upstream.close();
     await vi.waitFor(() => expect(events.some(event => event.type === "response.steer.pending")).toBe(true));
-    expect(events.some(event => event.type === "response.completed" && event.stream_id === "done-turn")).toBe(true);
+    expect(events.find(event => event.type === "response.completed" && event.stream_id === "done-turn").response).toMatchObject({
+      service_tier: tier, service_tier_confirmation: "unverified",
+    });
     expect(session.state.responses.get("resp_done").status).toBe("completed");
     expect(session.state.pending[0].status).toBe("pending_input");
     expect(events.find(event => event.type === "response.steer.pending").required_input).toEqual([{ type: "function_call_output", call_id: "call_done", name: "lookup" }]);
