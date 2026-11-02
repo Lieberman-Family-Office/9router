@@ -14,6 +14,11 @@ import { resolveCursorModels } from "open-sse/services/cursorModels.js";
 import { resolveZedModels } from "open-sse/shared/zedAuth.js";
 import { resolveClineModels, resolveClinepassModels } from "open-sse/services/clinepassModels.js";
 import codexProvider from "open-sse/providers/registry/codex.js";
+import { isRemovedModel } from "open-sse/providers/models/schema.js";
+
+const retainedModels = (models) => models?.filter(model => !isRemovedModel(
+  typeof model === "string" ? model : model?.id || model?.slug || model?.model || model?.name
+));
 
 const GEMINI_CLI_MODELS_URL = "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels";
 
@@ -562,7 +567,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({
         provider: connection.provider,
         connectionId: connection.id,
-        models
+        models: retainedModels(models)
       });
     }
 
@@ -603,7 +608,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({
         provider: connection.provider,
         connectionId: connection.id,
-        models
+        models: retainedModels(models)
       });
     }
 
@@ -624,7 +629,7 @@ export async function GET(request, { params }) {
       return NextResponse.json({
         provider: connection.provider,
         connectionId: connection.id,
-        models: result.models,
+        models: retainedModels(result.models),
         ...(result.warning ? { warning: result.warning } : {})
       });
     }
@@ -674,7 +679,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       provider: connection.provider,
       connectionId: connection.id,
-      models
+      models: retainedModels(models)
     });
   } catch (error) {
     console.log("Error fetching provider models:", error);

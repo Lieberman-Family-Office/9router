@@ -100,10 +100,6 @@ export default {
     { id: "gpt-5.4-low", name: "GPT-5.4 Low" },
     { id: "gpt-5.4-none-fast", name: "GPT-5.4 None Fast" },
     { id: "gpt-5.4-none", name: "GPT-5.4 None" },
-    { id: "gpt-5.4-mini-xhigh", name: "GPT-5.4 Mini XHigh" },
-    { id: "gpt-5.4-mini-high", name: "GPT-5.4 Mini High" },
-    { id: "gpt-5.4-mini-medium", name: "GPT-5.4 Mini Medium" },
-    { id: "gpt-5.4-mini-low", name: "GPT-5.4 Mini Low" },
     // GPT-5.3 Codex
     { id: "gpt-5.3-codex-xhigh-fast", name: "GPT-5.3 Codex XHigh Fast" },
     { id: "gpt-5.3-codex-xhigh", name: "GPT-5.3 Codex XHigh" },

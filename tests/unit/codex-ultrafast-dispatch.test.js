@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 
-const mocks = vi.hoisted(() => ({ transport: vi.fn(), details: vi.fn(), accounts: [], settings: {} }));
+const mocks = vi.hoisted(() => ({ transport: vi.fn(), details: vi.fn(), accounts: [], settings: {}, aliases: {}, combos: {} }));
 vi.mock("@/lib/localDb", () => ({
   getProviderConnections: async ({ isActive } = {}) => mocks.accounts.filter(account => isActive === undefined || account.isActive === isActive),
   getSettings: async () => mocks.settings,
-  getProxyPools: async () => [], getModelAliases: async () => ({}),
-  getComboByName: async () => null, getProviderNodes: async () => [],
+  getProxyPools: async () => [], getModelAliases: async () => mocks.aliases,
+  getComboByName: async name => mocks.combos[name] || null, getProviderNodes: async () => [],
   validateApiKey: async () => true, updateProviderConnection: async () => {},
 }));
 vi.mock("@/lib/usageDb.js", () => ({
@@ -24,6 +24,8 @@ const { encodeTextFrame, WsFrameReader } = await import("../../open-sse/handlers
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  mocks.aliases = {};
+  mocks.combos = {};
   mocks.details.mockResolvedValue(undefined);
   vi.stubEnv("ENABLE_REQUEST_LOGS", "false");
   mocks.settings = { quotaAwareSelection: false, codexUltrafastConnectionId: "eligible", fallbackStrategy: "fill-first" };
@@ -54,6 +56,22 @@ const assertTransport = model => {
   expect(options.headers["ChatGPT-Account-ID"]).toBe("test-workspace");
   expect(JSON.parse(options.body)).toMatchObject({ model, service_tier: "ultrafast", reasoning: { effort: "high" } });
 };
+
+it.each(["gpt-5.4-mini", "cx/gpt-5.4-mini", "cx/gpt-5.4-mini-review(high)", "cx/gpt-5.4-mini(compact_200k)", "openai/gpt-5-4-mini", "title-model", "removed-combo"])("rejects removed %s before remapping or upstream dispatch", async model => {
+  mocks.aliases = { "title-model": "cx/gpt-5.4-mini" };
+  mocks.combos = { "removed-combo": { name: "removed-combo", models: ["cx/gpt-5.4-mini"] } };
+  const response = await post({ model, input: "OK", stream: true });
+  expect(response.status).toBe(400);
+  expect(await response.text()).toContain("Model removed");
+  expect(mocks.transport).not.toHaveBeenCalled();
+});
+
+it("rejects the removed model in direct chat-core callers", async () => {
+  const { handleChatCore } = await import("../../open-sse/handlers/chatCore.js");
+  const result = await handleChatCore({ body: { model: "gpt-5.4-mini" }, modelInfo: { provider: "openai", model: "gpt-5.4-mini" } });
+  expect(result.response.status).toBe(400);
+  expect(mocks.transport).not.toHaveBeenCalled();
+});
 
 it.each(["gpt-6-astra", "gpt-6.1-sol"])("dispatches dedicated %s through real chat core and executor", async model => {
   const response = await post({ model: `cx/${model}-ultrafast(high)`, input: "OK", stream: true });

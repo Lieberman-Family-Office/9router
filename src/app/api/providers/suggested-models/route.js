@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { FILTERS } from "./filters.js";
+import { isRemovedModel } from "open-sse/providers/models/schema.js";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export async function GET(request) {
     }
     const json = await res.json();
     const raw = json.data ?? json.models ?? json;
-    const data = filter(Array.isArray(raw) ? raw : []);
+    const data = filter(Array.isArray(raw) ? raw : []).filter(model => !isRemovedModel(model.id));
     return NextResponse.json({ data });
   } catch {
     return NextResponse.json({ data: [] });

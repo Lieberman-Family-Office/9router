@@ -9,6 +9,13 @@ export function normalizeModelId(modelId) {
   return modelId.replace(/(\d)-(\d)/g, "$1.$2");
 }
 
+// Retire the whole family, including provider prefixes and request suffixes.
+export function isRemovedModel(modelId) {
+  if (typeof modelId !== "string") return false;
+  const base = normalizeModelId(modelId).trim().toLowerCase().split("/").pop();
+  return /^gpt-5\.4-mini(?:$|[-([:@\s])/.test(base);
+}
+
 // Model defaults centralized (was scattered as `m.kind || "llm"`, `quotaFamily || "normal"`, etc.)
 export const MODEL_DEFAULTS = {
   kind: "llm",

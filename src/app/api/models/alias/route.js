@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getModelAliases, setModelAlias, deleteModelAlias } from "@/models";
+import { isRemovedModel } from "open-sse/providers/models/schema.js";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const aliases = await getModelAliases();
-    return NextResponse.json({ aliases });
+    return NextResponse.json({ aliases: Object.fromEntries(Object.entries(aliases).filter(([alias, model]) => !isRemovedModel(alias) && !isRemovedModel(typeof model === "object" ? model?.model : model))) });
   } catch (error) {
     console.log("Error fetching aliases:", error);
     return NextResponse.json({ error: "Failed to fetch aliases" }, { status: 500 });
@@ -24,6 +25,7 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Model and alias required" }, { status: 400 });
     }
 
+    if (isRemovedModel(typeof model === "object" ? model?.model : model) || isRemovedModel(alias)) return NextResponse.json({ error: "Model removed" }, { status: 400 });
     await setModelAlias(alias, model);
 
     return NextResponse.json({ success: true, model, alias });
