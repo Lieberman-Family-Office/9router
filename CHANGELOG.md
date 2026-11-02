@@ -1,3 +1,8 @@
+# v0.5.91-lfenergy.14 (2026-11-02)
+
+## Fixes
+- **Mac watchdog**: use `/api/health` for local and Tailscale liveness probes, avoiding provider catalog and npm version lookups. Keep private managed-worker readiness checks unchanged.
+
 # v0.5.91 (2026-09-26)
 
 ## Features
