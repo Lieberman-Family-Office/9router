@@ -7,6 +7,7 @@ import {
 } from "@/shared/constants/providers";
 import { getProviderConnections, getCombos, getCustomModels, getModelAliases, getSettings } from "@/lib/localDb";
 import { getModelServiceTier, getModelUpstreamId } from "open-sse/config/providerModels.js";
+import { isRemovedModel } from "open-sse/providers/models/schema.js";
 import { getDisabledModels } from "@/lib/disabledModelsDb";
 import { resolveKiroModels } from "open-sse/services/kiroModels.js";
 import { resolveKimchiModels } from "open-sse/services/kimchiModels.js";
@@ -582,7 +583,7 @@ export async function buildModelsList(kindFilter, options = {}) {
         return !Array.isArray(enabled) || !enabled.length || enabled.includes(upstreamModel);
       })) continue;
     }
-    if (!model?.id || seenModelIds.has(model.id)) continue;
+    if (!model?.id || isRemovedModel(model.id) || seenModelIds.has(model.id)) continue;
     seenModelIds.add(model.id);
     dedupedModels.push(model);
   }

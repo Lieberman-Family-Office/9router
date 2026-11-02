@@ -8,7 +8,7 @@ describe("model name regex fallback (C2)", () => {
     expect(deriveModelName("kimi-k2.5")).toBe("Kimi K2.5");
     expect(deriveModelName("glm-4.6v")).toBe("GLM 4.6V (Vision)");
     expect(deriveModelName("minimax-m2.7")).toBe("MiniMax M2.7");
-    expect(deriveModelName("gpt-5.4-mini")).toBe("GPT 5.4 Mini");
+    expect(deriveModelName("gpt-5.4-nano")).toBe("GPT 5.4 Nano");
     expect(deriveModelName("grok-4")).toBe("Grok 4");
   });
 

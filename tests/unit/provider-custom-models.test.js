@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import { getProviderCustomModelRows } from "@/shared/utils/providerCustomModels.js";
 
 describe("provider custom model rows", () => {
+  it.each([true, false])("hides removed custom models with legacy aliases enabled=%s", includeLegacyAliases => {
+    const rows = getProviderCustomModelRows({
+      customModels: [
+        { providerAlias: "cx", id: "gpt-5.4-mini" },
+        { providerAlias: "cx", id: "gpt-6-astra" },
+      ],
+      modelAliases: { title: "cx/gpt-5.4-mini-review" },
+      providerAlias: "cx", includeLegacyAliases,
+    });
+    expect(rows.map(row => row.id)).toEqual(["gpt-6-astra"]);
+  });
+
   it("keeps identical model IDs separate per provider", () => {
     const customModels = [
       { providerAlias: "ollama", id: "minimax-m2.5", type: "llm", name: "MiniMax M2.5" },

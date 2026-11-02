@@ -15,6 +15,7 @@ export {
 
 import { AI_PROVIDERS, isOpenAICompatibleProvider } from "./providers.js";
 import { PROVIDER_MODELS as MODELS } from "open-sse/config/providerModels.js";
+import { isRemovedModel } from "open-sse/providers/models/schema.js";
 
 // Providers that accept any model (passthrough)
 const PASSTHROUGH_PROVIDERS = new Set(
@@ -25,6 +26,7 @@ const PASSTHROUGH_PROVIDERS = new Set(
 
 // Wrap isValidModel with passthrough providers
 export function isValidModel(aliasOrId, modelId) {
+  if (isRemovedModel(modelId)) return false;
   if (isOpenAICompatibleProvider(aliasOrId)) return true;
   if (PASSTHROUGH_PROVIDERS.has(aliasOrId)) return true;
   const models = MODELS[aliasOrId];

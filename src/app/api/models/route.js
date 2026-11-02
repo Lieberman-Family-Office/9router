@@ -4,6 +4,7 @@ import { getDisabledModels } from "@/lib/disabledModelsDb";
 import { AI_MODELS } from "@/shared/constants/config";
 import { getProviderAlias } from "@/shared/constants/providers";
 import { getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
+import { isRemovedModel } from "open-sse/providers/models/schema.js";
 
 // GET /api/models - Get models with aliases
 export async function GET() {
@@ -26,7 +27,7 @@ export async function GET() {
           ...m,
           fullModel,
           routedModel,
-          alias: modelAliases[fullModel] || m.model,
+          alias: isRemovedModel(modelAliases[fullModel]) ? m.model : modelAliases[fullModel] || m.model,
           caps: {
             vision: c.vision,
             search: c.search,
@@ -52,7 +53,7 @@ export async function GET() {
         name: m.name || m.id,
         fullModel,
         routedModel: fullModel,
-        alias: modelAliases[fullModel] || m.id,
+        alias: isRemovedModel(modelAliases[fullModel]) ? m.id : modelAliases[fullModel] || m.id,
         caps: {
           vision: c.vision,
           search: c.search,
@@ -64,7 +65,7 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({ models });
+    return NextResponse.json({ models: models.filter(model => !isRemovedModel(model.model)) });
   } catch (error) {
     console.log("Error fetching models:", error);
     return NextResponse.json({ error: "Failed to fetch models" }, { status: 500 });
@@ -81,6 +82,7 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Model and alias required" }, { status: 400 });
     }
 
+    if (isRemovedModel(model) || isRemovedModel(alias)) return NextResponse.json({ error: "Model removed" }, { status: 400 });
     const modelAliases = await getModelAliases();
 
     // Check if alias already exists for different model

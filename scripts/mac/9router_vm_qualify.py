@@ -44,7 +44,7 @@ HOST = os.environ.get("NINEROUTER_QUALIFY_HOST", "9router-test-vm.devbox.namespa
 QUALIFIED = Path.home() / ".9router" / "qualified"
 QUALIFY_MODELS = os.environ.get(
     "NINEROUTER_QUALIFY_MODELS",
-    "cx/gpt-5.4-mini,cc/claude-haiku-4-5-20251001,cx/gpt-5.4-mini(compact_200k)",
+    "cx/gpt-6-astra,cc/claude-haiku-4-5-20251001,cx/gpt-6-astra(compact_200k)",
 ).split(",")
 RUNTIME_SOURCES = {
     "controller": "scripts/mac/9router_hotswap.py",

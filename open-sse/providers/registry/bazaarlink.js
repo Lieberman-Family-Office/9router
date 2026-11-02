@@ -25,7 +25,6 @@ export default {
     { id: "claude-haiku-4.5", name: "Claude Haiku 4.5", contextLength: 200000 },
     { id: "gpt-5.5", name: "GPT-5.5", contextLength: 1050000 },
     { id: "gpt-5.4", name: "GPT-5.4", contextLength: 1050000 },
-    { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", contextLength: 400000 },
     { id: "gpt-5.4-nano", name: "GPT-5.4 Nano", contextLength: 400000 },
     { id: "grok-4.3", name: "Grok 4.3", contextLength: 1000000 },
     { id: "grok-4.20", name: "Grok 4.20", contextLength: 2000000 },

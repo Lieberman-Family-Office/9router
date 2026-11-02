@@ -1,3 +1,5 @@
+import { isRemovedModel } from "open-sse/providers/models/schema.js";
+
 function modelType(model) {
   return model?.kind || model?.type || "llm";
 }
@@ -15,7 +17,7 @@ export function getProviderCustomModelRows({
   const rows = [];
 
   for (const model of customModels) {
-    if (!model?.id || model.providerAlias !== providerAlias) continue;
+    if (!model?.id || isRemovedModel(model.id) || model.providerAlias !== providerAlias) continue;
     const rowType = modelType(model);
     if (type && rowType !== type) continue;
     if (builtInIds.has(model.id)) continue;
@@ -50,5 +52,5 @@ export function getProviderCustomModelRows({
     });
   }
 
-  return rows;
+  return rows.filter(row => !isRemovedModel(row.id));
 }

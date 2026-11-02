@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCustomModels, addCustomModel, deleteCustomModel } from "@/models";
 import { CAPACITY_META, isSttTransport } from "@/shared/constants/models";
+import { isRemovedModel } from "open-sse/providers/models/schema.js";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ function sanitizeTransport(transport, type) {
 export async function GET() {
   try {
     const models = await getCustomModels();
-    return NextResponse.json({ models });
+    return NextResponse.json({ models: models.filter(model => !isRemovedModel(model.id)) });
   } catch (error) {
     console.log("Error fetching custom models:", error);
     return NextResponse.json({ error: "Failed to fetch custom models" }, { status: 500 });
@@ -42,6 +43,7 @@ export async function POST(request) {
     if (!providerAlias || !id) {
       return NextResponse.json({ error: "providerAlias and id required" }, { status: 400 });
     }
+    if (isRemovedModel(id)) return NextResponse.json({ error: "Model removed" }, { status: 400 });
     const cleanCaps = sanitizeCaps(caps);
     const cleanTransport = sanitizeTransport(transport, type || "llm");
     const added = await addCustomModel({ providerAlias, id, type: type || "llm", name, ...(cleanCaps ? { caps: cleanCaps } : {}), ...(cleanTransport ? { transport: cleanTransport } : {}) });

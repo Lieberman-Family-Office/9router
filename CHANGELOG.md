@@ -1,3 +1,9 @@
+# v0.5.91-lfenergy.15 (2026-11-02)
+
+## Fixes
+- **Model retirement**: remove GPT-5.4 Mini from provider catalogs, pricing, discovery, custom models, and aliases. Reject retired model requests without remapping them or contacting a provider.
+- **Mac probes**: use `cx/gpt-6-astra` instead of the retired Mini model for deployment and qualification checks.
+
 # v0.5.91-lfenergy.14 (2026-11-02)
 
 ## Fixes

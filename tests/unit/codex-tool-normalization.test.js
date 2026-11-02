@@ -31,7 +31,7 @@ describe("CodexExecutor tool normalization", () => {
       required: ["title"],
     };
     const body = {
-      model: "gpt-5.4-mini",
+      model: "gpt-6-astra",
       input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "test for session title" }] }],
       stream: true,
       metadata: { unsupported: true },
@@ -45,7 +45,7 @@ describe("CodexExecutor tool normalization", () => {
       },
     };
 
-    executor.transformRequest("gpt-5.4-mini", body, true, {
+    executor.transformRequest("gpt-6-astra", body, true, {
       connectionId: "test-codex-structured-output",
       providerSpecificData: {},
     });

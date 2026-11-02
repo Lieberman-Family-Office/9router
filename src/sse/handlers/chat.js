@@ -29,6 +29,7 @@ import { getProjectIdForConnection } from "open-sse/services/projectId.js";
 import { runRequestScope } from "@/lib/requestScope.js";
 import { stripModelContextMarker } from "open-sse/utils/modelMarkers.js";
 import { getModelServiceTier } from "open-sse/config/providerModels.js";
+import { isRemovedModel } from "open-sse/providers/models/schema.js";
 import { getCapabilitiesForModel } from "open-sse/providers/capabilities.js";
 
 /**
@@ -98,6 +99,7 @@ async function handleChatInScope(request, clientRawRequest) {
   let dedicatedUltrafast = false;
   try {
     const info = await getModelInfo(modelStr);
+    if (isRemovedModel(modelStr) || isRemovedModel(info.model)) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Model removed");
     dedicatedUltrafast = info.provider === "codex" && getModelServiceTier("cx", info.model) === "ultrafast";
     if (dedicatedUltrafast) {
       const caps = getCapabilitiesForModel("codex", info.model);
@@ -188,6 +190,7 @@ async function handleChatInScope(request, clientRawRequest) {
  */
 async function handleSingleModelChat(body, modelStr, clientRawRequest = null, request = null, apiKey = null, requestedModel = null) {
   const modelInfo = await getModelInfo(modelStr);
+  if (isRemovedModel(modelStr) || isRemovedModel(modelInfo.model)) return errorResponse(HTTP_STATUS.BAD_REQUEST, "Model removed");
 
   // If provider is null, this might be a combo name - check and handle
   if (!modelInfo.provider) {

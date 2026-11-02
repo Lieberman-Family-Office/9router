@@ -73,10 +73,6 @@ const MODEL_ALIAS_MAP = {
   "gpt-5.4-medium": "gpt-5-4-medium",
   "gpt-5.4-low": "gpt-5-4-low",
   "gpt-5.4-none": "gpt-5-4-none",
-  "gpt-5.4-mini-xhigh": "gpt-5-4-mini-xhigh",
-  "gpt-5.4-mini-high": "gpt-5-4-mini-high",
-  "gpt-5.4-mini-medium": "gpt-5-4-mini-medium",
-  "gpt-5.4-mini-low": "gpt-5-4-mini-low",
   "gpt-5.4": "gpt-5-4-medium",
   // ── GPT-5.3-Codex ───────────────────────────────────────────────────────
   "gpt-5.3-codex-xhigh-fast": "gpt-5-3-codex-xhigh-priority",

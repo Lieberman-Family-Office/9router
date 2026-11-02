@@ -32,7 +32,6 @@ export default {
     { id: "anthropic/claude-opus-4.8", name: "Claude Opus 4.8" },
     { id: "anthropic/claude-opus-4.8-fast", name: "Claude Opus 4.8 Fast" },
     { id: "openai/gpt-5.4", name: "Gpt 5.4" },
-    { id: "openai/gpt-5.4-mini", name: "Gpt 5.4 Mini" },
     { id: "openai/gpt-5.4-pro", name: "Gpt 5.4 Pro" },
     { id: "openai/gpt-5.5", name: "Gpt 5.5" },
     { id: "openai/gpt-5.6-sol", name: "Gpt 5.6 Sol" },
