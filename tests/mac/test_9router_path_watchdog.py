@@ -72,6 +72,53 @@ def test_second_failure_kicks_targets(wd):
     assert kicks2 == ["9router", "tailscale"]
 
 
+@pytest.mark.parametrize("healthy", [True, False])
+def test_router_liveness_ignores_catalog_and_version(wd, healthy):
+    urls = []
+
+    def http(url):
+        urls.append(url)
+        path = urllib.parse.urlsplit(url).path
+        ok = path == "/combo/subs-coding" or (healthy and path == "/api/health")
+        return (True, "http_200") if ok else (False, "TimeoutError:timed out")
+
+    def runner(command, **kwargs):
+        if command[-2:] == ["ip", "-4"]:
+            output = "192.0.2.1\n"
+        else:
+            assert command[-2:] == ["status", "--json"]
+            output = '{"BackendState":"Running"}'
+        return subprocess.CompletedProcess(command, 0, output, "")
+
+    state = wd.WatchState()
+    for cycle in range(2):
+        results = wd.run_probes(
+            timeout_s=5,
+            ts_socket="unused",
+            ts_bin="unused",
+            runner=runner,
+            http=http,
+        )
+        kicks, _ = wd.decide_kicks(
+            results,
+            state,
+            now_mono=100 + cycle * 30,
+            fail_threshold=2,
+            cooldown_s=180,
+        )
+        expected = ["9router", "tailscale"] if not healthy and cycle == 1 else []
+        assert kicks == expected
+    assert (
+        urls
+        == [
+            "http://127.0.0.1:20128/api/health",
+            "http://192.0.2.1:20128/api/health",
+            "http://127.0.0.1:20129/combo/subs-coding",
+        ]
+        * 2
+    )
+
+
 def test_cooldown_suppresses_repeat_kick(wd):
     state = wd.WatchState()
     state.fail_streaks["ts_backend"] = 2
