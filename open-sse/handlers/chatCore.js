@@ -10,6 +10,7 @@ import { getModelTargetFormat, getModelSupportedFormats, getModelStrip, getModel
 import { PROVIDERS } from "../config/providers.js";
 import { createErrorResult, parseUpstreamError, formatProviderError } from "../utils/error.js";
 import { upstreamResponseHeaders } from "../utils/upstreamHeaders.js";
+import { recordClaudeUsageFromHeaders } from "../services/usage/claude.js";
 import { HTTP_STATUS, TOKEN_SAVER_HEADER } from "../config/runtimeConfig.js";
 import { handleBypassRequest } from "../utils/bypassHandler.js";
 import { trackPendingRequest, appendRequestLog, saveRequestDetail } from "@/lib/usageDb.js";
@@ -487,6 +488,9 @@ export async function handleChatCore({ body, modelInfo, credentials, log, onCred
       log?.warn?.("TOKEN", `${provider.toUpperCase()} | refresh threw: ${e.message}`);
     }
   }
+
+  // Free quota reading from the response itself (success or 429), instead of polling the usage endpoint.
+  if (provider === "claude") recordClaudeUsageFromHeaders(credentials.accessToken, providerResponse.headers);
 
   // Provider returned error
   if (!providerResponse.ok) {
