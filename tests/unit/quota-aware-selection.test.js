@@ -143,6 +143,16 @@ describe("sortConnectionsByRemaining", () => {
     ]);
     expect(sorted.map((c) => c.id)).toEqual(["known", "unknown"]);
   });
+  it("tie-breaks equal or unknown quota by priority before id", () => {
+    const unknown = { remainingFraction: null, unknown: true };
+    const sorted = sortConnectionsByRemaining([
+      { id: "5783d890", priority: 6, _quotaSnapshot: unknown },
+      { id: "9d28bc6f", priority: 1, _quotaSnapshot: unknown },
+      { id: "c6afdbc2", priority: 2, _quotaSnapshot: unknown },
+      { id: "0000none", _quotaSnapshot: unknown },
+    ]);
+    expect(sorted.map((c) => c.id)).toEqual(["9d28bc6f", "c6afdbc2", "5783d890", "0000none"]);
+  });
 });
 
 describe("createQuotaSnapshotCache", () => {

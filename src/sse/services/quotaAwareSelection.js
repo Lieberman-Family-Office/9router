@@ -112,6 +112,10 @@ export function compareConnectionsByRemaining(a, b) {
   const ta = a.lastUsedAt ? Date.parse(a.lastUsedAt) : 0;
   const tb = b.lastUsedAt ? Date.parse(b.lastUsedAt) : 0;
   if (ta !== tb) return ta - tb; // older first
+  // Unknown/equal quota must fall back to the operator's priority, not UUID order.
+  const pa = toFiniteNumber(a.priority, 999);
+  const pb = toFiniteNumber(b.priority, 999);
+  if (pa !== pb) return pa - pb;
   return String(a.id || "").localeCompare(String(b.id || ""));
 }
 
