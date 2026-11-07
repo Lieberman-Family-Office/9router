@@ -286,6 +286,33 @@ describe("polling isolation", () => {
   });
 });
 
+describe("reserved connections", () => {
+  it("keeps reserved accounts out of rotation unless pinned, falling back when the pool is empty", async () => {
+    const rows = [{ id: "orch", accessToken: "o", priority: 1 }, { id: "w1", accessToken: "a", priority: 2 }, { id: "w2", accessToken: "b", priority: 3 }];
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false, providerStrategies: { claude: {
+      fallbackStrategy: "round-robin", stickyRoundRobinLimit: 1, reservedConnectionIds: ["orch"] } } });
+    mocks.getProviderConnections.mockImplementation(async () => rows.map(row => ({ ...row })));
+    mocks.updateProviderConnection.mockImplementation(async (id, patch) => Object.assign(rows.find(row => row.id === id), patch));
+    const picks = [];
+    for (let i = 0; i < 4; i++) picks.push((await getProviderCredentials("claude")).connectionId);
+    expect(picks).not.toContain("orch");
+    expect(new Set(picks)).toEqual(new Set(["w1", "w2"]));
+    await expect(getProviderCredentials("claude", null, null, { preferredConnectionId: "orch" })).resolves.toMatchObject({ connectionId: "orch" });
+    await expect(getProviderCredentials("claude", new Set(["orch"]), null, { preferredConnectionId: "orch" })).resolves.toMatchObject({ connectionId: expect.stringMatching(/^w/) });
+    await expect(getProviderCredentials("claude", new Set(["w1", "w2"]))).resolves.toMatchObject({ connectionId: "orch" });
+  });
+
+  it("forwards x-connection-id from chat requests", async () => {
+    mocks.getSettings.mockResolvedValue({ quotaAwareSelection: false, fallbackStrategy: "fill-first" });
+    mocks.getProviderConnections.mockResolvedValue([{ id: "first", accessToken: "a" }, { id: "pinned", accessToken: "b" }]);
+    mocks.handleChatCore.mockResolvedValue({ success: true, response: new Response("OK") });
+    await handleChat(new Request("http://localhost/v1/messages", { method: "POST",
+      headers: { "Content-Type": "application/json", "X-Connection-Id": "pinned" },
+      body: JSON.stringify({ model: "claude/claude-sonnet-4-6", messages: [] }) }));
+    expect(mocks.handleChatCore.mock.calls[0][0].credentials.connectionId).toBe("pinned");
+  });
+});
+
 describe("Claude remaining-first routing", () => {
   it("prefers the account with higher session remaining", async () => {
     mocks.getProviderConnections.mockResolvedValue([

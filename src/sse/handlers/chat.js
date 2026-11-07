@@ -260,7 +260,7 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   let lastHeaders = null;
 
   while (true) {
-    const credOpts = { requestedModel: requestedModel || model };
+    const credOpts = { requestedModel: requestedModel || model, preferredConnectionId: request?.headers?.get("x-connection-id") || null };
     let credentials = await getProviderCredentials(provider, excludeConnectionIds, model, credOpts);
 
     // No connections for the resolved provider (e.g. bare gpt-* → openai while
