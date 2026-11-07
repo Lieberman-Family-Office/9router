@@ -1,3 +1,8 @@
+# v0.5.91-lfenergy.17 (2026-11-07)
+
+## Features
+- **Reserved accounts**: `providerStrategies.<provider>.reservedConnectionIds` removes accounts from rotation; requests with `x-connection-id` (now honored on chat) can still pin them (#69).
+
 # v0.5.91-lfenergy.16 (2026-11-07)
 
 ## Fixes
