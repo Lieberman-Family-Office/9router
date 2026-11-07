@@ -1,3 +1,9 @@
+# v0.5.91-lfenergy.16 (2026-11-07)
+
+## Fixes
+- **Claude account selection**: when quota is equal or unknown, order accounts by configured priority before connection id (#66).
+- **Claude usage**: record quota from the `anthropic-ratelimit-unified-*` headers on every chat response, so routing stops depending on the rate-limited usage endpoint (#67).
+
 # v0.5.91-lfenergy.15 (2026-11-02)
 
 ## Fixes
