@@ -263,6 +263,13 @@ export async function getProviderCredentials(provider, excludeConnectionIds = nu
         log.info("AUTH", `${provider} | pinned to ${connection.id?.slice(0, 8)} (${connection.name || connection.email || "unnamed"})`);
       }
     }
+    if (!connection) {
+      // Reserved accounts serve only requests pinned to them via x-connection-id.
+      const reserved = new Set(providerOverride.reservedConnectionIds || []);
+      const pool = selectable.filter((c) => !reserved.has(c.id));
+      // ponytail: pool empty → reserved accounts serve unpinned traffic rather than 503.
+      if (pool.length) selectable = pool;
+    }
     if (connection) {
       // skip strategy
     } else if (strategy === "round-robin") {
