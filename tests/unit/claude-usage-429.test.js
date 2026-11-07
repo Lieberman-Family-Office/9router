@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 const fetch = vi.hoisted(() => vi.fn());
 vi.mock("../../open-sse/utils/proxyFetch.js", () => ({ proxyAwareFetch: fetch }));
-import { getClaudeUsage } from "../../open-sse/services/usage/claude.js";
+import { getClaudeUsage, recordClaudeUsageFromHeaders } from "../../open-sse/services/usage/claude.js";
 
 const ok = { ok: true, status: 200, json: async () => ({ five_hour: { utilization: 40, resets_at: null } }) };
 const r429 = (retryAfter = null) => ({ ok: false, status: 429, headers: { get: () => retryAfter } });
@@ -60,5 +60,45 @@ describe("Claude usage on OAuth 429", () => {
     vi.setSystemTime(600_000);
     const c = await getClaudeUsage("t-backoff", null, { force: true });
     expect(Date.parse(c.retryAt)).toBe(600_000 + 7_200_000);
+  });
+});
+
+describe("Claude usage from chat response headers", () => {
+  const future = Math.floor(Date.now() / 1000) + 3600;
+  const headers = (extra = {}) => new Headers({
+    "anthropic-ratelimit-unified-5h-utilization": "0.25",
+    "anthropic-ratelimit-unified-5h-reset": String(future),
+    "anthropic-ratelimit-unified-7d-utilization": "1.0",
+    "anthropic-ratelimit-unified-7d-reset": String(future),
+    "anthropic-ratelimit-unified-7d_sonnet-utilization": "0.5",
+    "anthropic-ratelimit-unified-status": "allowed",
+    ...extra,
+  });
+
+  it("maps unified windows and serves routing without polling", async () => {
+    const rec = recordClaudeUsageFromHeaders("t-hdr", headers());
+    expect(rec.quotas["session (5h)"]).toMatchObject({ used: 25, remaining: 75, resetAt: new Date(future * 1000).toISOString() });
+    expect(rec.quotas["weekly (7d)"].remaining).toBe(0);
+    expect(rec.quotas["weekly sonnet (7d)"]).toMatchObject({ used: 50, resetAt: null });
+    const routed = await getClaudeUsage("t-hdr", null, { signal: new AbortController().signal });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(routed).toBe(rec);
+  });
+
+  it("keeps unexpired polled windows the headers do not carry", async () => {
+    fetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({
+      limits: [{ kind: "weekly_scoped", percent: 30, resets_at: new Date(future * 1000).toISOString(), scope: { model: { display_name: "Fable" } } }],
+    }) });
+    await getClaudeUsage("t-merge", null, { force: true });
+    const rec = recordClaudeUsageFromHeaders("t-merge", headers());
+    expect(rec.quotas["weekly fable (7d)"].used).toBe(30);
+    expect(rec.quotas["session (5h)"].used).toBe(25);
+  });
+
+  it("ignores responses without usable unified headers and never throws", () => {
+    expect(recordClaudeUsageFromHeaders("t-none", new Headers({ "anthropic-ratelimit-unified-5h-utilization": "" }))).toBeNull();
+    expect(recordClaudeUsageFromHeaders("t-none", null)).toBeNull();
+    expect(recordClaudeUsageFromHeaders("", headers())).toBeNull();
+    expect(recordClaudeUsageFromHeaders("t-throw", { forEach: () => { throw new Error("boom"); } })).toBeNull();
   });
 });

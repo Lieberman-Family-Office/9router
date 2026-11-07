@@ -40,6 +40,56 @@ function cacheFresh(accessToken, result) {
   return fresh;
 }
 
+// utilization = % USED (e.g. 87 means 87% used, 13% remaining)
+function createQuotaObject(window) {
+  const used = window.utilization;
+  const remaining = Math.max(0, 100 - used);
+  return {
+    used,
+    total: 100,
+    remaining,
+    remainingPercentage: remaining,
+    resetAt: parseResetTime(window.resets_at),
+    unlimited: false,
+  };
+}
+
+// Every Claude chat response carries anthropic-ratelimit-unified-{5h,7d,7d_<model>}-{utilization,reset}
+// (utilization is a 0..1 fraction). Recording them keeps routing off the 429-prone usage endpoint.
+const UNIFIED_WINDOW = /^anthropic-ratelimit-unified-(?:(5h)|7d(?:_([a-z0-9]+))?)-utilization$/;
+
+export function recordClaudeUsageFromHeaders(accessToken, headers) {
+  try {
+    if (!accessToken || typeof headers?.forEach !== "function") return null;
+    const quotas = {};
+    headers.forEach((value, name) => {
+      const match = UNIFIED_WINDOW.exec(name.toLowerCase());
+      const fraction = Number(value);
+      if (!match || String(value).trim() === "" || !Number.isFinite(fraction)) return;
+      let key = "weekly (7d)";
+      if (match[1]) key = "session (5h)";
+      else if (match[2]) key = `weekly ${match[2]} (7d)`;
+      const reset = Number(headers.get(name.toLowerCase().replace(/-utilization$/, "-reset")));
+      quotas[key] = createQuotaObject({
+        utilization: Math.max(0, Math.min(100, fraction * 100)),
+        resets_at: reset > 0 ? reset : null,
+      });
+    });
+    if (Object.keys(quotas).length === 0) return null;
+    // Keep polled windows the headers do not carry (e.g. limits[] scopes) until their reset passes.
+    const prev = lastGood.get(accessToken);
+    const kept = Object.entries(prev?.quotas || {}).filter(([, q]) => q?.resetAt && Date.parse(q.resetAt) > Date.now());
+    return cacheFresh(accessToken, {
+      plan: prev?.plan || "Claude Code",
+      extraUsage: prev?.extraUsage ?? null,
+      resetCredits: prev?.resetCredits ?? null,
+      quotas: { ...Object.fromEntries(kept), ...quotas },
+    });
+  } catch {
+    return null; // fail-open: never break a chat response over usage bookkeeping
+  }
+}
+
 export async function getClaudeUsage(accessToken, proxyOptions = null, options = {}) {
   const force = options?.force === true;
   // Bounded callers own their request; do not join an unrelated unbounded dashboard poll.
@@ -98,22 +148,8 @@ async function fetchClaudeUsageRaw(accessToken, proxyOptions = null, signal = un
       const data = await oauthResponse.json();
       const quotas = {};
 
-      // utilization = % USED (e.g. 87 means 87% used, 13% remaining)
       const hasUtilization = (window) =>
         window && typeof window === "object" && typeof window.utilization === "number";
-
-      const createQuotaObject = (window) => {
-        const used = window.utilization;
-        const remaining = Math.max(0, 100 - used);
-        return {
-          used,
-          total: 100,
-          remaining,
-          remainingPercentage: remaining,
-          resetAt: parseResetTime(window.resets_at),
-          unlimited: false,
-        };
-      };
 
       if (hasUtilization(data.five_hour)) {
         quotas["session (5h)"] = createQuotaObject(data.five_hour);
