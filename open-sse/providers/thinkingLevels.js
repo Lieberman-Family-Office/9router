@@ -47,6 +47,9 @@ const PATTERN_THINKING = [
   { provider: "codex", pattern: "*gpt-5.6-luna*", levels: CODEX_GPT_5_6_LEVELS },
   // Claude Opus 5: API accepts low/medium/high/xhigh/max (platform.claude.com effort docs).
   { provider: "claude", pattern: "*claude*opus-5*", levels: ["none", "low", "medium", "high", "xhigh", "max"] },
+  // Fable 5.x: same five levels as Opus 5 (platform.claude.com effort docs). "none" is
+  // dropped by thinkingCanDisable:false on 5.1/5.2, whose adaptive thinking is always on.
+  { provider: "claude", pattern: "*claude*fable-5*", levels: ["none", "low", "medium", "high", "xhigh", "max"] },
   { pattern: "*codex*", levels: ["low", "medium", "high", "xhigh"] }, // codex cannot disable thinking
   { pattern: "*mimo*v2.6*", levels: ["none", "low", "medium", "high", "xhigh"] },
   // mimo-v2.5-pro on opencode-go rejects reasoning_effort "max" (probed live); v2.5 accepts it.

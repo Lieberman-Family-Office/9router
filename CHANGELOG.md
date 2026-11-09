@@ -1,3 +1,8 @@
+# v0.5.91-lfenergy.19 (2026-11-09)
+
+## Features
+- **Claude**: Fable 5.1/5.2 accept the same effort suffixes as Opus 5.5 — `(low)`, `(medium)`, `(high)`, `(xhigh)`, `(max)` — e.g. `cc/claude-fable-5-2(xhigh)`. Previously `xhigh` was silently downgraded to `high`.
+
 # v0.5.91-lfenergy.18 (2026-11-09)
 
 ## Features
