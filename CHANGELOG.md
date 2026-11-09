@@ -1,3 +1,11 @@
+# v0.5.91-lfenergy.18 (2026-11-09)
+
+## Features
+- **Claude**: add Claude Fable 5.2 (`cc/claude-fable-5-2`) with adaptive thinking, 1M context, and pricing.
+
+## Fixes
+- **Claude**: advertise Claude Code 2.1.321; Fable 5.2 rejects versions below 2.1.290 with `claude_code_version_too_old`.
+
 # v0.5.91-lfenergy.17 (2026-11-07)
 
 ## Features
@@ -35,7 +43,6 @@
 - **Combos**: display vision adapter models in an ordered table view
 
 ## Fixes
-- **Claude**: add Claude Fable 5.2; update spoofed cli version to 2.1.321 (Fable 5.2 requires >= 2.1.290)
 - **Claude**: decloak tool names when `toolNameMap` misses (#4342); update spoofed cli version to 2.1.280 to support Opus 5.5
 - **Providers API**: make POST `/api/providers` O(1) and refuse silent key overwrite (#4350)
 - **Capabilities**: stop caching the catalog source per module copy (#4351)
