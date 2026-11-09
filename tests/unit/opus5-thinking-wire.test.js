@@ -32,6 +32,18 @@ describe("Opus 5 effort reaches Anthropic unchanged or mapped onto its enum", ()
   });
 });
 
+describe("Fable 5.x accepts the same efforts as Opus 5.5", () => {
+  for (const fable of ["claude-fable-5-2", "claude-fable-5-1"]) {
+    it(`${fable}: low..max reach Anthropic unchanged`, () => {
+      expect(getThinkingLevels("claude", fable)).toEqual(
+        expect.arrayContaining(["low", "medium", "high", "xhigh", "max"]));
+      for (const level of ["low", "medium", "high", "xhigh", "max"]) {
+        expect(wire(`${fable}(${level})`).output_config).toEqual({ effort: level });
+      }
+    });
+  }
+});
+
 describe("Opus 5 thinking is on and its text is visible", () => {
   it("adds display summarized when an effort is requested", () => {
     expect(wire(`${MODEL}(high)`).thinking).toEqual({ type: "adaptive", display: "summarized" });
