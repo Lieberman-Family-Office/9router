@@ -35,6 +35,7 @@
 - **Combos**: display vision adapter models in an ordered table view
 
 ## Fixes
+- **Claude**: add Claude Fable 5.2; update spoofed cli version to 2.1.321 (Fable 5.2 requires >= 2.1.290)
 - **Claude**: decloak tool names when `toolNameMap` misses (#4342); update spoofed cli version to 2.1.280 to support Opus 5.5
 - **Providers API**: make POST `/api/providers` O(1) and refuse silent key overwrite (#4350)
 - **Capabilities**: stop caching the catalog source per module copy (#4351)
