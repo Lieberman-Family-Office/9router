@@ -1,3 +1,11 @@
+# v0.5.91-lfenergy.18 (2026-11-09)
+
+## Features
+- **Claude**: add Claude Fable 5.2 (`cc/claude-fable-5-2`) with adaptive thinking, 1M context, and pricing.
+
+## Fixes
+- **Claude**: advertise Claude Code 2.1.321; Fable 5.2 rejects versions below 2.1.290 with `claude_code_version_too_old`.
+
 # v0.5.91-lfenergy.17 (2026-11-07)
 
 ## Features
