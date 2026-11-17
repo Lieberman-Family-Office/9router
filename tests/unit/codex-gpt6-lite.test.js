@@ -54,7 +54,7 @@ describe("Codex GPT-6 Sol/Luna transport", () => {
     expect(body.instructions).toBe("");
     expect(body.tools).toBeNull();
     expect(body.parallel_tool_calls).toBe(false);
-    expect(body.reasoning).toEqual({ effort: "medium", context: "all_turns" });
+    expect(body.reasoning).toEqual({ effort: "high", context: "all_turns" });
     expect(body.input[0]).toEqual({ type: "additional_tools", role: "developer", tools: [tool] });
     expect(body.input[1]).toEqual({ type: "message", role: "developer", content: [{ type: "input_text", text: "Do the task" }] });
     expect(executor.buildHeaders(credentials, true, null, "gpt-6-sol")["x-openai-internal-codex-responses-lite"]).toBe("true");

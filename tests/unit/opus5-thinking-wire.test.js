@@ -49,8 +49,8 @@ describe("Opus 5 thinking is on and its text is visible", () => {
     expect(wire(`${MODEL}(high)`).thinking).toEqual({ type: "adaptive", display: "summarized" });
   });
 
-  it("turns on adaptive thinking with display summarized when nothing is requested", () => {
-    expect(wire(MODEL)).toEqual({ thinking: { type: "adaptive", display: "summarized" }, output_config: undefined });
+  it("turns on adaptive thinking at default effort high when nothing is requested", () => {
+    expect(wire(MODEL)).toEqual({ thinking: { type: "adaptive", display: "summarized" }, output_config: { effort: "high" } });
   });
 
   it("keeps a Claude-format client's explicit display choice", () => {
@@ -122,7 +122,7 @@ describe("Opus 5 thinking is on and its text is visible", () => {
     expect(maxTokens(`${MODEL}(xhigh)`, 500000)).toBe(128000); // still clamped to the model's maxOutput
   });
 
-  it("non-Claude-5 adaptive models get no thinking added when none requested", () => {
-    expect(wire("claude-opus-4-8").thinking).toBeUndefined();
+  it("non-Claude-5 adaptive models default to effort high when none requested", () => {
+    expect(wire("claude-opus-4-8").output_config).toEqual({ effort: "high" });
   });
 });
