@@ -5,7 +5,7 @@ import { cloakClaudeTools, decloakStreamChunk } from "../utils/claudeCloaking.js
 import { restoreToolNames } from "../utils/opencodeFingerprint.js";
 import { filterToOpenAIFormat } from "./formats/openai.js";
 import { normalizeThinkingConfig } from "../services/provider.js";
-import { applyThinking, captureThinking } from "./concerns/thinkingUnified.js";
+import { applyThinking, captureThinking, DEFAULT_THINKING_INTENT } from "./concerns/thinkingUnified.js";
 import { captureSessionId } from "../utils/sessionManager.js";
 import { AntigravityExecutor } from "../executors/antigravity.js";
 import { PROVIDERS } from "../providers/index.js";
@@ -117,7 +117,8 @@ export function translateRequest(sourceFormat, targetFormat, model, body, stream
     targetFormat === FORMATS.KIRO &&
     (sourceFormat === FORMATS.OPENAI || sourceFormat === FORMATS.CLAUDE);
   if (!kiroThinkingMappedByTranslator) {
-    applyThinking(targetFormat, model, result, provider, thinkingIntent);
+    // Codex defaults in its executor, after its hyphen effort suffix (`-ultrafast-max`) is read.
+    applyThinking(targetFormat, model, result, provider, thinkingIntent, provider === "codex" ? null : DEFAULT_THINKING_INTENT);
   }
 
   // Always normalize to clean OpenAI format when target is OpenAI

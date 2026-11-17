@@ -49,6 +49,9 @@ exports[`GOLDEN request: OpenAI → Claude > full body (system/image/tool/tool_r
     },
   ],
   "model": "claude-opus-4-6",
+  "output_config": {
+    "effort": "high",
+  },
   "stream": true,
   "system": [
     {
@@ -65,6 +68,10 @@ exports[`GOLDEN request: OpenAI → Claude > full body (system/image/tool/tool_r
     },
   ],
   "temperature": 0.7,
+  "thinking": {
+    "display": "summarized",
+    "type": "adaptive",
+  },
   "tools": [
     {
       "cache_control": {
@@ -175,7 +182,12 @@ exports[`GOLDEN request: OpenAI → Gemini > full body (system/image/tool/tool_r
     },
   ],
   "generationConfig": {
+    "maxOutputTokens": 65535,
     "temperature": 0.7,
+    "thinkingConfig": {
+      "includeThoughts": true,
+      "thinkingLevel": "high",
+    },
   },
   "model": "gemini-3-pro",
   "safetySettings": [

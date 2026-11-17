@@ -1,3 +1,9 @@
+# v0.5.91-lfenergy.22 (2026-11-17)
+
+## Changes
+- **All providers**: reasoning models default to effort `high` when the client sets none (no `(effort)` suffix, no `reasoning_effort` / `reasoning.effort` / `output_config.effort` / `thinking` / `thinkingConfig`). Codex was `low` (`medium` for Responses-Lite GPT-6.x); OpenAI, Claude, Gemini and the rest previously sent nothing (upstream default). Explicit effort still wins; non-reasoning models are untouched. Skipped when `tool_choice` forces a tool (Anthropic rejects manual thinking + forced tool use).
+- **Claude**: `output_config.format` (structured output) is now kept when effort is applied; previously the whole `output_config` was replaced.
+
 # v0.5.91-lfenergy.21 (2026-11-17)
 
 ## Fixes

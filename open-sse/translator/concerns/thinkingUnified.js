@@ -331,7 +331,11 @@ function stripAll(body) {
   delete body.thinkingConfig;
   delete body.enable_thinking;
   delete body.thinking_budget;
-  delete body.output_config;
+  // output_config also carries format (structured output); only effort is a thinking field.
+  if (body.output_config && typeof body.output_config === "object") {
+    delete body.output_config.effort;
+    if (Object.keys(body.output_config).length === 0) delete body.output_config;
+  }
   if (body.generationConfig) delete body.generationConfig.thinkingConfig;
   if (body.request?.generationConfig) delete body.request.generationConfig.thinkingConfig;
   if (body.params && typeof body.params === "object") {
@@ -363,7 +367,7 @@ function applyFormat(fmt, body, cfg, caps, supportedLevels, display) {
       if (canDisable) body.thinking = { type: "adaptive", ...(display ? { display } : {}) };
       else delete body.thinking;
       const effort = toClaudeEffort(toLevel(eff), supportedLevels);
-      if (effort) body.output_config = { effort };
+      if (effort) body.output_config = { ...body.output_config, effort };
       break;
     }
     case "claude-budget": {
@@ -472,11 +476,20 @@ function applyFormat(fmt, body, cfg, caps, supportedLevels, display) {
   }
 }
 
+// Operator policy: reasoning models run at "high" when the client sets no effort.
+export const DEFAULT_THINKING_INTENT = Object.freeze({ mode: "level", level: "high" });
+
+// Anthropic 400s manual thinking + forced tool use (any/tool; OpenAI "required"/function).
+function forcesToolUse(body) {
+  const tc = body.tool_choice;
+  return tc === "required" || (tc && typeof tc === "object" && tc.type !== "auto" && tc.type !== "none");
+}
+
 // Public entry: normalize thinking for the resolved target format.
 // Mutates and returns body. No-op when model has no reasoning capability.
 // `intent` is a pre-captured config (from captureThinking on the original body);
-// falls back to extracting from the current body when omitted.
-export function applyThinking(targetFormat, model, body, provider = null, intent = undefined) {
+// falls back to extracting from the current body when omitted, then to `defaultIntent`.
+export function applyThinking(targetFormat, model, body, provider = null, intent = undefined, defaultIntent = null) {
   if (!body || typeof body !== "object") return body;
 
   const {
@@ -494,7 +507,7 @@ export function applyThinking(targetFormat, model, body, provider = null, intent
   const preservedText = pickTextConfig(body);
   const priorMultiAgent = body.multi_agent;
   const priorContextManagement = body.context_management;
-  const cfg = override || intent || extractThinking(body);
+  const cfg = override || intent || extractThinking(body) || (forcesToolUse(body) ? null : defaultIntent);
   const caps = getCapabilitiesForModel(provider, cleanModel);
 
   // Model cannot reason → strip any stray thinking fields.

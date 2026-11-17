@@ -602,7 +602,7 @@ export class CodexExecutor extends BaseExecutor {
     const { model: baseModel, effort: modelEffort } = splitCodexEffortSuffix(body.model);
     body.model = baseModel;
 
-    // Priority: explicit reasoning.effort > reasoning_effort param > hyphen suffix > default (low; medium for Lite).
+    // Priority: explicit reasoning.effort > reasoning_effort param > hyphen suffix > default high (operator policy).
     // Preserve Responses reasoning fields per OpenAI docs: mode, context, summary (opt-in only).
     // Do NOT default summary to "auto" — summaries require explicit opt-in.
     // Mid-conversation effort changes belong in configuration_update input items.
@@ -611,7 +611,7 @@ export class CodexExecutor extends BaseExecutor {
       : {};
     const effort = normalizeReasoningEffort(
       body.model,
-      prior.effort || body.reasoning_effort || modelEffort || (responsesLite ? "medium" : "low"),
+      prior.effort || body.reasoning_effort || modelEffort || "high",
     );
     body.reasoning = { effort };
     // ChatGPT Codex OAuth rejects mode=pro (`reasoning.mode` unsupported for these models).
