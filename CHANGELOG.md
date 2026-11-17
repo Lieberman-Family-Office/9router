@@ -1,3 +1,8 @@
+# v0.5.91-lfenergy.21 (2026-11-17)
+
+## Fixes
+- **OpenAI**: rename `max_tokens` → `max_completion_tokens` for the `openai` provider. api.openai.com 400s `max_tokens` on reasoning models (`gpt-5.5`, `gpt-6-astra`, `gpt-6.2-*`). An explicit `max_completion_tokens` from the client wins.
+
 # v0.5.91-lfenergy.20 (2026-11-17)
 
 ## Features

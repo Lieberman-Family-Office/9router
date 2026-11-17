@@ -8,6 +8,9 @@ import { getCapabilitiesForModel } from "../../providers/capabilities.js";
 const STRIP_RULES = [
   // All Claude models: temperature deprecated/rejected upstream (Anthropic 400). #1748
   { match: /claude/i, drop: ["temperature"] },
+  // api.openai.com: reasoning models (gpt-5+, gpt-6.x) 400 on max_tokens; every chat model
+  // accepts max_completion_tokens (probed gpt-4o-mini + gpt-6.2-sol, 2026-11-17).
+  { provider: "openai", rename: { max_tokens: "max_completion_tokens" } },
   // GitHub Copilot gpt-5.4: temperature unsupported.
   { provider: "github", match: /gpt-5\.4/i, drop: ["temperature"] },
   // GitHub Copilot Claude (except opus/sonnet 4.6): thinking + reasoning_effort rejected. #713
@@ -52,6 +55,12 @@ export function stripUnsupportedParams(provider, model, body) {
     if (!matches(rule, model)) continue;
     for (const key of rule.drop || []) {
       if (body[key] !== undefined) delete body[key];
+    }
+    // An explicit value for the new name wins; the old name is dropped either way.
+    for (const [from, to] of Object.entries(rule.rename || {})) {
+      if (body[from] === undefined) continue;
+      if (body[to] === undefined) body[to] = body[from];
+      delete body[from];
     }
     // Per-message field drop (assistant turns only — that is where clients replay reasoning).
     if (Array.isArray(rule.dropMessageFields) && Array.isArray(body.messages)) {
