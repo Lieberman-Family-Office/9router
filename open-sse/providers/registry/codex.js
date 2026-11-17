@@ -2,8 +2,8 @@ import { withCodexReviewModels } from "../models/helpers.js";
 
 // Codex CLI version seen by OpenAI's backend — single source for the Version /
 // User-Agent identity headers. Bump when the installed codex CLI is upgraded.
-// 0.159.0: chatgpt.com/backend-api/codex/models only lists gpt-6.1-sol from this version (measured 2026-09-29).
-const CODEX_CLI_VERSION = "0.159.0";
+// 0.169.0: codex/models lists gpt-6.2-sol/astra only from 0.166.0 (minimal_client_version, measured 2026-11-17).
+const CODEX_CLI_VERSION = "0.169.0";
 const GPT_6_LITE_THINKING_LEVELS = ["low", "medium", "high", "xhigh", "max"];
 
 export default {
@@ -53,6 +53,14 @@ export default {
     },
   },
   models: [
+    { id: "gpt-6.2-sol", name: "GPT 6.2 Sol", responsesLite: true, thinkingLevels: GPT_6_LITE_THINKING_LEVELS },
+    { id: "gpt-6.2-sol[1m]", name: "GPT 6.2 Sol (extended context)", upstreamModelId: "gpt-6.2-sol", responsesLite: true, thinkingLevels: GPT_6_LITE_THINKING_LEVELS },
+    { id: "gpt-6.2-sol-review", name: "GPT 6.2 Sol Review", upstreamModelId: "gpt-6.2-sol", quotaFamily: "review" },
+    { id: "gpt-6.2-sol-ultrafast", name: "GPT 6.2 Sol Ultrafast", upstreamModelId: "gpt-6.2-sol", serviceTier: "ultrafast", responsesLite: true, thinkingLevels: GPT_6_LITE_THINKING_LEVELS },
+    { id: "gpt-6.2-astra", name: "GPT 6.2 Astra" },
+    { id: "gpt-6.2-astra[1m]", name: "GPT 6.2 Astra (extended context)", upstreamModelId: "gpt-6.2-astra" },
+    { id: "gpt-6.2-astra-review", name: "GPT 6.2 Astra Review", upstreamModelId: "gpt-6.2-astra", quotaFamily: "review" },
+    { id: "gpt-6.2-astra-ultrafast", name: "GPT 6.2 Astra Ultrafast", upstreamModelId: "gpt-6.2-astra", serviceTier: "ultrafast" },
     { id: "gpt-6.1-sol", name: "GPT 6.1 Sol", responsesLite: true, thinkingLevels: GPT_6_LITE_THINKING_LEVELS },
     { id: "gpt-6.1-sol[1m]", name: "GPT 6.1 Sol (extended context)", upstreamModelId: "gpt-6.1-sol", responsesLite: true, thinkingLevels: GPT_6_LITE_THINKING_LEVELS },
     { id: "gpt-6.1-sol-review", name: "GPT 6.1 Sol Review", upstreamModelId: "gpt-6.1-sol", quotaFamily: "review" },

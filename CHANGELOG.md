@@ -1,3 +1,9 @@
+# v0.5.91-lfenergy.20 (2026-11-17)
+
+## Features
+- **OpenAI/Codex**: add GPT-6.2 Astra and GPT-6.2 Sol — `cx/gpt-6.2-astra`, `cx/gpt-6.2-sol` (plus `[1m]`, `-review`, `-ultrafast` variants and `(low)`…`(max)` effort suffixes), and `openai/gpt-6.2-astra`, `openai/gpt-6.2-sol`. Pricing from OpenAI's rate card.
+- **Codex**: spoofed CLI version 0.159.0 → 0.169.0; ChatGPT only serves GPT-6.2 to clients ≥ 0.166.0.
+
 # v0.5.91-lfenergy.19 (2026-11-09)
 
 ## Features

@@ -21,7 +21,7 @@ describe("GPT-6 Codex effort levels", () => {
     expect(getThinkingLevels("codex", "gpt-6-sol")).toEqual(want);
   });
 
-  for (const model of ["gpt-6-astra", "gpt-6-sol"]) {
+  for (const model of ["gpt-6-astra", "gpt-6-sol", "gpt-6.2-astra", "gpt-6.2-sol"]) {
     it(`${model}: low/medium/high/xhigh/max pass through; ultra is dropped (not remapped)`, () => {
       for (const level of ["low", "medium", "high", "xhigh", "max"]) {
         expect(sentEffort(model, level)).toBe(level);
