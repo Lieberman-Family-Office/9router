@@ -42,6 +42,7 @@ const PATTERN_THINKING = [
   { provider: "codex", pattern: "*gpt-6-astra*", levels: CODEX_GPT_6_LEVELS },
   { provider: "codex", pattern: "*gpt-6-sol*", levels: CODEX_GPT_6_LEVELS },
   { provider: "codex", pattern: "*gpt-6.1-sol*", levels: CODEX_GPT_6_LEVELS },
+  { provider: "codex", pattern: "*gpt-6.2-*", levels: CODEX_GPT_6_LEVELS },
   { provider: "codex", pattern: "*gpt-5.6-sol*", levels: CODEX_GPT_5_6_LEVELS },
   { provider: "codex", pattern: "*gpt-5.6-terra*", levels: CODEX_GPT_5_6_LEVELS },
   { provider: "codex", pattern: "*gpt-5.6-luna*", levels: CODEX_GPT_5_6_LEVELS },
